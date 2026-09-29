@@ -1,0 +1,56 @@
+/* 디자인 토큰 — docs/디자인가이드.md 1·3·4장, brand.config.json colors 와 같아야 한다(tokens.test.ts 가 검사). */
+:root {
+  /* 1. 색 */
+  --bg: #FBF7EE;
+  --bg-dot: #EFE4CC;
+  --surface: #FFFFFF;
+  --line: #EDE3CF;
+  --ink: #2A2320;
+  --ink-2: #5E554C;
+  --ink-3: #8C8278;
+  --gold: #C9A24A;
+  --gold-deep: #9E7420;
+  --gold-soft: #F6EBCB;
+  --gold-grad: linear-gradient(135deg,#FBEFC4 0%,#E2BC5E 38%,#B8862A 70%,#F0D68A 100%);
+  --navy: #1E2748;
+  --navy-2: #2C3766;
+  --purple: #4B3A7C;
+  --lavender: #EEE8F7;
+  --rose: #C2577A;
+  --rose-soft: #FBE9EF;
+  --seal: #B23A2E;
+  /* 분야 색 */
+  --field-wealth: #9E7420;
+  --field-love: #C2577A;
+  --field-work: #2C3766;
+  --field-health: #3E7D5A;
+
+  /* 3. 글자 크기 (px 은 빌드 때 rem 으로 바뀜) */
+  --fs-hero: 28px;
+  --fs-title: 26px;
+  --fs-card: 21px;
+  --fs-body: 18px;
+  --fs-small: 16px;
+  --fs-caption: 14px;
+
+  /* 4. 간격·모양 */
+  --gutter: 18px;
+  --gap-card: 12px;
+  --gap-section: 30px;
+  --radius: 22px;
+  --radius-lg: 22px;
+  --radius-md: 20px;
+  --radius-btn: 16px;
+  --radius-pill: 999px;
+  --shadow: 0 6px 18px rgba(80,60,20,.08);
+  --shadow-rare: 0 10px 22px rgba(158,116,32,.28);
+  --touch: 48px;
+  --btn-h: 58px;
+  --tabbar-h: 84px;
+  --app-max: 480px;
+}
+
+/* 글자 크게 보기 — 보통/크게/아주 크게 */
+html { font-size: 100%; }
+html[data-scale='115'] { font-size: 115%; }
+html[data-scale='130'] { font-size: 130%; }

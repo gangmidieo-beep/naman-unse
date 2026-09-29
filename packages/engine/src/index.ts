@@ -1,5 +1,5 @@
 // 나만의 운세 만세력 엔진 공개 API. 계산 로직은 src/core(원본 그대로)에 있고, 여기서는 입력 정리·음력 변환·추가 관계만 한다.
-import { computePillars, dayPillarIndex } from './core/pillars.mjs';
+import { computePillars as rawComputePillars, dayPillarIndex } from './core/pillars.mjs';
 import { sipsinChart, sipsinOfStem, sipsinOfBranch } from './core/sipsin.mjs';
 import { elementRatio } from './core/elements.mjs';
 import { computeDaeun } from './core/daeun.mjs';
@@ -16,6 +16,14 @@ export { lunarToSolar, solarToLunar, leapMonthOf, LUNAR_YEAR_MIN, LUNAR_YEAR_MAX
 export { STEMS, STEMS_HANJA, BRANCHES, BRANCHES_HANJA, ELEMENTS, STEM_ELEMENT, BRANCH_ELEMENT, sipsinOfStem, sipsinOfBranch };
 export type { LunarDate, BranchRelation };
 export const ENGINE_VERSION = '1.0.0';
+
+// 원본 JS 함수에 타입만 입힌다(계산은 그대로).
+type RawPillar = { text: string; hanja: string; stem: number; branch: number };
+type RawPillars = {
+  year: RawPillar; month: RawPillar; day: RawPillar; hour: RawPillar | null; sajuYear: number; sajuMonth: number;
+  jeolgi: { prev: { name: string; at: string }; next: { name: string; at: string } }; birthInstant: string; timeKnown: boolean;
+};
+const computePillars = rawComputePillars as (b: { year: number; month: number; day: number; hour?: number | null; minute?: number }) => RawPillars;
 
 export type Pillar = { text: string; hanja: string; stem: number; branch: number };
 export type SajuInput = {
