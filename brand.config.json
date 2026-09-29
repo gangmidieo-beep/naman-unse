@@ -1,0 +1,47 @@
+{
+  "serviceName": "나만의 운세",
+  "slug": "naman-unse",
+  "colors": {
+    "--bg": "#FBF7EE",
+    "--bg-dot": "#EFE4CC",
+    "--surface": "#FFFFFF",
+    "--line": "#EDE3CF",
+    "--ink": "#2A2320",
+    "--ink-2": "#5E554C",
+    "--ink-3": "#8C8278",
+    "--gold": "#C9A24A",
+    "--gold-deep": "#9E7420",
+    "--gold-soft": "#F6EBCB",
+    "--gold-grad": "linear-gradient(135deg,#FBEFC4 0%,#E2BC5E 38%,#B8862A 70%,#F0D68A 100%)",
+    "--navy": "#1E2748",
+    "--navy-2": "#2C3766",
+    "--purple": "#4B3A7C",
+    "--lavender": "#EEE8F7",
+    "--rose": "#C2577A",
+    "--rose-soft": "#FBE9EF",
+    "--seal": "#B23A2E"
+  },
+  "characters": [
+    { "id": "dosa", "name": "천궁도령", "roles": ["정통사주", "재물운", "직장운", "신년운세", "부적"], "tone": "하오체", "color": "#1E2748" },
+    { "id": "sunnyeo", "name": "월하선녀", "roles": ["오늘의 운세", "애정운", "궁합", "띠별운세", "MBTI"], "tone": "해요체", "color": "#C2577A" }
+  ],
+  "products": [
+    { "id": "saju", "name": "정통사주", "desc": "타고난 그릇과 앞으로 10년 흐름", "price": 9900, "isSample": true, "character": "dosa", "googleProductId": "", "chapters": "평생·재물·직장" },
+    { "id": "saju_wealth", "name": "정통사주 · 재물편", "desc": "돈이 들어오는 시기와 새는 구멍", "price": 9900, "isSample": true, "character": "dosa", "googleProductId": "", "baseProduct": "saju" },
+    { "id": "saju_work", "name": "정통사주 · 직장편", "desc": "일이 풀리는 때와 맞는 자리", "price": 9900, "isSample": true, "character": "dosa", "googleProductId": "", "baseProduct": "saju" },
+    { "id": "gunghap", "name": "우리 궁합", "desc": "두 사람 인연의 깊이", "price": 7900, "isSample": true, "character": "sunnyeo", "googleProductId": "" },
+    { "id": "newyear", "name": "2027 신년운세", "desc": "열두 달 흐름 한눈에", "price": 7900, "isSample": true, "character": "dosa", "googleProductId": "" }
+  ],
+  "subscription": {
+    "id": "premium_monthly",
+    "name": "프리미엄 회원",
+    "price": 4900,
+    "period": "month",
+    "isSample": true,
+    "googleProductId": "",
+    "discountRate": 0.3,
+    "benefits": ["광고 없이 보기", "이번 달 운세", "분야별 심화 풀이·조언", "MBTI × 사주 연결 풀이", "유료 풀이 30% 할인"]
+  },
+  "links": { "kakaoChannel": "", "terms": "", "privacy": "" },
+  "business": { "name": "", "ceo": "", "regNo": "", "mailOrderNo": "", "address": "", "contact": "" }
+}

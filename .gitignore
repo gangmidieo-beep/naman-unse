@@ -11,3 +11,7 @@ service-account*.json
 reference/
 .DS_Store
 Thumbs.db
+test-results/
+playwright-report/
+.vite/
+*.log
