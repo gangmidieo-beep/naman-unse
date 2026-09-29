@@ -1,12 +1,18 @@
 import { type ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Icon, type IconName } from './Icon';
+import { optionalImg } from '../assets/images';
+
+export function Seal() {
+  const logo = optionalImg('logo_seal');
+  return logo ? <img className="seal" src={logo.src} width={26} height={26} alt="" /> : <span className="seal" aria-hidden>運</span>;
+}
 
 export function AppHeader({ lunar }: { lunar: string }) {
   return (
     <header className="hdr">
       <span className="pill" aria-label={`오늘 음력 ${lunar}`}>🌙 음 {lunar}</span>
-      <Link to="/" className="logo" aria-label="나만의 운세 홈"><span className="seal">運</span>나만의 운세</Link>
+      <Link to="/" className="logo" aria-label="나만의 운세 홈"><Seal />나만의 운세</Link>
       <Link to="/me" className="pill">내 정보</Link>
     </header>
   );

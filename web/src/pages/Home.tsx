@@ -5,6 +5,7 @@ import { useApp, useMainProfile } from '../store/app';
 import { lunarPill, newYearTarget } from '../lib/dates';
 import { useTodayFortune } from '../lib/fortune';
 import { Icon } from '../components/Icon';
+import { optionalImg } from '../assets/images';
 
 export default function Home() {
   const { profile, isSample } = useMainProfile();
@@ -32,8 +33,8 @@ export default function Home() {
         <div className="hscroll">
           <RareCard to="/consult?who=dosa&product=saju" img="dosaCard" title="정통 사주" desc="천궁도령 · 평생 흐름" owned={owned('saju')} />
           <RareCard to="/consult?who=sunnyeo&product=gunghap" img="sunnyeoCard" title="우리 궁합" desc="월하선녀 · 인연의 붉은 실" owned={owned('gunghap')} />
-          <RareCard to="/consult?who=dosa&product=newyear" big={ny.pillar.hanja} title={`${ny.year} 신년운세`} desc="한 해 열두 달 흐름" owned={owned('newyear')} />
-          <RareCard onClick={() => setSoon('한자 부적')} big="符" title="한자 부적" desc="천궁도령 · 곧 열려요" />
+          <RareCard to="/consult?who=dosa&product=newyear" big={ny.pillar.hanja} raw={optionalImg('card_newyear')} title={`${ny.year} 신년운세`} desc="한 해 열두 달 흐름" owned={owned('newyear')} />
+          <RareCard onClick={() => setSoon('한자 부적')} big="符" raw={optionalImg('card_talisman')} title="한자 부적" desc="천궁도령 · 곧 열려요" />
         </div>
 
         <SectionHeader en="ZODIAC" title="내 띠 운세 바로 찾기" />

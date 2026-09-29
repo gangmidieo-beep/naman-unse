@@ -344,3 +344,4 @@ img.seal { background: none; object-fit: contain; }
 .compare .gold { color: var(--gold-deep); font-weight: 800; background: #FFFBEF; }
 .compare th.gold { background: var(--gold-grad); color: #3A2A08; }
 .big-b { font-size: 20px; }
+.duo-one { grid-column: 1 / -1; }

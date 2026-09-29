@@ -72,20 +72,20 @@ export function FreeCard({ to, onClick, icon, title, desc }: { to?: string; onCl
   return to ? <Link to={to} className="card">{body}</Link> : <button type="button" className="card" onClick={onClick}>{body}</button>;
 }
 
-export function RareCard({ to, onClick, img, big, title, desc, owned }: {
-  to?: string; onClick?: () => void; img?: ImgKey; big?: string; title: string; desc: string; owned?: boolean;
+export function RareCard({ to, onClick, img, raw, big, title, desc, owned }: {
+  to?: string; onClick?: () => void; img?: ImgKey; raw?: { src: string; srcset?: string; w: number; h: number }; big?: string; title: string; desc: string; owned?: boolean;
 }) {
   const body = (
     <>
       <span className={`badge-p${owned ? ' owned' : ''}`}>{owned ? '✓ 보유중' : '✦ 프리미엄'}</span>
       <div className="in">
-        {img ? <Img k={img} alt="" /> : <div className="big" aria-hidden>{big}</div>}
+        {img || raw ? <Img k={img} raw={raw} alt="" sizes="220px" /> : <div className="big" aria-hidden>{big}</div>}
         <div className="shade" />
         <div className="txt"><b>{title}</b><span>{desc}</span></div>
       </div>
     </>
   );
-  const cls = `rare${img ? '' : ' plain'}`;
+  const cls = `rare${img || raw ? '' : ' plain'}`;
   return to ? <Link to={to} className={cls}>{body}</Link> : <button type="button" className={cls} onClick={onClick}>{body}</button>;
 }
 

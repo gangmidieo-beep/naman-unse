@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { SubHeader } from '../components/layout';
 import { Button, CharacterBubble, useToast } from '../components/ui';
 import { Img } from '../components/Img';
+import { optionalImg } from '../assets/images';
 import { useApp } from '../store/app';
 import { BRAND, won } from '../lib/brand';
 import { getPayments, isNativeApp } from '../platform/payments';
@@ -50,8 +51,14 @@ export default function Premium() {
       <main className="screen">
         <div className="duo">
           <div className="duo-in">
-            <Img k="dosaCard" eager alt="천궁도령" />
-            <Img k="sunnyeoCard" eager alt="월하선녀" />
+            {optionalImg('banner_premium') ? (
+              <Img raw={optionalImg('banner_premium')} className="duo-one" eager alt="천궁도령과 월하선녀" />
+            ) : (
+              <>
+                <Img k="dosaCard" eager alt="천궁도령" />
+                <Img k="sunnyeoCard" eager alt="월하선녀" />
+              </>
+            )}
             <div className="shade" />
             <div className="txt">
               <span className="badge-p" style={{ position: 'static' }}>✦ 프리미엄</span>

@@ -9,6 +9,7 @@ import { sajuOf } from '@naman/content';
 import { SubHeader } from '../components/layout';
 import { Button, CharacterBubble, useToast } from '../components/ui';
 import { Img } from '../components/Img';
+import { optionalImg } from '../assets/images';
 import { SAMPLE_PROFILE, useApp, type Profile } from '../store/app';
 import { productById } from '../lib/brand';
 import { saveImage, shareLink } from '../lib/share';
@@ -85,7 +86,7 @@ export default function ReadingPage() {
     return (
       <main className="screen no-tab waiting" aria-live="polite">
         <div className="starboard" aria-hidden>
-          <Img k="dosaFace" className="wait-face" eager alt="" />
+          {optionalImg('loading_dosa') ? <Img raw={optionalImg('loading_dosa')} className="wait-face" eager alt="별자리 판을 읽는 천궁도령" /> : <Img k="dosaFace" className="wait-face" eager alt="" />}
           <span className="ring r1" /><span className="ring r2" />
           {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ transform: `rotate(${i * 36}deg) translateY(-118px)` }}>✦</i>)}
         </div>

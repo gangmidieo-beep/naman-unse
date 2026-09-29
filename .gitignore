@@ -16,3 +16,5 @@ playwright-report/
 .vite/
 *.log
 scripts/tmp/
+web/public/img/_incoming/*
+!web/public/img/_incoming/.gitkeep
