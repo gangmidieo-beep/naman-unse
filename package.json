@@ -14,9 +14,10 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "check:independence": "node scripts/check-independence.mjs",
-    "check:copy": "node scripts/check-copy-overlap.mjs",
+    "check:copy": "node scripts/lint-copy.mjs && node scripts/check-copy-overlap.mjs",
     "make:images": "node scripts/make-images.mjs",
     "db:migrate": "npm run db:migrate -w server",
     "admin:create": "npm run admin:create -w server"

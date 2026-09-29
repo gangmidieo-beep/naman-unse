@@ -15,3 +15,4 @@ test-results/
 playwright-report/
 .vite/
 *.log
+scripts/tmp/

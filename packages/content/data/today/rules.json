@@ -1,0 +1,43 @@
+{
+  "_설명": "오늘의 운세 점수 규칙표. 코드는 이 표만 읽는다. 분야 점수 = base + 십신 가중치 + 지지 관계 + 12운성 + 오행 보정 (+ 날짜 시드 흔들림), 1~5 로 잘라 별점.",
+  "base": 3,
+  "jitter": 0.45,
+  "tenGod": {
+    "비견": { "wealth": -0.5, "love": 0, "work": 0.5, "health": 0.5 },
+    "겁재": { "wealth": -1, "love": -0.5, "work": 0, "health": 0.5 },
+    "식신": { "wealth": 0.5, "love": 1, "work": 0, "health": 1 },
+    "상관": { "wealth": 0.5, "love": 1, "work": -0.5, "health": 0 },
+    "편재": { "wealth": 1.5, "love": 0.5, "work": 0, "health": -0.5 },
+    "정재": { "wealth": 1.5, "love": 0.5, "work": 0.5, "health": 0 },
+    "편관": { "wealth": 0, "love": -0.5, "work": 1, "health": -1 },
+    "정관": { "wealth": 0.5, "love": 0.5, "work": 1.5, "health": 0 },
+    "편인": { "wealth": -0.5, "love": 0, "work": 0.5, "health": 1 },
+    "정인": { "wealth": 0, "love": 0.5, "work": 1, "health": 1 }
+  },
+  "branchTenGodFactor": 0.4,
+  "branch": {
+    "pillarWeight": { "day": 1, "year": 0.6 },
+    "combine": { "wealth": 0.5, "love": 1, "work": 0.5, "health": 0.3 },
+    "halfCombine": { "wealth": 0.3, "love": 0.5, "work": 0.3, "health": 0.2 },
+    "clash": { "wealth": -0.8, "love": -1, "work": -0.8, "health": -1 },
+    "punish": { "wealth": -0.4, "love": -0.5, "work": -0.5, "health": -0.5 },
+    "break": { "wealth": -0.3, "love": -0.3, "work": -0.3, "health": -0.2 },
+    "harm": { "wealth": -0.2, "love": -0.4, "work": -0.2, "health": -0.2 }
+  },
+  "twelveStage": {
+    "장생": 0.6, "목욕": 0, "관대": 0.4, "건록": 0.7, "제왕": 0.6, "쇠": 0,
+    "병": -0.4, "사": -0.4, "묘": -0.2, "절": -0.6, "태": 0.1, "양": 0.3
+  },
+  "twelveStageFieldFactor": { "wealth": 0.8, "love": 0.8, "work": 1, "health": 1.2 },
+  "element": { "weakest": 0.6, "missing": 0.8, "strongest": -0.4 },
+  "totalWeights": { "wealth": 0.3, "love": 0.2, "work": 0.3, "health": 0.2 },
+  "totalRange": { "min": 55, "max": 96, "rawMin": 1.3, "rawMax": 4.8 },
+  "bands": [63, 71, 79, 87],
+  "lucky": {
+    "목": { "color": "초록", "hex": "#4E9A5B", "numbers": [3, 8], "direction": "동쪽" },
+    "화": { "color": "빨강", "hex": "#D2463C", "numbers": [2, 7], "direction": "남쪽" },
+    "토": { "color": "노랑", "hex": "#E3B53B", "numbers": [5, 10], "direction": "가까운 곳" },
+    "금": { "color": "흰색", "hex": "#FFFFFF", "numbers": [4, 9], "direction": "서쪽" },
+    "수": { "color": "남색", "hex": "#26336B", "numbers": [1, 6], "direction": "북쪽" }
+  }
+}
