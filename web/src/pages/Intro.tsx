@@ -16,11 +16,17 @@ export default function Intro() {
   const setIntroSeen = useApp((s) => s.setIntroSeen);
   const [i, setI] = useState(0);
   const track = useRef<HTMLDivElement>(null);
-  const go = (n: number) => track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' });
+  const target = useRef<number | null>(null); // 버튼으로 넘기는 중엔 스크롤 중간값 무시
+  const go = (n: number) => { target.current = n; setI(n); track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' }); };
+  const onScroll = (el: HTMLDivElement) => {
+    const n = Math.round(el.scrollLeft / el.clientWidth);
+    if (target.current != null) { if (n === target.current) target.current = null; return; }
+    setI(n);
+  };
   const start = () => { setIntroSeen(); nav('/', { replace: true }); };
   return (
     <main className="intro">
-      <div className="intro-track" ref={track} onScroll={(e) => setI(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}>
+      <div className="intro-track" ref={track} onScroll={(e) => onScroll(e.currentTarget)}>
         {SLIDES.map((s, n) => (
           <section className="intro-slide" key={n} aria-label={`${n + 1}번째 소개`}>
             <div className="intro-art">

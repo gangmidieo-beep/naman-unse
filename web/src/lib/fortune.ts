@@ -1,6 +1,19 @@
-// 오늘의 운세 훅 — 04 단계에서 packages/content 계산으로 교체.
+// 오늘의 운세 훅 — 엔진 계산 + 문구 DB (AI 호출 없음). 같은 프로필·같은 날은 항상 같은 결과.
+import { useMemo } from 'react';
+import { sajuOf, todayFortune, weekFortune, monthFortune } from '@naman/content';
 import type { Profile } from '../store/app';
 
-export function useTodayFortune(_p: Profile) {
-  return { total: 87, stars: 4, oneLine: '어른의 조언과 문서 소식에 귀를 여는 날이에요.' };
+const now = () => new Date();
+export const useSaju = (p: Profile) => useMemo(() => sajuOf(p), [p]);
+export function useTodayFortune(p: Profile) {
+  const saju = useSaju(p);
+  return useMemo(() => todayFortune(saju, now(), p.id), [saju, p.id]);
+}
+export function useWeekFortune(p: Profile) {
+  const saju = useSaju(p);
+  return useMemo(() => weekFortune(saju, now(), p.id), [saju, p.id]);
+}
+export function useMonthFortune(p: Profile) {
+  const saju = useSaju(p);
+  return useMemo(() => monthFortune(saju, now(), p.id), [saju, p.id]);
 }

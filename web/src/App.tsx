@@ -9,6 +9,14 @@ import Intro from './pages/Intro';
 import ProfileNew from './pages/ProfileNew';
 import DevComponents from './pages/DevComponents';
 import Placeholder from './pages/Placeholder';
+import Today from './pages/Today';
+import TodayField from './pages/TodayField';
+import { ZodiacDetail, ZodiacList } from './pages/Zodiac';
+import Consult from './pages/Consult';
+import Checkout from './pages/Checkout';
+import ReadingPage from './pages/Reading';
+import Premium from './pages/Premium';
+import Me from './pages/Me';
 
 const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev'];
 
@@ -27,6 +35,15 @@ export function App() {
           <Route path="/intro" element={<Intro />} />
           <Route path="/profile/new" element={<ProfileNew />} />
           <Route path="/profile/:id/edit" element={<ProfileNew />} />
+          <Route path="/today" element={<Today />} />
+          <Route path="/today/:field" element={<TodayField />} />
+          <Route path="/zodiac" element={<ZodiacList />} />
+          <Route path="/zodiac/:animal" element={<ZodiacDetail />} />
+          <Route path="/consult" element={<Consult />} />
+          <Route path="/checkout/:product" element={<Checkout />} />
+          <Route path="/reading/:orderId" element={<ReadingPage />} />
+          <Route path="/premium" element={<Premium />} />
+          <Route path="/me" element={<Me />} />
           <Route path="/dev/components" element={<DevComponents />} />
           <Route path="*" element={<Placeholder />} />
         </Routes>
