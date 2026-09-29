@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+node_modules/
+build/
+dist/
+*.keystore
+*.jks
+google-services.json
+service-account*.json
+reference/
+.DS_Store
+Thumbs.db
