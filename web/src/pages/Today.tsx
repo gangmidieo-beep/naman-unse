@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { FIELDS, FIELD_LABEL, type Field } from '@naman/content';
 import { SubHeader, SectionHeader } from '../components/layout';
 import {
-  AdSlot, Button, CategoryRow, CharacterBubble, LuckyGrid, PremiumLock, RareListItem, ScoreStars, SegTabs, Stars, useToast,
+  AdSlot, CategoryRow, CharacterBubble, LuckyGrid, PremiumLock, RareListItem, ScoreStars, SegTabs, Stars, useToast,
 } from '../components/ui';
 import { ShareCard } from '../components/ShareCard';
 import { useApp, useMainProfile } from '../store/app';
