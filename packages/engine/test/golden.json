@@ -1,0 +1,2016 @@
+[
+ {
+  "label": "입춘 전날 2024-02-03",
+  "input": {
+   "year": 2024,
+   "month": 2,
+   "day": 3,
+   "hour": 12,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2024,
+    "month": 2,
+    "day": 3
+   },
+   "pillars": [
+    "계묘",
+    "을축",
+    "정유",
+    "병오"
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 25,
+    "화": 36,
+    "토": 13,
+    "금": 13,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:겁재/비견",
+    "일주:일간/편재",
+    "월주:편인/식신",
+    "연주:편관/편인"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "backward",
+    "cycles": [
+     "갑자",
+     "계해",
+     "임술",
+     "신유",
+     "경신",
+     "기미",
+     "무오",
+     "정사"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "입춘 당일 절입 전 2024-02-04 12시",
+  "input": {
+   "year": 2024,
+   "month": 2,
+   "day": 4,
+   "hour": 12,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2024,
+    "month": 2,
+    "day": 4
+   },
+   "pillars": [
+    "계묘",
+    "을축",
+    "무술",
+    "무오"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 25,
+    "화": 13,
+    "토": 49,
+    "금": 0,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:비견/정인",
+    "일주:일간/비견",
+    "월주:정관/겁재",
+    "연주:정재/정관"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "forward",
+    "cycles": [
+     "병인",
+     "정묘",
+     "무진",
+     "기사",
+     "경오",
+     "신미",
+     "임신",
+     "계유"
+    ],
+    "current": "병인"
+   }
+  }
+ },
+ {
+  "label": "입춘 당일 절입 후 2024-02-04 18시",
+  "input": {
+   "year": 2024,
+   "month": 2,
+   "day": 4,
+   "hour": 18,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2024,
+    "month": 2,
+    "day": 4
+   },
+   "pillars": [
+    "갑진",
+    "병인",
+    "무술",
+    "신유"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 25,
+    "화": 13,
+    "토": 37,
+    "금": 25,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:상관/상관",
+    "일주:일간/비견",
+    "월주:편인/편관",
+    "연주:편관/비견"
+   ],
+   "daeun": {
+    "startAge": 10,
+    "direction": "forward",
+    "cycles": [
+     "정묘",
+     "무진",
+     "기사",
+     "경오",
+     "신미",
+     "임신",
+     "계유",
+     "갑술"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "입춘 다음날 2024-02-05",
+  "input": {
+   "year": 2024,
+   "month": 2,
+   "day": 5,
+   "hour": 12,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2024,
+    "month": 2,
+    "day": 5
+   },
+   "pillars": [
+    "갑진",
+    "병인",
+    "기해",
+    "경오"
+   ],
+   "dayMaster": "기토",
+   "ratio": {
+    "목": 24,
+    "화": 25,
+    "토": 25,
+    "금": 13,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:상관/편인",
+    "일주:일간/정재",
+    "월주:정인/정관",
+    "연주:정관/겁재"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "backward",
+    "cycles": [
+     "을축",
+     "갑자",
+     "계해",
+     "임술",
+     "신유",
+     "경신",
+     "기미",
+     "무오"
+    ],
+    "current": "을축"
+   }
+  }
+ },
+ {
+  "label": "2025 입춘(23:10) 1시간 전",
+  "input": {
+   "year": 2025,
+   "month": 2,
+   "day": 3,
+   "hour": 22,
+   "minute": 10,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2025,
+    "month": 2,
+    "day": 3
+   },
+   "pillars": [
+    "갑진",
+    "정축",
+    "계묘",
+    "계해"
+   ],
+   "dayMaster": "계수",
+   "ratio": {
+    "목": 25,
+    "화": 13,
+    "토": 25,
+    "금": 0,
+    "수": 37
+   },
+   "sipsin": [
+    "시주:비견/겁재",
+    "일주:일간/식신",
+    "월주:편재/편관",
+    "연주:상관/정관"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "forward",
+    "cycles": [
+     "무인",
+     "기묘",
+     "경진",
+     "신사",
+     "임오",
+     "계미",
+     "갑신",
+     "을유"
+    ],
+    "current": "무인"
+   }
+  }
+ },
+ {
+  "label": "2025 입춘(23:10) 1시간 후",
+  "input": {
+   "year": 2025,
+   "month": 2,
+   "day": 4,
+   "hour": 0,
+   "minute": 10,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2025,
+    "month": 2,
+    "day": 4
+   },
+   "pillars": [
+    "을사",
+    "무인",
+    "갑진",
+    "갑자"
+   ],
+   "dayMaster": "갑목",
+   "ratio": {
+    "목": 49,
+    "화": 13,
+    "토": 25,
+    "금": 0,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:비견/정인",
+    "일주:일간/편재",
+    "월주:편재/비견",
+    "연주:겁재/식신"
+   ],
+   "daeun": {
+    "startAge": 10,
+    "direction": "forward",
+    "cycles": [
+     "기묘",
+     "경진",
+     "신사",
+     "임오",
+     "계미",
+     "갑신",
+     "을유",
+     "병술"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "2023 입춘(11:43) 1시간 전",
+  "input": {
+   "year": 2023,
+   "month": 2,
+   "day": 4,
+   "hour": 10,
+   "minute": 43,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2023,
+    "month": 2,
+    "day": 4
+   },
+   "pillars": [
+    "임인",
+    "계축",
+    "계사",
+    "정사"
+   ],
+   "dayMaster": "계수",
+   "ratio": {
+    "목": 13,
+    "화": 36,
+    "토": 13,
+    "금": 0,
+    "수": 38
+   },
+   "sipsin": [
+    "시주:편재/정재",
+    "일주:일간/정재",
+    "월주:비견/편관",
+    "연주:겁재/상관"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "forward",
+    "cycles": [
+     "갑인",
+     "을묘",
+     "병진",
+     "정사",
+     "무오",
+     "기미",
+     "경신",
+     "신유"
+    ],
+    "current": "갑인"
+   }
+  }
+ },
+ {
+  "label": "2023 입춘(11:43) 1시간 후",
+  "input": {
+   "year": 2023,
+   "month": 2,
+   "day": 4,
+   "hour": 12,
+   "minute": 43,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2023,
+    "month": 2,
+    "day": 4
+   },
+   "pillars": [
+    "계묘",
+    "갑인",
+    "계사",
+    "무오"
+   ],
+   "dayMaster": "계수",
+   "ratio": {
+    "목": 37,
+    "화": 25,
+    "토": 13,
+    "금": 0,
+    "수": 25
+   },
+   "sipsin": [
+    "시주:정관/편재",
+    "일주:일간/정재",
+    "월주:상관/상관",
+    "연주:비견/식신"
+   ],
+   "daeun": {
+    "startAge": 10,
+    "direction": "forward",
+    "cycles": [
+     "을묘",
+     "병진",
+     "정사",
+     "무오",
+     "기미",
+     "경신",
+     "신유",
+     "임술"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "2020 소한 전날 밤 자시",
+  "input": {
+   "year": 2020,
+   "month": 1,
+   "day": 5,
+   "hour": 23,
+   "minute": 30,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2020,
+    "month": 1,
+    "day": 5
+   },
+   "pillars": [
+    "기해",
+    "병자",
+    "정미",
+    "경자"
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 0,
+    "화": 25,
+    "토": 25,
+    "금": 13,
+    "수": 37
+   },
+   "sipsin": [
+    "시주:정재/편관",
+    "일주:일간/식신",
+    "월주:겁재/편관",
+    "연주:식신/정관"
+   ],
+   "daeun": {
+    "startAge": 10,
+    "direction": "backward",
+    "cycles": [
+     "을해",
+     "갑술",
+     "계유",
+     "임신",
+     "신미",
+     "경오",
+     "기사",
+     "무진"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "2020 소한 당일 오전",
+  "input": {
+   "year": 2020,
+   "month": 1,
+   "day": 6,
+   "hour": 8,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2020,
+    "month": 1,
+    "day": 6
+   },
+   "pillars": [
+    "기해",
+    "정축",
+    "무신",
+    "병진"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 0,
+    "화": 25,
+    "토": 49,
+    "금": 13,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:편인/비견",
+    "일주:일간/식신",
+    "월주:정인/겁재",
+    "연주:겁재/편재"
+   ],
+   "daeun": {
+    "startAge": 10,
+    "direction": "forward",
+    "cycles": [
+     "무인",
+     "기묘",
+     "경진",
+     "신사",
+     "임오",
+     "계미",
+     "갑신",
+     "을유"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "음력 윤달 2020 윤4월 15일",
+  "input": {
+   "year": 2020,
+   "month": 4,
+   "day": 15,
+   "hour": 9,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": true,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2020,
+    "month": 6,
+    "day": 6
+   },
+   "pillars": [
+    "경자",
+    "임오",
+    "경진",
+    "신사"
+   ],
+   "dayMaster": "경금",
+   "ratio": {
+    "목": 0,
+    "화": 25,
+    "토": 13,
+    "금": 37,
+    "수": 25
+   },
+   "sipsin": [
+    "시주:겁재/편관",
+    "일주:일간/편인",
+    "월주:식신/정관",
+    "연주:비견/상관"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "backward",
+    "cycles": [
+     "신사",
+     "경진",
+     "기묘",
+     "무인",
+     "정축",
+     "병자",
+     "을해",
+     "갑술"
+    ],
+    "current": "신사"
+   }
+  }
+ },
+ {
+  "label": "음력 윤달 1987 윤6월 10일",
+  "input": {
+   "year": 1987,
+   "month": 6,
+   "day": 10,
+   "hour": 15,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": true,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1987,
+    "month": 8,
+    "day": 4
+   },
+   "pillars": [
+    "정묘",
+    "정미",
+    "을유",
+    "갑신"
+   ],
+   "dayMaster": "을목",
+   "ratio": {
+    "목": 37,
+    "화": 25,
+    "토": 13,
+    "금": 25,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:겁재/정관",
+    "일주:일간/편관",
+    "월주:식신/편재",
+    "연주:식신/비견"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "backward",
+    "cycles": [
+     "병오",
+     "을사",
+     "갑진",
+     "계묘",
+     "임인",
+     "신축",
+     "경자",
+     "기해"
+    ],
+    "current": "계묘"
+   }
+  }
+ },
+ {
+  "label": "음력 윤달 2023 윤2월 20일",
+  "input": {
+   "year": 2023,
+   "month": 2,
+   "day": 20,
+   "hour": 6,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": true,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2023,
+    "month": 4,
+    "day": 10
+   },
+   "pillars": [
+    "계묘",
+    "병진",
+    "무술",
+    "을묘"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 36,
+    "화": 13,
+    "토": 38,
+    "금": 0,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:정관/정관",
+    "일주:일간/비견",
+    "월주:편인/비견",
+    "연주:정재/정관"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "forward",
+    "cycles": [
+     "정사",
+     "무오",
+     "기미",
+     "경신",
+     "신유",
+     "임술",
+     "계해",
+     "갑자"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "자시 23:30 (같은 날 일주)",
+  "input": {
+   "year": 1990,
+   "month": 5,
+   "day": 15,
+   "hour": 23,
+   "minute": 30,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1990,
+    "month": 5,
+    "day": 15
+   },
+   "pillars": [
+    "경오",
+    "신사",
+    "경진",
+    "병자"
+   ],
+   "dayMaster": "경금",
+   "ratio": {
+    "목": 0,
+    "화": 36,
+    "토": 13,
+    "금": 38,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:편관/상관",
+    "일주:일간/편인",
+    "월주:겁재/편관",
+    "연주:비견/정관"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "임오",
+     "계미",
+     "갑신",
+     "을유",
+     "병술",
+     "정해",
+     "무자",
+     "기축"
+    ],
+    "current": "을유"
+   }
+  }
+ },
+ {
+  "label": "자시 00:30",
+  "input": {
+   "year": 1990,
+   "month": 5,
+   "day": 16,
+   "hour": 0,
+   "minute": 30,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1990,
+    "month": 5,
+    "day": 16
+   },
+   "pillars": [
+    "경오",
+    "신사",
+    "신사",
+    "무자"
+   ],
+   "dayMaster": "신금",
+   "ratio": {
+    "목": 0,
+    "화": 36,
+    "토": 13,
+    "금": 38,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:정인/식신",
+    "일주:일간/정관",
+    "월주:비견/정관",
+    "연주:겁재/편관"
+   ],
+   "daeun": {
+    "startAge": 3,
+    "direction": "backward",
+    "cycles": [
+     "경진",
+     "기묘",
+     "무인",
+     "정축",
+     "병자",
+     "을해",
+     "갑술",
+     "계유"
+    ],
+    "current": "정축"
+   }
+  }
+ },
+ {
+  "label": "자시 23:00 정각",
+  "input": {
+   "year": 1975,
+   "month": 8,
+   "day": 20,
+   "hour": 23,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1975,
+    "month": 8,
+    "day": 20
+   },
+   "pillars": [
+    "을묘",
+    "갑신",
+    "무술",
+    "임자"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 37,
+    "화": 0,
+    "토": 25,
+    "금": 13,
+    "수": 25
+   },
+   "sipsin": [
+    "시주:편재/정재",
+    "일주:일간/비견",
+    "월주:편관/식신",
+    "연주:정관/정관"
+   ],
+   "daeun": {
+    "startAge": 4,
+    "direction": "backward",
+    "cycles": [
+     "계미",
+     "임오",
+     "신사",
+     "경진",
+     "기묘",
+     "무인",
+     "정축",
+     "병자"
+    ],
+    "current": "기묘"
+   }
+  }
+ },
+ {
+  "label": "2000-01-01 00:00",
+  "input": {
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2000,
+    "month": 1,
+    "day": 1
+   },
+   "pillars": [
+    "기묘",
+    "병자",
+    "무오",
+    "임자"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 13,
+    "화": 25,
+    "토": 25,
+    "금": 0,
+    "수": 37
+   },
+   "sipsin": [
+    "시주:편재/정재",
+    "일주:일간/정인",
+    "월주:편인/정재",
+    "연주:겁재/정관"
+   ],
+   "daeun": {
+    "startAge": 2,
+    "direction": "forward",
+    "cycles": [
+     "정축",
+     "무인",
+     "기묘",
+     "경진",
+     "신사",
+     "임오",
+     "계미",
+     "갑신"
+    ],
+    "current": "기묘"
+   }
+  }
+ },
+ {
+  "label": "1901년",
+  "input": {
+   "year": 1901,
+   "month": 3,
+   "day": 10,
+   "hour": 8,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1901,
+    "month": 3,
+    "day": 10
+   },
+   "pillars": [
+    "신축",
+    "신묘",
+    "정해",
+    "갑진"
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 24,
+    "화": 13,
+    "토": 25,
+    "금": 25,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:정인/상관",
+    "일주:일간/정관",
+    "월주:편재/편인",
+    "연주:편재/식신"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "backward",
+    "cycles": [
+     "경인",
+     "기축",
+     "무자",
+     "정해",
+     "병술",
+     "을유",
+     "갑신",
+     "계미"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "1910년",
+  "input": {
+   "year": 1910,
+   "month": 11,
+   "day": 11,
+   "hour": 14,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1910,
+    "month": 11,
+    "day": 11
+   },
+   "pillars": [
+    "경술",
+    "정해",
+    "경진",
+    "계미"
+   ],
+   "dayMaster": "경금",
+   "ratio": {
+    "목": 0,
+    "화": 13,
+    "토": 37,
+    "금": 25,
+    "수": 25
+   },
+   "sipsin": [
+    "시주:상관/정인",
+    "일주:일간/편인",
+    "월주:정관/식신",
+    "연주:비견/편인"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "backward",
+    "cycles": [
+     "병술",
+     "을유",
+     "갑신",
+     "계미",
+     "임오",
+     "신사",
+     "경진",
+     "기묘"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "1920년 인시",
+  "input": {
+   "year": 1920,
+   "month": 6,
+   "day": 1,
+   "hour": 3,
+   "minute": 30,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1920,
+    "month": 6,
+    "day": 1
+   },
+   "pillars": [
+    "경신",
+    "신사",
+    "경인",
+    "무인"
+   ],
+   "dayMaster": "경금",
+   "ratio": {
+    "목": 25,
+    "화": 13,
+    "토": 13,
+    "금": 49,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:편인/편재",
+    "일주:일간/편재",
+    "월주:겁재/편관",
+    "연주:비견/비견"
+   ],
+   "daeun": {
+    "startAge": 2,
+    "direction": "forward",
+    "cycles": [
+     "임오",
+     "계미",
+     "갑신",
+     "을유",
+     "병술",
+     "정해",
+     "무자",
+     "기축"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "2001년",
+  "input": {
+   "year": 2001,
+   "month": 9,
+   "day": 11,
+   "hour": 10,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2001,
+    "month": 9,
+    "day": 11
+   },
+   "pillars": [
+    "신사",
+    "정유",
+    "정축",
+    "을사"
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 13,
+    "화": 49,
+    "토": 13,
+    "금": 25,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:편인/겁재",
+    "일주:일간/식신",
+    "월주:비견/편재",
+    "연주:편재/겁재"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "forward",
+    "cycles": [
+     "무술",
+     "기해",
+     "경자",
+     "신축",
+     "임인",
+     "계묘",
+     "갑진",
+     "을사"
+    ],
+    "current": "기해"
+   }
+  }
+ },
+ {
+  "label": "2010년",
+  "input": {
+   "year": 2010,
+   "month": 10,
+   "day": 10,
+   "hour": 20,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2010,
+    "month": 10,
+    "day": 10
+   },
+   "pillars": [
+    "경인",
+    "병술",
+    "계사",
+    "임술"
+   ],
+   "dayMaster": "계수",
+   "ratio": {
+    "목": 13,
+    "화": 24,
+    "토": 25,
+    "금": 13,
+    "수": 25
+   },
+   "sipsin": [
+    "시주:겁재/정관",
+    "일주:일간/정재",
+    "월주:정재/정관",
+    "연주:정인/상관"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "forward",
+    "cycles": [
+     "정해",
+     "무자",
+     "기축",
+     "경인",
+     "신묘",
+     "임진",
+     "계사",
+     "갑오"
+    ],
+    "current": "정해"
+   }
+  }
+ },
+ {
+  "label": "2024 성탄",
+  "input": {
+   "year": 2024,
+   "month": 12,
+   "day": 25,
+   "hour": 16,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2024,
+    "month": 12,
+    "day": 25
+   },
+   "pillars": [
+    "갑진",
+    "병자",
+    "계해",
+    "경신"
+   ],
+   "dayMaster": "계수",
+   "ratio": {
+    "목": 13,
+    "화": 13,
+    "토": 13,
+    "금": 25,
+    "수": 36
+   },
+   "sipsin": [
+    "시주:정인/정인",
+    "일주:일간/겁재",
+    "월주:정재/비견",
+    "연주:상관/정관"
+   ],
+   "daeun": {
+    "startAge": 6,
+    "direction": "backward",
+    "cycles": [
+     "을해",
+     "갑술",
+     "계유",
+     "임신",
+     "신미",
+     "경오",
+     "기사",
+     "무진"
+    ],
+    "current": null
+   }
+  }
+ },
+ {
+  "label": "시간 모름 양력",
+  "input": {
+   "year": 1968,
+   "month": 3,
+   "day": 15,
+   "hour": null,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": true
+  },
+  "expect": {
+   "solar": {
+    "year": 1968,
+    "month": 3,
+    "day": 15
+   },
+   "pillars": [
+    "무신",
+    "을묘",
+    "갑신",
+    null
+   ],
+   "dayMaster": "갑목",
+   "ratio": {
+    "목": 50,
+    "화": 0,
+    "토": 17,
+    "금": 33,
+    "수": 0
+   },
+   "sipsin": [
+    "일주:일간/편관",
+    "월주:겁재/겁재",
+    "연주:편재/편관"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "병진",
+     "정사",
+     "무오",
+     "기미",
+     "경신",
+     "신유",
+     "임술",
+     "계해"
+    ],
+    "current": "신유"
+   }
+  }
+ },
+ {
+  "label": "시간 모름 음력",
+  "input": {
+   "year": 1955,
+   "month": 7,
+   "day": 7,
+   "hour": null,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": true
+  },
+  "expect": {
+   "solar": {
+    "year": 1955,
+    "month": 8,
+    "day": 24
+   },
+   "pillars": [
+    "을미",
+    "갑신",
+    "정사",
+    null
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 33,
+    "화": 33,
+    "토": 17,
+    "금": 17,
+    "수": 0
+   },
+   "sipsin": [
+    "일주:일간/겁재",
+    "월주:정인/정재",
+    "연주:편인/식신"
+   ],
+   "daeun": {
+    "startAge": 5,
+    "direction": "forward",
+    "cycles": [
+     "을유",
+     "병술",
+     "정해",
+     "무자",
+     "기축",
+     "경인",
+     "신묘",
+     "임진"
+    ],
+    "current": "신묘"
+   }
+  }
+ },
+ {
+  "label": "서머타임 시행 1949",
+  "input": {
+   "year": 1949,
+   "month": 7,
+   "day": 1,
+   "hour": 10,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1949,
+    "month": 7,
+    "day": 1
+   },
+   "pillars": [
+    "기축",
+    "경오",
+    "임진",
+    "을사"
+   ],
+   "dayMaster": "임수",
+   "ratio": {
+    "목": 13,
+    "화": 25,
+    "토": 36,
+    "금": 13,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:상관/편재",
+    "일주:일간/편관",
+    "월주:편인/정재",
+    "연주:정관/정관"
+   ],
+   "daeun": {
+    "startAge": 8,
+    "direction": "backward",
+    "cycles": [
+     "기사",
+     "무진",
+     "정묘",
+     "병인",
+     "을축",
+     "갑자",
+     "계해",
+     "임술"
+    ],
+    "current": "임술"
+   }
+  }
+ },
+ {
+  "label": "서머타임 시행 1957",
+  "input": {
+   "year": 1957,
+   "month": 6,
+   "day": 15,
+   "hour": 13,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1957,
+    "month": 6,
+    "day": 15
+   },
+   "pillars": [
+    "정유",
+    "병오",
+    "무오",
+    "기미"
+   ],
+   "dayMaster": "무토",
+   "ratio": {
+    "목": 0,
+    "화": 49,
+    "토": 38,
+    "금": 13,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:겁재/겁재",
+    "일주:일간/정인",
+    "월주:편인/정인",
+    "연주:정인/상관"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "정미",
+     "무신",
+     "기유",
+     "경술",
+     "신해",
+     "임자",
+     "계축",
+     "갑인"
+    ],
+    "current": "계축"
+   }
+  }
+ },
+ {
+  "label": "서머타임 시행 1987",
+  "input": {
+   "year": 1987,
+   "month": 8,
+   "day": 1,
+   "hour": 9,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1987,
+    "month": 8,
+    "day": 1
+   },
+   "pillars": [
+    "정묘",
+    "정미",
+    "임오",
+    "을사"
+   ],
+   "dayMaster": "임수",
+   "ratio": {
+    "목": 25,
+    "화": 49,
+    "토": 13,
+    "금": 0,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:상관/편재",
+    "일주:일간/정재",
+    "월주:정재/정관",
+    "연주:정재/상관"
+   ],
+   "daeun": {
+    "startAge": 8,
+    "direction": "backward",
+    "cycles": [
+     "병오",
+     "을사",
+     "갑진",
+     "계묘",
+     "임인",
+     "신축",
+     "경자",
+     "기해"
+    ],
+    "current": "계묘"
+   }
+  }
+ },
+ {
+  "label": "예시 인물 홍길동",
+  "input": {
+   "year": 1968,
+   "month": 3,
+   "day": 15,
+   "hour": 7,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1968,
+    "month": 3,
+    "day": 15
+   },
+   "pillars": [
+    "무신",
+    "을묘",
+    "갑신",
+    "무진"
+   ],
+   "dayMaster": "갑목",
+   "ratio": {
+    "목": 37,
+    "화": 0,
+    "토": 38,
+    "금": 25,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:편재/편재",
+    "일주:일간/편관",
+    "월주:겁재/겁재",
+    "연주:편재/편관"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "병진",
+     "정사",
+     "무오",
+     "기미",
+     "경신",
+     "신유",
+     "임술",
+     "계해"
+    ],
+    "current": "신유"
+   }
+  }
+ },
+ {
+  "label": "1956 음력",
+  "input": {
+   "year": 1956,
+   "month": 11,
+   "day": 3,
+   "hour": 5,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1956,
+    "month": 12,
+    "day": 4
+   },
+   "pillars": [
+    "병신",
+    "기해",
+    "을사",
+    "기묘"
+   ],
+   "dayMaster": "을목",
+   "ratio": {
+    "목": 24,
+    "화": 25,
+    "토": 25,
+    "금": 13,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:편재/비견",
+    "일주:일간/상관",
+    "월주:편재/정인",
+    "연주:상관/정관"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "backward",
+    "cycles": [
+     "무술",
+     "정유",
+     "병신",
+     "을미",
+     "갑오",
+     "계사",
+     "임진",
+     "신묘"
+    ],
+    "current": "임진"
+   }
+  }
+ },
+ {
+  "label": "1964 양력",
+  "input": {
+   "year": 1964,
+   "month": 7,
+   "day": 7,
+   "hour": 11,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1964,
+    "month": 7,
+    "day": 7
+   },
+   "pillars": [
+    "갑진",
+    "경오",
+    "정사",
+    "병오"
+   ],
+   "dayMaster": "정화",
+   "ratio": {
+    "목": 13,
+    "화": 61,
+    "토": 13,
+    "금": 13,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:겁재/비견",
+    "일주:일간/겁재",
+    "월주:정재/비견",
+    "연주:정인/상관"
+   ],
+   "daeun": {
+    "startAge": 1,
+    "direction": "forward",
+    "cycles": [
+     "신미",
+     "임신",
+     "계유",
+     "갑술",
+     "을해",
+     "병자",
+     "정축",
+     "무인"
+    ],
+    "current": "정축"
+   }
+  }
+ },
+ {
+  "label": "1976 음력",
+  "input": {
+   "year": 1976,
+   "month": 1,
+   "day": 1,
+   "hour": 13,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1976,
+    "month": 1,
+    "day": 31
+   },
+   "pillars": [
+    "을묘",
+    "기축",
+    "임오",
+    "정미"
+   ],
+   "dayMaster": "임수",
+   "ratio": {
+    "목": 25,
+    "화": 25,
+    "토": 37,
+    "금": 0,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:정재/정관",
+    "일주:일간/정재",
+    "월주:정관/정관",
+    "연주:상관/상관"
+   ],
+   "daeun": {
+    "startAge": 2,
+    "direction": "forward",
+    "cycles": [
+     "경인",
+     "신묘",
+     "임진",
+     "계사",
+     "갑오",
+     "을미",
+     "병신",
+     "정유"
+    ],
+    "current": "갑오"
+   }
+  }
+ },
+ {
+  "label": "1988 양력",
+  "input": {
+   "year": 1988,
+   "month": 9,
+   "day": 17,
+   "hour": 19,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1988,
+    "month": 9,
+    "day": 17
+   },
+   "pillars": [
+    "무진",
+    "신유",
+    "을해",
+    "병술"
+   ],
+   "dayMaster": "을목",
+   "ratio": {
+    "목": 13,
+    "화": 13,
+    "토": 36,
+    "금": 25,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:상관/정재",
+    "일주:일간/정인",
+    "월주:편관/편관",
+    "연주:정재/정재"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "임술",
+     "계해",
+     "갑자",
+     "을축",
+     "병인",
+     "정묘",
+     "무진",
+     "기사"
+    ],
+    "current": "을축"
+   }
+  }
+ },
+ {
+  "label": "1972 음력 12월 29일(그믐)",
+  "input": {
+   "year": 1972,
+   "month": 12,
+   "day": 29,
+   "hour": 21,
+   "minute": 0,
+   "calendar": "lunar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1973,
+    "month": 2,
+    "day": 2
+   },
+   "pillars": [
+    "임자",
+    "계축",
+    "기사",
+    "을해"
+   ],
+   "dayMaster": "기토",
+   "ratio": {
+    "목": 13,
+    "화": 13,
+    "토": 25,
+    "금": 0,
+    "수": 49
+   },
+   "sipsin": [
+    "시주:편관/정재",
+    "일주:일간/정인",
+    "월주:편재/비견",
+    "연주:정재/편재"
+   ],
+   "daeun": {
+    "startAge": 9,
+    "direction": "backward",
+    "cycles": [
+     "임자",
+     "신해",
+     "경술",
+     "기유",
+     "무신",
+     "정미",
+     "병오",
+     "을사"
+    ],
+    "current": "무신"
+   }
+  }
+ },
+ {
+  "label": "1990 기준 사주",
+  "input": {
+   "year": 1990,
+   "month": 5,
+   "day": 15,
+   "hour": 14,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "M",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 1990,
+    "month": 5,
+    "day": 15
+   },
+   "pillars": [
+    "경오",
+    "신사",
+    "경진",
+    "계미"
+   ],
+   "dayMaster": "경금",
+   "ratio": {
+    "목": 0,
+    "화": 25,
+    "토": 25,
+    "금": 37,
+    "수": 13
+   },
+   "sipsin": [
+    "시주:상관/정인",
+    "일주:일간/편인",
+    "월주:겁재/편관",
+    "연주:비견/정관"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "forward",
+    "cycles": [
+     "임오",
+     "계미",
+     "갑신",
+     "을유",
+     "병술",
+     "정해",
+     "무자",
+     "기축"
+    ],
+    "current": "을유"
+   }
+  }
+ },
+ {
+  "label": "2026-09-29 오늘",
+  "input": {
+   "year": 2026,
+   "month": 9,
+   "day": 29,
+   "hour": 12,
+   "minute": 0,
+   "calendar": "solar",
+   "leapMonth": false,
+   "gender": "F",
+   "timeUnknown": false
+  },
+  "expect": {
+   "solar": {
+    "year": 2026,
+    "month": 9,
+    "day": 29
+   },
+   "pillars": [
+    "병오",
+    "정유",
+    "병오",
+    "갑오"
+   ],
+   "dayMaster": "병화",
+   "ratio": {
+    "목": 13,
+    "화": 74,
+    "토": 0,
+    "금": 13,
+    "수": 0
+   },
+   "sipsin": [
+    "시주:편인/겁재",
+    "일주:일간/겁재",
+    "월주:겁재/정재",
+    "연주:비견/겁재"
+   ],
+   "daeun": {
+    "startAge": 7,
+    "direction": "backward",
+    "cycles": [
+     "병신",
+     "을미",
+     "갑오",
+     "계사",
+     "임진",
+     "신묘",
+     "경인",
+     "기축"
+    ],
+    "current": null
+   }
+  }
+ }
+]

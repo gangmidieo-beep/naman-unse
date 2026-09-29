@@ -80,3 +80,10 @@ reference/ 는 읽기 전용. 아래는 분석 결과만 적는다.
 | 브랜드 설정 | jajeong-live/service/brands.mjs, lib/offers.ts, bimil-saju/service/business.json | 상품명·가격·사업자 정보 |
 | 풀이·오늘 문장 | daily.mjs, prompts.mjs, report-text.mjs, mock-report.mjs | 문장 재사용 금지(검사 스크립트) |
 | API 키 | 코드에 실제 값 없음 확인(테스트 더미만). 운영 키는 각 호스팅 환경변수에만 존재 | — |
+
+## 4. 이식 중 발견한 원본 문제 (2026-09-29)
+| 문제 | 영향 | 조치 |
+|---|---|---|
+| `@fullstackfamily/manseryeok` `lunarToSolar` 가 **음력 11·12월 날짜를 전부 오류** 처리(양력 이듬해로 넘어가는 달) | 원본 서비스에서 음력 11·12월생 입력 불가 | 음력 표를 `solarToLunar` 방향으로 추출해 자체 변환기(`packages/engine/src/lunar.ts`) 사용 |
+| 같은 패키지 데이터에 1956-12-31 하루 누락 | 그날 양→음 변환 오류 | 달 시작일 기준 추출로 음력 1956-11-30 복원 |
+| 패키지 음력 표 2050년 12월 잘림 | — | 지원 범위 1900~2049 |
