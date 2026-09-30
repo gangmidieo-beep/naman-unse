@@ -87,7 +87,7 @@
       "price": 29000,
       "memberPrice": 26100,
       "thumbHanja": "命",
-      "badge": null,
+      "badge": "BEST",
       "visible": true,
       "sort": 0,
       "googleProductId": ""
@@ -117,7 +117,7 @@
       "price": 19000,
       "memberPrice": 17100,
       "thumbHanja": "運",
-      "badge": null,
+      "badge": "HOT",
       "visible": true,
       "sort": 2,
       "googleProductId": ""
@@ -147,7 +147,7 @@
       "price": 19000,
       "memberPrice": 17100,
       "thumbHanja": "財",
-      "badge": null,
+      "badge": "인기",
       "visible": true,
       "sort": 10,
       "googleProductId": ""
@@ -252,7 +252,7 @@
       "price": 29000,
       "memberPrice": 26100,
       "thumbHanja": "丁未",
-      "badge": null,
+      "badge": "NEW",
       "visible": true,
       "sort": 30,
       "googleProductId": ""
@@ -314,7 +314,7 @@
       "price": 19000,
       "memberPrice": 17100,
       "thumbHanja": "緣",
-      "badge": null,
+      "badge": "인기",
       "visible": true,
       "sort": 1,
       "googleProductId": ""
@@ -359,7 +359,7 @@
       "price": 29000,
       "memberPrice": 26100,
       "thumbHanja": "合",
-      "badge": null,
+      "badge": "BEST",
       "visible": true,
       "sort": 10,
       "googleProductId": ""
@@ -404,7 +404,7 @@
       "price": 19000,
       "memberPrice": 17100,
       "thumbHanja": "再",
-      "badge": null,
+      "badge": "HOT",
       "visible": true,
       "sort": 20,
       "googleProductId": ""
@@ -480,7 +480,7 @@
       "cardCopy": "재물의 좋은 기운과 풍요를 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
-      "badge": null,
+      "badge": "BEST",
       "visible": true,
       "sort": 0,
       "detail": "재물의 좋은 흐름과 풍요를 기원하는 부적입니다. 금전적인 안정과 새로운 기회를 바라는 마음을 담아, 이름과 생년월일 그리고 간절한 소원을 새긴 나만의 재물운 부적을 완성해보세요.",
@@ -528,7 +528,7 @@
       "cardCopy": "원하는 결과와 좋은 소식을 기원합니다",
       "price": 9900,
       "memberPrice": 8910,
-      "badge": null,
+      "badge": "HOT",
       "visible": true,
       "sort": 3,
       "detail": "바라는 결과와 좋은 소식을 기원하는 부적입니다. 취업과 시험, 자격증 등 중요한 도전을 앞두고 있다면 노력의 결실을 바라는 간절한 마음을 부적에 담아보세요.",

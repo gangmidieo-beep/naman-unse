@@ -205,7 +205,7 @@ export const talismanTone = (t: Talisman) => ({ '재물·성공': 'w', '사랑·
 // 코드로 그리는 노란 한지 부적: 붉은 테두리 + 세로 한자. hanjaPhrase 4글자 중 앞 2~3글자를 크게, 전체를 작은 머리글로.
 export function TalismanPaper({ t, size = 1, name, birth, wish, issued }: { t: Talisman; size?: number; name?: string; birth?: string; wish?: string; issued?: string }) {
   const phrase = (t as any).hanjaPhrase as string;
-  const chars = [...phrase].slice(0, size >= 2 ? 3 : 2);
+  const chars = [...phrase].slice(0, size >= 2 && !name ? 3 : 2);
   const w = 64 * size, h = 100 * size;
   return (
     <div className="bj" style={{ width: w, height: h, gap: 1 * size }} role="img" aria-label={`${t.title} (${phrase})`}>

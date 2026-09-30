@@ -1,70 +1,103 @@
-// 브리핑 캡처 — node scripts/briefing.mjs [주소=http://localhost:5391] [폴더=docs/briefing/2026-09-30]
-// 390×844, deviceScaleFactor 2 로 12개 화면을 찍고, 합본 3장 + 디자인 포인트 1장을 만든다. (dev 서버 또는 preview 서버가 떠 있어야 함)
+// 브리핑 캡처 — node scripts/briefing.mjs <세트: v2|extra> [주소=http://localhost:5391]
+// 390×844, deviceScaleFactor 2 로 화면을 찍고 합본을 만든다(가로 2400px 이내). dev 또는 preview 서버가 떠 있어야 한다.
 import { chromium } from '@playwright/test';
 import sharp from 'sharp';
-import { mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const BASE = process.argv[2] ?? 'http://localhost:5391';
-const OUT = join(root, process.argv[3] ?? 'docs/briefing/2026-09-30');
-mkdirSync(OUT, { recursive: true });
-const brand = JSON.parse(readFileSync(join(root, 'brand.config.json'), 'utf8'));
+const SET = process.argv[2] ?? 'v2';
+const BASE = process.argv[3] ?? 'http://localhost:5391';
 
-const ME = { id: 'me1', name: '김순자', gender: 'F', year: 1964, month: 5, day: 21, calendar: 'solar', leap: false, hour: 6 };
-const PARTNER = { id: 'p2', name: '박철수', gender: 'M', year: 1962, month: 11, day: 3, calendar: 'lunar', leap: false, hour: 20 };
-const base = { fontScale: '100', notifyOn: false, notifyTime: '07:00', premium: false, purchases: [] };
+const ME = { id: 'me1', name: '김순자', gender: 'F', year: 1964, month: 5, day: 21, calendar: 'solar', leap: false, hour: 6, relation: '나', bloodType: 'A', mbti: 'ISFJ' };
+const SPOUSE = { id: 'p2', name: '박철수', gender: 'M', year: 1962, month: 11, day: 3, calendar: 'lunar', leap: false, hour: 20, relation: '배우자' };
+const base = { fontScale: '100', notifyOn: true, notifyTime: '07:00', eventNotify: true, pushConsent: true, plan: null, purchases: [], talismans: [], account: null, adViews: { date: '', count: 0, last: 0 }, unlocked: {} };
+const T0 = '2026-09-30T09:00:00.000Z';
+const BOUGHT = {
+  purchases: [
+    { orderId: 'ODEMO1', productId: 'wealth', profileId: 'me1', price: 19000, createdAt: T0, kind: 'reading', status: 'paid' },
+    { orderId: 'ODEMO2', productId: 'spouse', profileId: 'me1+p2', price: 29000, createdAt: '2026-09-29T09:00:00.000Z', kind: 'reading', status: 'paid' },
+    { orderId: 'ODEMO3', productId: 'newyear', profileId: 'me1', price: 29000, createdAt: '2026-09-28T09:00:00.000Z', kind: 'reading', status: 'paid' },
+    { orderId: 'ODEMO4', productId: 't_wealth', profileId: 'me1', price: 14900, createdAt: T0, kind: 'talisman', status: 'paid' },
+  ],
+  talismans: [{ id: 'tm1', talismanId: 't_wealth', orderId: 'ODEMO4', name: '김순자', birth: '양력 1964년 5월 21일', wish: '올해 안에 내 집 마련하기', issuedAt: '2026-09-30' }],
+  account: { provider: 'mock', id: 'g-1', name: 'Google 계정(테스트)' },
+};
+const today = new Date().toISOString().slice(0, 10);
 const S = {
   intro: null,
   sample: { ...base, introSeen: true, profiles: [], mainId: null },
-  me: { ...base, introSeen: true, profiles: [ME, PARTNER], mainId: 'me1' },
-  bought: {
-    ...base, introSeen: true, profiles: [ME, PARTNER], mainId: 'me1',
-    purchases: [{ orderId: 'ODEMO1', productId: 'saju_wealth', profileId: 'me1', price: 9900, createdAt: '2026-09-30T09:00:00.000Z' }],
-  },
+  me: { ...base, introSeen: true, profiles: [ME, SPOUSE], mainId: 'me1' },
+  bought: { ...base, introSeen: true, profiles: [ME, SPOUSE], mainId: 'me1', ...BOUGHT },
+  // 보상형 광고를 이미 본 상태(결과가 열린 화면 캡처용)
+  opened: { ...base, introSeen: true, profiles: [ME, SPOUSE], mainId: 'me1', ...BOUGHT, unlocked: { 'blood:A': today, 'mbti:ISFJ': today, 'zodiac:dragon': today, [`today:me1:${today.replace(/-/g, '')}`]: today } },
+  premium: { ...base, introSeen: true, profiles: [ME, SPOUSE], mainId: 'me1', ...BOUGHT, plan: 'yearly', planUntil: '2027-09-30' },
 };
 
-const MAX_H = 2400; // 긴 화면은 위에서부터 이 높이(CSS px)까지
-const SHOTS = [
-  { file: '01_첫실행', title: '첫 실행', path: '/intro', state: 'intro' },
-  { file: '02_정보입력', title: '정보 입력 (대화형)', path: '/profile/new', state: 'sample', act: async (p) => {
-    await p.getByLabel('이름 또는 별명').fill('김순자');
-    await p.getByRole('button', { name: '다음' }).click();
-    await p.getByRole('button', { name: '여성' }).click();
-    await p.getByRole('button', { name: '다음' }).click();
-    await p.getByLabel('생년월일 8자리').fill('19640521');
-    await p.getByRole('button', { name: '다음' }).click();
-    await p.getByRole('button', { name: '다음' }).click();
-    await p.getByRole('button', { name: /묘시/ }).click();
-  } },
-  { file: '03_홈_예시', title: '홈 (정보 입력 전 · 예시)', path: '/', state: 'sample', full: true },
-  { file: '04_홈_내운세', title: '홈 (내 운세)', path: '/', state: 'me', full: true },
-  { file: '05_오늘의운세', title: '오늘의 운세', path: '/today', state: 'me', full: true },
-  { file: '06_재물상세', title: '재물운 상세', path: '/today/wealth', state: 'me', full: true },
-  { file: '07_띠별운세', title: '띠별 운세 (말띠)', path: '/zodiac/horse', state: 'me', full: true },
-  { file: '08_사주상담', title: '사주상담', path: '/consult', state: 'me', full: true, act: async (p) => {
-    await p.getByRole('button', { name: '돈·재물' }).click();
-  } },
-  { file: '09_결제', title: '결제 (테스트)', path: '/checkout/saju_wealth', state: 'me', full: true, act: async (p) => {
-    await p.getByRole('checkbox').check();
-  } },
-  { file: '10_풀이결과', title: '풀이 결과', path: '/reading/ODEMO1', state: 'bought', full: true, wait: 4500 },
-  { file: '11_프리미엄', title: '프리미엄', path: '/premium', state: 'me', full: true },
-  { file: '12_내정보', title: '내 정보', path: '/me', state: 'bought', full: true },
-];
+const SETS = {
+  v2: {
+    out: 'docs/briefing/2026-09-30-v2',
+    shots: [
+      { file: '01_홈', title: '홈', path: '/', state: 'me', full: true, maxH: 4200 },
+      { file: '02_오늘의운세', title: '오늘의 운세', path: '/today', state: 'me', full: true },
+      { file: '03_나만의운명', title: '나만의 운명 (천궁도사)', path: '/fate', state: 'me', full: true },
+      { file: '04_상품상세_재물운', title: '상품 상세 · 재물운', path: '/product/wealth', state: 'me', full: true },
+      { file: '05_나만의인연', title: '나만의 인연 (월하선녀)', path: '/love?g=두 사람의 인연', state: 'me', full: true },
+      { file: '06_결과_운명서', title: '결과 · 나의 운명서', path: '/reading/ODEMO1', state: 'bought', full: true, wait: 4500 },
+      { file: '07_나만의부적', title: '나만의 부적', path: '/talisman', state: 'me', full: true },
+      { file: '08_부적상세_재물운', title: '부적 상세 · 재물운 부적', path: '/talisman/t_wealth', state: 'me', full: true },
+      { file: '09_부적완성', title: '부적 완성', path: '/talisman/t_wealth/make?order=ODEMO4', state: 'bought', full: true },
+      { file: '10_나의운세함', title: '나의 운세함', path: '/box', state: 'bought', full: true },
+      { file: '11_프리미엄', title: '프리미엄', path: '/premium', state: 'me', full: true },
+    ],
+    montages: [
+      { out: '전체화면_합본.png', pick: 'all', cols: 4, heading: '나만의 운세 · 2차 시안 (디자인 v2)' },
+      { out: '운명인연흐름_합본.png', pick: ['03', '04', '05', '06', '10'], cols: 5, heading: '운명·인연 — 목록 → 상세 → 결제 → 운명서·인연서 → 운세함' },
+      { out: '부적흐름_합본.png', pick: ['07', '08', '09', '10'], cols: 4, heading: '부적 — 목록 → 설명서·효험·사용법 → 소원 새긴 부적 → 부적함' },
+    ],
+  },
+  extra: {
+    out: `docs/briefing/${today}-추가요청`,
+    shots: [
+      { file: '01_별자리', title: '별자리 운세', path: '/fun/zodiac-star', state: 'me', full: true },
+      { file: '02_혈액형', title: '혈액형 운세', path: '/fun/blood', state: 'opened', full: true },
+      { file: '03_타로', title: '오늘의 타로', path: '/fun/tarot', state: 'premium', full: true, act: async (p) => { await p.getByRole('button', { name: '2번째 카드 고르기' }).click(); await p.waitForTimeout(900); } },
+      { file: '04_꿈해몽', title: '꿈 해몽', path: '/fun/dream', state: 'premium', full: true, act: async (p) => { await p.getByLabel('꿈 검색').fill('돼지꿈'); await p.getByRole('button', { name: '풀이' }).click(); } },
+      { file: '05_팩폭사주', title: 'MZ 팩폭 사주', path: '/fun/factbomb', state: 'me', full: true },
+      { file: '06_MBTI사주', title: 'MBTI 사주', path: '/fun/mbti', state: 'opened', full: true },
+      { file: '07_토정비결', title: '토정비결 상세', path: '/product/tojeong', state: 'me', full: true },
+      { file: '08_로그인', title: '로그인', path: '/login', state: 'me' },
+      { file: '09_공유시트', title: '공유 시트', path: '/today', state: 'opened', act: async (p) => { await p.getByRole('button', { name: '결과 이미지로 공유하기' }).click(); await p.waitForTimeout(400); } },
+      { file: '10_띠별', title: '띠별 운세', path: '/zodiac/dragon', state: 'opened', full: true },
+    ],
+    montages: [{ out: '추가요청_합본.png', pick: 'all', cols: 5, heading: '추가 요청 — 재미로 보는 운세·토정비결·로그인·공유' }],
+  },
+  admin: {
+    out: `docs/briefing/${today}-추가요청/관리자`,
+    shots: ['dashboard', 'members', 'products', 'banners', 'payments', 'push', 'ads', 'stats'].map((k, i) => ({
+      file: `${String(i + 1).padStart(2, '0')}_${k}`, title: k, path: `/admin/${k}`, state: 'admin', viewport: { width: 1280, height: 860 }, full: true, maxH: 1800,
+    })),
+    montages: [],
+  },
+};
+const cfg = SETS[SET];
+const OUT = join(root, cfg.out);
+mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
 const problems = [];
-async function newPage(state) {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
-  page.on('pageerror', (e) => problems.push(e.message));
-  page.on('console', (m) => m.type() === 'error' && problems.push(m.text()));
-  const st = S[state];
-  await page.addInitScript((s) => { if (s) localStorage.setItem('naman-unse', JSON.stringify({ state: s, version: 1 })); else localStorage.clear(); }, st);
-  return page;
-}
-async function settle(page) {
+for (const s of cfg.shots) {
+  const vp = s.viewport ?? { width: 390, height: 844 };
+  const page = await browser.newPage({ viewport: vp, deviceScaleFactor: s.viewport ? 1 : 2, locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
+  page.on('pageerror', (e) => problems.push(`${s.file}: ${e.message}`));
+  page.on('console', (m) => m.type() === 'error' && problems.push(`${s.file}: ${m.text()}`));
+  const st = S[s.state];
+  await page.addInitScript((x) => { if (x) localStorage.setItem('naman-unse', JSON.stringify({ state: x, version: 2 })); else if (x === null) localStorage.clear(); }, st ?? null);
+  if (s.state === 'admin') await page.addInitScript(() => localStorage.setItem('naman-admin', JSON.stringify({ token: 'dev', email: 'admin@local' })));
+  await page.goto(BASE + s.path, { waitUntil: 'networkidle' });
+  if (s.wait) await page.waitForTimeout(s.wait);
+  if (s.act) await s.act(page);
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(async () => {
     document.querySelectorAll('img[loading="lazy"]').forEach((i) => (i.loading = 'eager'));
@@ -72,20 +105,12 @@ async function settle(page) {
     scrollTo(0, 0);
     await Promise.all([...document.images].map((i) => (i.complete ? 0 : new Promise((r) => { i.onload = i.onerror = r; }))));
   });
-  await page.waitForTimeout(800);
-}
-
-for (const s of SHOTS) {
-  const page = await newPage(s.state);
-  await page.goto(BASE + s.path, { waitUntil: 'networkidle' });
-  if (s.wait) await page.waitForTimeout(s.wait);
-  if (s.act) await s.act(page);
-  await settle(page);
+  await page.waitForTimeout(700);
   const file = join(OUT, `${s.file}.png`);
   if (s.full) {
-    await page.addStyleTag({ content: '.tabs{position:absolute!important}.toast{display:none!important}' });
+    await page.addStyleTag({ content: '.tabs,.sticky{position:absolute!important}.toast{display:none!important}' });
     const h = await page.evaluate(() => document.documentElement.scrollHeight);
-    await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: 390, height: Math.min(h, MAX_H) } });
+    await page.screenshot({ path: file, fullPage: true, clip: { x: 0, y: 0, width: vp.width, height: Math.min(h, s.maxH ?? 2600) } });
   } else {
     await page.addStyleTag({ content: '.toast{display:none!important}' });
     await page.screenshot({ path: file });
@@ -93,15 +118,14 @@ for (const s of SHOTS) {
   await page.close();
   console.log('✓', s.file);
 }
+await browser.close();
 
-/* ---------- 합본 ---------- */
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 async function montage(items, cols, out, heading) {
-  const TW = 700, TH = 1516, LABEL = 70, GAP = 40, HEAD = heading ? 130 : 0;
+  const TW = 700, TH = 1516, LABEL = 70, GAP = 40, HEAD = 130;
   const rows = Math.ceil(items.length / cols);
   const W = cols * TW + (cols + 1) * GAP, H = HEAD + rows * (TH + LABEL + GAP) + GAP;
-  const comps = [];
-  if (heading) comps.push({ input: Buffer.from(`<svg width="${W}" height="${HEAD}"><text x="${W / 2}" y="86" font-size="56" font-weight="700" text-anchor="middle" font-family="Malgun Gothic, sans-serif" fill="#1E2748">${esc(heading)}</text></svg>`), left: 0, top: 0 });
+  const comps = [{ input: Buffer.from(`<svg width="${W}" height="${HEAD}"><text x="${W / 2}" y="86" font-size="54" font-weight="700" text-anchor="middle" font-family="Noto Serif KR, Malgun Gothic, serif" fill="#1C1A17">${esc(heading)}</text></svg>`), left: 0, top: 0 }];
   for (const [i, s] of items.entries()) {
     const x = GAP + (i % cols) * (TW + GAP), y = HEAD + GAP + Math.floor(i / cols) * (TH + LABEL + GAP);
     const img = sharp(join(OUT, `${s.file}.png`));
@@ -109,72 +133,18 @@ async function montage(items, cols, out, heading) {
     const scaled = await img.resize({ width: TW }).toBuffer();
     const sh = Math.round((m.height * TW) / m.width);
     const tile = await sharp(scaled).extract({ left: 0, top: 0, width: TW, height: Math.min(sh, TH) }).toBuffer();
-    comps.push({ input: Buffer.from(`<svg width="${TW}" height="${LABEL}"><rect x="0" y="8" rx="26" ry="26" width="${TW}" height="54" fill="#1E2748"/><text x="${TW / 2}" y="46" font-size="30" font-weight="700" text-anchor="middle" font-family="Malgun Gothic, sans-serif" fill="#fff">${esc(`${s.file.slice(0, 2)}. ${s.title}`)}</text></svg>`), left: x, top: y });
-    comps.push({ input: await sharp({ create: { width: TW, height: TH, channels: 3, background: '#FBF7EE' } }).composite([{ input: tile, left: 0, top: 0 }]).png().toBuffer(), left: x, top: y + LABEL });
+    comps.push({ input: Buffer.from(`<svg width="${TW}" height="${LABEL}"><rect x="0" y="8" rx="26" ry="26" width="${TW}" height="54" fill="#1C1A17"/><text x="${TW / 2}" y="46" font-size="30" font-weight="700" text-anchor="middle" font-family="Malgun Gothic, sans-serif" fill="#E6C877">${esc(`${s.file.slice(0, 2)}. ${s.title}`)}</text></svg>`), left: x, top: y });
+    comps.push({ input: await sharp({ create: { width: TW, height: TH, channels: 3, background: '#F5EFE1' } }).composite([{ input: tile, left: 0, top: 0 }]).png().toBuffer(), left: x, top: y + LABEL });
   }
-  const path = join(OUT, out);
-  await sharp({ create: { width: W, height: H, channels: 3, background: '#EFE7D6' } }).composite(comps).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(path);
-  console.log('✓', out, `${W}×${H}`, `${(statSync(path).size / 1048576).toFixed(1)}MB`);
+  let buf = await sharp({ create: { width: W, height: H, channels: 3, background: '#D9D2C3' } }).composite(comps).png().toBuffer();
+  if (W > 2400) buf = await sharp(buf).resize({ width: 2400 }).png().toBuffer();
+  buf = await sharp(buf).png({ compressionLevel: 9, palette: true, quality: 90 }).toBuffer();
+  writeFileSync(join(OUT, out), buf);
+  const m = await sharp(buf).metadata();
+  console.log('✓', out, `${m.width}×${m.height}`, `${(statSync(join(OUT, out)).size / 1048576).toFixed(1)}MB`);
 }
-// 가로 2400px 이내: 3열이면 칸 폭을 줄여서
-async function fit(out) {
-  const p = join(OUT, out), m = await sharp(p).metadata();
-  if (m.width > 2400) {
-    const buf = await sharp(p).resize({ width: 2400 }).png({ compressionLevel: 9, palette: true, quality: 90 }).toBuffer();
-    writeFileSync(p, buf);
-  }
-  const m2 = await sharp(p).metadata();
-  console.log('  →', out, `${m2.width}×${m2.height}`, `${(statSync(p).size / 1048576).toFixed(1)}MB`);
+for (const m of cfg.montages) {
+  const items = m.pick === 'all' ? cfg.shots : cfg.shots.filter((s) => m.pick.includes(s.file.slice(0, 2)));
+  await montage(items, m.cols, m.out, m.heading);
 }
-await montage(SHOTS, 3, '전체화면_합본.png', '나만의 운세 · 1차 시안 전체 화면');
-await fit('전체화면_합본.png');
-await montage(SHOTS.slice(0, 7), 4, '무료흐름_합본.png', '무료 흐름 — 첫 실행 → 정보 입력 → 홈 → 오늘의 운세 → 분야 → 띠별');
-await fit('무료흐름_합본.png');
-await montage(SHOTS.slice(7), 3, '유료흐름_합본.png', '유료 흐름 — 상담 → 선택 → 결제 → 풀이');
-await fit('유료흐름_합본.png');
-
-/* ---------- 디자인 포인트 ---------- */
-const cap = await newPage('me');
-await cap.goto(BASE + '/', { waitUntil: 'networkidle' });
-await settle(cap);
-const freeCard = (await cap.locator('.card').first().screenshot()).toString('base64');
-const rareCard = (await cap.locator('.rare').first().screenshot()).toString('base64');
-await cap.close();
-const face = (f) => readFileSync(join(root, 'web/public/img/char', f)).toString('base64');
-const chips = ['--bg', '--surface', '--gold', '--gold-deep', '--navy', '--purple', '--lavender', '--rose', '--seal']
-  .map((k) => `<div class="chip"><i style="background:${brand.colors[k]}"></i><b>${k.slice(2)}</b><span>${brand.colors[k]}</span></div>`).join('');
-const html = `<!doctype html><html lang="ko"><meta charset="utf-8"><style>
-@font-face{font-family:P;src:local('Malgun Gothic')}
-body{margin:0;background:#FBF7EE;font-family:'Pretendard','Malgun Gothic',sans-serif;color:#2A2320;width:1200px;padding:50px 60px;box-sizing:border-box}
-h1{font-size:44px;margin:0 0 30px;color:#1E2748}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-bottom:40px}
-.two>div{background:#fff;border-radius:24px;padding:28px;text-align:center;border:1px solid #EDE3CF}
-.two h2{font-size:30px;margin:0 0 6px}.two p{font-size:20px;color:#5E554C;margin:0 0 20px}
-.two img{max-width:100%;border-radius:18px}
-.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:36px}
-.chip{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #EDE3CF;border-radius:16px;padding:12px 16px;font-size:20px}
-.chip i{width:40px;height:40px;border-radius:50%;border:1px solid #0002}.chip span{margin-left:auto;color:#8C8278}
-.type{background:#fff;border:1px solid #EDE3CF;border-radius:20px;padding:24px 28px;margin-bottom:36px}
-.type .b{font-size:36px;line-height:1.6}.type .s{font-size:30px;color:#8C8278}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:20px;overflow:hidden;font-size:24px}
-td,th{padding:16px;border-top:1px solid #EDE3CF;text-align:left}th{background:#F1EADB}
-td img{width:72px;height:72px;border-radius:50%;vertical-align:middle;margin-right:12px}
-</style><h1>나만의 운세 — 디자인 포인트</h1>
-<div class="two"><div><h2>무료 = 일반 카드</h2><p>흰 카드 · 얇은 베이지 테두리 · 네이비 "매일 무료"</p><img src="data:image/png;base64,${freeCard}"></div>
-<div><h2>유료 = 금색 레어 카드</h2><p>금색 테두리 · ✦ 프리미엄 배지 · 반짝임</p><img src="data:image/png;base64,${rareCard}" style="max-height:560px"></div></div>
-<div class="chips">${chips}</div>
-<div class="type"><div class="b">본문 18px (실제 화면의 2배로 표시) — 오늘은 서두르지 말고 들어주는 쪽이 복을 불러요.</div><div class="s">설명 16px 이 가장 작은 글씨 · 설정에서 크게/아주 크게(115%·130%)</div></div>
-<table><tr><th>캐릭터</th><th>담당</th><th>말투</th></tr>
-<tr><td><img src="data:image/webp;base64,${face('cheongung_face.webp')}">천궁도사</td><td>정통사주 · 재물 · 직장 · 신년운세 · 부적</td><td>점잖은 하오체 "~하시게"</td></tr>
-<tr><td><img src="data:image/webp;base64,${face('wolha_face.webp')}">월하선녀</td><td>오늘의 운세 · 애정 · 궁합 · 띠별 · MBTI</td><td>다정한 해요체 "~해요"</td></tr></table></html>`;
-const tmp = join(OUT, '_point.html');
-writeFileSync(tmp, html);
-const pp = await browser.newPage({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1 });
-await pp.goto(pathToFileURL(tmp).href);
-await pp.screenshot({ path: join(OUT, 'briefing_포인트.png'), fullPage: true });
-await pp.close();
-const { unlinkSync } = await import('node:fs');
-unlinkSync(tmp);
-console.log('✓ briefing_포인트.png');
-await browser.close();
 if (problems.length) { console.error('콘솔 에러:', [...new Set(problems)]); process.exit(1); }

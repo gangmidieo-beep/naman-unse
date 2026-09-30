@@ -149,7 +149,7 @@ img { display: block; max-width: 100%; }
 .rare .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 17, 15, 0) 40%, rgba(18, 17, 15, .95) 88%); }
 .rare .tx { position: absolute; left: 14px; right: 14px; bottom: 14px; color: #F6EEDB; }
 .rare .tx b { font-family: var(--serif); font-weight: 900; font-size: 21px; display: block; line-height: 1.3; }
-.rare .tx span { font-size: 14px; color: var(--on-ink-2); display: block; line-height: 1.4; margin-top: 2px; }
+.rare .tx span { font-size: 14px; color: var(--on-ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; margin-top: 2px; }
 .rare .tx .pr { margin-top: 8px; font-weight: 800; font-size: 16px; color: var(--gold-light); }
 .pb { position: absolute; top: 11px; left: 11px; z-index: 2; font-size: 12px; font-weight: 900; color: var(--ink); background: var(--gold-grad); border-radius: 999px; padding: 3px 9px; }
 .pb.owned { background: #2F5A3F; color: #EAF3EC; }

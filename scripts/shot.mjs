@@ -29,7 +29,7 @@ await page.evaluate(async () => {
   scrollTo(0, 0);
   await Promise.all([...document.images].map((i) => (i.complete ? 0 : new Promise((r) => { i.onload = i.onerror = r; }))));
 });
-if (full) await page.addStyleTag({ content: '.tabs{position:absolute!important}.toast{display:none}' });
+if (full) await page.addStyleTag({ content: '.tabs,.sticky{position:absolute!important}.toast{display:none}' });
 await page.waitForTimeout(900);
 const report = await page.evaluate(() => {
   const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
