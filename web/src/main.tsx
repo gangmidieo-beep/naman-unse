@@ -5,7 +5,7 @@ import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/app.css';
-import './styles/reading.css';
+import './styles/pages.css';
 import { App } from './App';
 
 createRoot(document.getElementById('root')!).render(

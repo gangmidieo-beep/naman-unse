@@ -8,3 +8,4 @@ export function newYearTarget(d = new Date()) {
   return { year: y, pillar: yearPillarOf(new Date(Date.UTC(y, 5, 1))) };
 }
 export const koDate = (d = new Date()) => { const k = kstParts(d); return `${k.year}년 ${k.month}월 ${k.day}일`; };
+export const kstMonthDay = (d = new Date()) => { const k = kstParts(d); return `${k.month}월 ${k.day}일`; };

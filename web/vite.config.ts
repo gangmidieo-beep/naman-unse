@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
     define: {
       __MOCK_MODE__: JSON.stringify(env.MOCK_MODE !== 'false'),
       __API_ORIGIN__: JSON.stringify(env.API_ORIGIN || ''),
+      __PUBLIC_WEB_ORIGIN__: JSON.stringify(env.PUBLIC_WEB_ORIGIN || ''),
+      __KAKAO_JS_KEY__: JSON.stringify(env.KAKAO_JS_KEY || ''),
     },
     css: { postcss: { plugins: [pxToRem()] } },
     preview: { port: 5392 },

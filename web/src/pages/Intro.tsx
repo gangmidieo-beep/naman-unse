@@ -1,3 +1,4 @@
+// 첫 실행 소개 3장 → 사주 정보 입력(화면설계_v2 2장). 건너뛰면 예시 운세 홈.
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Img } from '../components/Img';
@@ -6,9 +7,9 @@ import { useApp } from '../store/app';
 import type { ImgKey } from '../assets/images';
 
 const SLIDES: { img: ImgKey | null; who: string; title: string; text: string }[] = [
-  { img: 'sunnyeoBanner', who: '월하선녀', title: '매일 아침\n오늘의 운세를 챙겨드려요', text: '총운부터 재물·애정·직장·건강까지, 매일 무료로 보세요.' },
-  { img: 'dosaBanner', who: '천궁도령', title: '정통 사주로\n평생 흐름을 풀어드리지요', text: '타고난 그릇과 앞으로의 흐름을 깊이 읽어 드리오.' },
-  { img: null, who: '나만의 운세', title: '로그인 없이\n바로 시작해요', text: '생년월일만 넣으면 나만의 운세로 바뀌어요.' },
+  { img: 'cheongungBanner', who: '天宮道士 · 천궁도사', title: '오늘의 운세부터\n평생의 흐름까지 읽어드리지요', text: '정통사주·재물·직장·신년운세를 깊이 풀어 드리오.' },
+  { img: 'wolhaBanner', who: '月下仙女 · 월하선녀', title: '사랑과 인연의 실을\n따라가 볼게요', text: '연애·결혼·궁합·인연의 흐름을 다정하게 살펴 드려요.' },
+  { img: null, who: '나만의 운세', title: '생년월일만 넣으면\n나만의 운세가 시작돼요', text: '로그인 없이 바로 시작하고, 매일 아침 운세를 받아 보세요.' },
 ];
 
 export default function Intro() {
@@ -23,17 +24,15 @@ export default function Intro() {
     if (target.current != null) { if (n === target.current) target.current = null; return; }
     setI(n);
   };
-  const start = () => { setIntroSeen(); nav('/', { replace: true }); };
+  const start = (toInput: boolean) => { setIntroSeen(); nav(toInput ? '/profile/new?first=1' : '/', { replace: true }); };
   return (
     <main className="intro">
       <div className="intro-track" ref={track} onScroll={(e) => onScroll(e.currentTarget)}>
         {SLIDES.map((s, n) => (
           <section className="intro-slide" key={n} aria-label={`${n + 1}번째 소개`}>
-            <div className="intro-art">
-              {s.img ? <Img k={s.img} eager={n === 0} alt={s.who} /> : (
-                <div className="intro-seal"><span className="seal">運</span><b>나만의 운세</b></div>
-              )}
-            </div>
+            <div className="intro-art"><div className="in">
+              {s.img ? <Img k={s.img} eager={n === 0} alt={s.who} /> : <div className="intro-seal"><span className="seal">運</span><b>나만의 운세</b></div>}
+            </div></div>
             <small>{s.who}</small>
             <h1>{s.title.split('\n').map((l, k) => <span key={k}>{l}<br /></span>)}</h1>
             <p>{s.text}</p>
@@ -46,11 +45,14 @@ export default function Intro() {
       <div className="intro-cta">
         {i < SLIDES.length - 1 ? (
           <>
-            <Button onClick={() => go(i + 1)}>다음</Button>
-            <button className="textlink" onClick={start}>건너뛰기</button>
+            <Button kind="ink" onClick={() => go(i + 1)}>다음</Button>
+            <button className="textlink" onClick={() => start(false)}>건너뛰고 예시 운세 보기</button>
           </>
         ) : (
-          <Button onClick={start}>시작하기</Button>
+          <>
+            <Button kind="gold" onClick={() => start(true)}>내 사주 정보 입력하기</Button>
+            <button className="textlink" onClick={() => start(false)}>나중에 할게요 (예시 운세 보기)</button>
+          </>
         )}
       </div>
     </main>

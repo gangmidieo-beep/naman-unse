@@ -1,54 +1,56 @@
-import { useState } from 'react';
+// 홈 v2 — 화면설계_v2 3장 순서: 헤더 → 히어로 → 오늘의 운세 카드 → 롤링 배너 10종 → 재미로 보는 운세 7종 → 나만의 운명 → 나만의 인연 → 나만의 부적 → 하단 광고
+import { Link } from 'react-router-dom';
 import { AppHeader, SectionHeader } from '../components/layout';
-import { ComingSoonSheet, FreeCard, GreetingCard, NoticeCard, RareCard, ZodiacGrid, useToast } from '../components/ui';
-import { useApp, useMainProfile } from '../store/app';
-import { lunarPill, newYearTarget } from '../lib/dates';
+import { AdSlot, CharacterSectionHead, FreeCard, HeroDuo, RareCard, RollingBanner, TalismanPaper, TodayCard } from '../components/ui';
+import { usePremium, useApp, useMainProfile } from '../store/app';
 import { useTodayFortune } from '../lib/fortune';
-import { Icon } from '../components/Icon';
+import { BRAND, FATE, LOVE, TALISMANS } from '../lib/catalog';
 import { optionalImg } from '../assets/images';
+import { kstMonthDay } from '../lib/dates';
+
+// 홈 가로 스크롤에 먼저 보일 상품(카탈로그 badge 가 있으면 그것 우선, 없으면 대표 상품)
+const pick = <T extends { id: string; badge?: string | null }>(list: T[], ids: string[]) => {
+  const badged = list.filter((p) => p.badge);
+  return [...badged, ...ids.map((id) => list.find((p) => p.id === id)!).filter((p) => p && !badged.includes(p))].slice(0, 5);
+};
 
 export default function Home() {
   const { profile, isSample } = useMainProfile();
-  const { notifyOn, setNotify, purchases } = useApp();
-  const today = useTodayFortune(profile);
-  const toast = useToast();
-  const [soon, setSoon] = useState<string | null>(null);
-  const ny = newYearTarget();
-  const owned = (id: string) => purchases.some((p) => p.productId === id || p.productId.startsWith(id + '_'));
+  const premium = usePremium();
+  const purchases = useApp((s) => s.purchases);
+  const f = useTodayFortune(profile);
+  const owned = (id: string) => purchases.some((p) => p.productId === id);
+  const banners = BRAND.banners.map((b) => ({ ...b, img: optionalImg(`banner_${b.link.split('/').pop()}`)?.src }));
   return (
     <>
-      <AppHeader lunar={lunarPill()} />
+      <AppHeader />
       <main className="screen">
-        <GreetingCard name={profile.name} isSample={isSample} score={today.total} stars={today.stars} oneLine={today.oneLine} />
+        <HeroDuo />
+        <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine} />
 
-        <SectionHeader en="FREE · DAILY" title={<>매일매일 <em>무료</em>로 보세요</>} desc="광고만 보면 모두 무료예요" />
-        <div className="grid2">
-          <FreeCard to="/today" icon={<Icon name="today" />} title="오늘의 운세" desc="총운·재물·애정·직장·건강" />
-          <FreeCard to="/zodiac" icon={<Icon name="zodiac" />} title="띠별 운세" desc="12띠 오늘 흐름" />
-          <FreeCard to="/today?tab=week" icon={<Icon name="week" />} title="이번 주 운세" desc="한 주 미리 보기" />
-          <FreeCard onClick={() => setSoon('MBTI 운세')} icon={<Icon name="mbti" />} title="MBTI 운세" desc="성격 × 사주" />
+        <SectionHeader en="SPECIAL" title={<>지금 많이 찾는 <em>풀이</em></>} />
+        <RollingBanner items={banners} />
+
+        <SectionHeader en="FOR FUN" title="재미로 보는 운세" desc="가볍게 즐기고, 새롭게 발견하는 나의 이야기" />
+        <div className="g2">
+          {BRAND.fun.map((x) => <FreeCard key={x.id} to={x.link} hanja={x.hanja} title={x.title} desc={x.copy} wide={x.id === 'dream'} />)}
         </div>
 
-        <SectionHeader en="PREMIUM · 정통 풀이" title={<>도령과 선녀가<br /><em>깊이</em> 풀어드려요</>} />
-        <div className="hscroll">
-          <RareCard to="/consult?who=dosa&product=saju" img="dosaCard" title="정통 사주" desc="천궁도령 · 평생 흐름" owned={owned('saju')} />
-          <RareCard to="/consult?who=sunnyeo&product=gunghap" img="sunnyeoCard" title="우리 궁합" desc="월하선녀 · 인연의 붉은 실" owned={owned('gunghap')} />
-          <RareCard to="/consult?who=dosa&product=newyear" big={ny.pillar.hanja} raw={optionalImg('card_newyear')} title={`${ny.year} 신년운세`} desc="한 해 열두 달 흐름" owned={owned('newyear')} />
-          <RareCard onClick={() => setSoon('한자 부적')} big="符" raw={optionalImg('card_talisman')} title="한자 부적" desc="천궁도령 · 곧 열려요" />
-        </div>
+        <CharacterSectionHead who="cheongung" title="나만의 운명" desc="타고난 사주부터 재물과 성공, 운의 흐름까지" to="/fate" />
+        <div className="hs">{pick(FATE, ['jeongtong', 'wealth', 'newyear', 'tojeong', 'daewoon']).map((p) => <RareCard key={p.id} p={p} owned={owned(p.id)} />)}</div>
 
-        <SectionHeader en="ZODIAC" title="내 띠 운세 바로 찾기" />
-        <ZodiacGrid />
+        <CharacterSectionHead who="wolha" title="나만의 인연" desc="사랑과 인연 속에 숨겨진 이야기" to="/love" />
+        <div className="hs">{pick(LOVE, ['gunghap', 'inyeon', 'reunion', 'marriage', 'love']).map((p) => <RareCard key={p.id} p={p} owned={owned(p.id)} />)}</div>
 
-        <NoticeCard
-          on={notifyOn}
-          onToggle={() => {
-            setNotify(!notifyOn);
-            toast(notifyOn ? '알림을 껐어요' : '매일 아침 7시에 알려드릴게요');
-          }}
-        />
+        <Link to="/talisman" className="bjentry">
+          <div className="in">
+            <TalismanPaper t={TALISMANS[8]} />
+            <div><small>WISH TALISMAN</small><b>나만의 부적</b><span>간절한 소망을 마음에 담아, 나를 위한 특별한 부적을 만들어 보세요.</span></div>
+          </div>
+        </Link>
+
+        <AdSlot premium={premium} kind="홈 하단 배너" />
       </main>
-      <ComingSoonSheet open={!!soon} onClose={() => setSoon(null)} what={soon ?? ''} />
     </>
   );
 }

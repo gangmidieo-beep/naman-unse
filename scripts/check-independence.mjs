@@ -1,4 +1,4 @@
-// 독립성 검사 — 이전 서비스의 이름·도메인·판매자 아이디·서비스 ID·픽셀·키 흔적이 저장소에 남아 있으면 실패(exit 1).
+// 독립성 검사 — 이전 서비스의 이름·도메인·판매자 아이디·서비스 ID·픽셀·키 흔적, 옛 캐릭터 이름(천궁도령→천궁도사)이 저장소에 남아 있으면 실패(exit 1).
 // 금지 문자열 목록은 이 파일 자신이 걸리지 않도록 base64 로 저장한다. 목록 원본: docs/독립양도구조.md
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const FORBIDDEN = Buffer.from(
-  'amFqZW9uZwrsnpDsoJXsgqzso7wK7J6Q7KCVCmJpbWlsCuu5hOuwgOyLoOuLuQpiaW1pbHNpbmRhbmcKd2hpc3BlcnNhanUK6reT7IaN66eQCm55aDA5MjgKa2FtaTY2MTAKa2FtaTkyOApsc2oyMwp1cC5yYWlsd2F5LmFwcApjMWFiMWYyOQoxZTNhM2I5ZQozYTBhNmU4MgpmYnEoJ2luaXQnCnNrLWFudC0KeGtleXNpYi0=',
+  'amFqZW9uZwrsnpDsoJXsgqzso7wK7J6Q7KCVCmJpbWlsCuu5hOuwgOyLoOuLuQpiaW1pbHNpbmRhbmcKd2hpc3BlcnNhanUK6reT7IaN66eQCm55aDA5MjgKa2FtaTY2MTAKa2FtaTkyOApsc2oyMwp1cC5yYWlsd2F5LmFwcApjMWFiMWYyOQoxZTNhM2I5ZQozYTBhNmU4MgpmYnEoJ2luaXQnCnNrLWFudC0KeGtleXNpYi0K7LKc6raB64+E66C5',
   'base64',
 ).toString('utf8').split('\n');
 // 검사 제외: 작업 자료·기록 파일·외부 패키지·빌드 결과. 00_시작가이드.md·*.bat 은 초기 작업 패키지 파일(납품 전 14단계에서 삭제).

@@ -1,59 +1,70 @@
 import { type ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Icon, type IconName } from './Icon';
 import { optionalImg } from '../assets/images';
+import { lunarPill } from '../lib/dates';
+import { useApp } from '../store/app';
 
-export function Seal() {
-  const logo = optionalImg('logo_seal');
-  return logo ? <img className="seal" src={logo.src} width={26} height={26} alt="" /> : <span className="seal" aria-hidden>運</span>;
+// 로고 — 대표님 아이콘 글씨 이미지(web/public/img/brand/logo.png, _incoming 의 logo_brand)가 오면 그 이미지, 없으면 임시 Song Myung 글씨
+export function BrandLogo() {
+  const img = optionalImg('logo_brand');
+  if (img) return <img className="brandlogo" src={img.src} alt="나만의 운세" height={34} />;
+  const seal = optionalImg('logo_seal');
+  return (
+    <>
+      {seal ? <img className="seal" src={seal.src} width={24} height={24} alt="" /> : <span className="seal" aria-hidden>運</span>}
+      나만의 운세
+    </>
+  );
 }
 
-export function AppHeader({ lunar }: { lunar: string }) {
+// 홈 헤더 — 좌: 날짜 알약(날씨는 키 받은 뒤) / 가운데: 로고 / 우: 로그인
+export function AppHeader() {
+  const account = useApp((s) => s.account);
   return (
     <header className="hdr">
-      <span className="pill" aria-label={`오늘 음력 ${lunar}`}>🌙 음 {lunar}</span>
-      <Link to="/" className="logo" aria-label="나만의 운세 홈"><Seal />나만의 운세</Link>
-      <Link to="/me" className="pill">내 정보</Link>
+      <span className="chip-h" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
+      <Link to="/" className="logo" aria-label="나만의 운세 홈"><BrandLogo /></Link>
+      <Link to={account ? '/box' : '/login'} className="chip-h">{account ? '내 계정' : '로그인'}</Link>
     </header>
   );
 }
 
-export function SubHeader({ title, back = true, right }: { title: string; back?: boolean; right?: ReactNode }) {
+export function SubHeader({ title, sub, back = true, right }: { title: string; sub?: string; back?: boolean; right?: ReactNode }) {
   const nav = useNavigate();
   return (
-    <header className="subhdr">
-      {back && (
-        <button className="back" onClick={() => (history.length > 1 ? nav(-1) : nav('/'))} aria-label="뒤로">‹</button>
-      )}
-      <h1 style={{ fontSize: 'inherit', paddingLeft: back ? 0 : 12 }}>{title}</h1>
-      {right && <div className="right">{right}</div>}
+    <header className="sub">
+      {back ? (
+        <button className="bk" onClick={() => (history.length > 1 ? nav(-1) : nav('/'))} aria-label="뒤로">‹</button>
+      ) : <span className="r" />}
+      <h1 className="t"><b>{title}</b>{sub && <small>{sub}</small>}</h1>
+      <span className="r">{right}</span>
     </header>
   );
 }
 
-export function SectionHeader({ en, title, desc }: { en: string; title: ReactNode; desc?: string }) {
+export function SectionHeader({ en, title, desc, center, style }: { en: string; title: ReactNode; desc?: string; center?: boolean; style?: React.CSSProperties }) {
   return (
-    <div className="sec">
-      <small>{en}</small>
+    <div className={`sec${center ? ' center' : ''}`} style={style}>
+      <div className="en">{en}</div>
       <h3>{title}</h3>
       {desc && <p>{desc}</p>}
     </div>
   );
 }
 
-const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: '/', label: '홈', icon: 'home', end: true },
-  { to: '/today', label: '오늘운세', icon: 'today' },
-  { to: '/consult', label: '사주상담', icon: 'chat' },
-  { to: '/zodiac', label: '띠별운세', icon: 'zodiac' },
-  { to: '/me', label: '내 정보', icon: 'user' },
+const TABS = [
+  { to: '/', label: '홈', i: '家', end: true },
+  { to: '/fate', label: '나만의 운명', i: '命' },
+  { to: '/love', label: '나만의 인연', i: '緣' },
+  { to: '/talisman', label: '나만의 부적', i: '符' },
+  { to: '/box', label: '나의 운세함', i: '函' },
 ];
 export function TabBar() {
   return (
     <nav className="tabs" aria-label="주 메뉴">
       {TABS.map((t) => (
         <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
-          <span className="i" aria-hidden><Icon name={t.icon} size={26} mono /></span>
+          <span className="i" aria-hidden>{t.i}</span>
           {t.label}
         </NavLink>
       ))}

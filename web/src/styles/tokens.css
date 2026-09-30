@@ -1,53 +1,60 @@
-/* 디자인 토큰 — docs/디자인가이드.md 1·3·4장, brand.config.json colors 와 같아야 한다(tokens.test.ts 가 검사). */
+/* 디자인 토큰 v2 — docs/디자인가이드_v2.md 1장 = 시안 v2 :root = brand.config.json colors (tokens.test.ts 가 검사).
+   한지 + 먹색 + 골드. 흰색(#FFF) 배경·연보라·연분홍·하늘색 금지. */
 :root {
   /* 1. 색 */
-  --bg: #FBF7EE;
-  --bg-dot: #EFE4CC;
-  --surface: #FFFFFF;
-  --line: #EDE3CF;
-  --ink: #2A2320;
-  --ink-2: #5E554C;
-  --ink-3: #8C8278;
-  --gold: #C9A24A;
-  --gold-deep: #9E7420;
-  --gold-soft: #F6EBCB;
-  --gold-grad: linear-gradient(135deg,#FBEFC4 0%,#E2BC5E 38%,#B8862A 70%,#F0D68A 100%);
-  --navy: #1E2748;
-  --navy-2: #2C3766;
-  --purple: #4B3A7C;
-  --lavender: #EEE8F7;
-  --rose: #C2577A;
-  --rose-soft: #FBE9EF;
-  --seal: #B23A2E;
-  /* 분야 색 */
-  --field-wealth: #9E7420;
-  --field-love: #C2577A;
-  --field-work: #2C3766;
-  --field-health: #3E7D5A;
+  --hanji: #F5EFE1;
+  --hanji-2: #EDE3CC;
+  --paper: #FBF8F0;
+  --line: #DCCDA8;
+  --line-soft: #E8DDC4;
+  --ink: #1C1A17;
+  --ink-2: #2D2925;
+  --ink-3: #5A5249;
+  --ink-4: #857B6E;
+  --ink-grad: linear-gradient(160deg,#2A2621 0%,#1C1A17 55%,#12110F 100%);
+  --navy: #141D36;
+  --navy-2: #223056;
+  --gold: #B8892E;
+  --gold-deep: #8A6418;
+  --gold-light: #E6C877;
+  --gold-pale: #F4E6BD;
+  --gold-grad: linear-gradient(120deg,#7C5A16 0%,#C99A3A 28%,#F2D98E 50%,#C99A3A 72%,#7C5A16 100%);
+  --rose: #9E3A55;
+  --seal: #A8291E;
+  --on-ink: #F4EBD6;      /* 먹색 바탕 위 본문 */
+  --on-ink-2: #CFC3A8;    /* 먹색 바탕 위 설명 */
 
-  /* 3. 글자 크기 (px 은 빌드 때 rem 으로 바뀜) */
+  /* 부적 분류 바탕 */
+  --bj-wealth: linear-gradient(160deg,#2A2621,#12110F);
+  --bj-love: linear-gradient(160deg,#3A2433,#1C1418);
+  --bj-wish: linear-gradient(160deg,#1E2A44,#0F1524);
+  --bj-peace: linear-gradient(160deg,#23332A,#111A15);
+
+  /* 2. 글꼴 */
+  --serif: 'Noto Serif KR', serif;
+  --sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --brush: 'Song Myung', serif;
+
+  /* 3. 글자 크기 (px 은 빌드 때 rem 으로 바뀜) — 본문 18, 최소 16 (배지·탭·캡션 예외) */
   --fs-hero: 28px;
-  --fs-title: 26px;
-  --fs-card: 21px;
+  --fs-title: 27px;
+  --fs-card: 20px;
   --fs-body: 18px;
   --fs-small: 16px;
-  --fs-caption: 14px;
+  --fs-caption: 13px;
 
   /* 4. 간격·모양 */
   --gutter: 18px;
-  --gap-card: 12px;
-  --gap-section: 30px;
   --radius: 22px;
-  --radius-lg: 22px;
-  --radius-md: 20px;
-  --radius-btn: 16px;
-  --radius-pill: 999px;
-  --shadow: 0 6px 18px rgba(80,60,20,.08);
-  --shadow-rare: 0 10px 22px rgba(158,116,32,.28);
+  --radius-md: 18px;
+  --radius-btn: 14px;
+  --shadow: 0 6px 16px rgba(60,40,10,.10);
+  --shadow-rare: 0 10px 22px rgba(40,28,6,.30);
   --touch: 48px;
-  --btn-h: 58px;
-  --tabbar-h: 84px;
+  --btn-h: 56px;
+  --tabbar-h: 82px;
   --app-max: 480px;
+  --hanji-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* 글자 크게 보기 — 보통/크게/아주 크게 */

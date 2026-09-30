@@ -8,24 +8,31 @@ import Home from './pages/Home';
 import Intro from './pages/Intro';
 import ProfileNew from './pages/ProfileNew';
 import DevComponents from './pages/DevComponents';
-import Placeholder from './pages/Placeholder';
 import Today from './pages/Today';
-import TodayField from './pages/TodayField';
 import { ZodiacDetail, ZodiacList } from './pages/Zodiac';
-import Consult from './pages/Consult';
+import { FateList, LoveList } from './pages/Catalog';
+import ProductDetail from './pages/ProductDetail';
+import { TalismanDetail, TalismanList, TalismanMake } from './pages/Talisman';
 import Checkout from './pages/Checkout';
 import ReadingPage from './pages/Reading';
 import Premium from './pages/Premium';
-import Me from './pages/Me';
+import Box from './pages/Me';
+import Login, { AuthCallback } from './pages/Login';
+import { BloodPage, DreamPage, FactbombPage, MbtiPage, StarPage, TarotPage } from './pages/Fun';
 
-const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev'];
+// 하단 탭을 숨기는 화면(입력·결제·풀이·부적 작성·상세)
+const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev', '/product/', '/login', '/auth'];
+const noTab = (path: string) => NO_TAB.some((p) => path.startsWith(p)) || /^\/talisman\/[^/]+/.test(path);
 
 export function App() {
   const { introSeen, fontScale } = useApp();
   const loc = useLocation();
   useEffect(() => { document.documentElement.dataset.scale = fontScale; }, [fontScale]);
-  useEffect(() => { window.scrollTo(0, 0); track('page_view', { path: loc.pathname }); }, [loc.pathname]);
-  const showTab = !NO_TAB.some((p) => loc.pathname.startsWith(p));
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    track('page_view', { path: loc.pathname });
+    if (new URLSearchParams(loc.search).get('utm_source') === 'share') track('share_link_open', { path: loc.pathname });
+  }, [loc.pathname]);
   if (!introSeen && loc.pathname === '/') return <Navigate to="/intro" replace />;
   return (
     <ToastProvider>
@@ -36,18 +43,34 @@ export function App() {
           <Route path="/profile/new" element={<ProfileNew />} />
           <Route path="/profile/:id/edit" element={<ProfileNew />} />
           <Route path="/today" element={<Today />} />
-          <Route path="/today/:field" element={<TodayField />} />
-          <Route path="/zodiac" element={<ZodiacList />} />
-          <Route path="/zodiac/:animal" element={<ZodiacDetail />} />
-          <Route path="/consult" element={<Consult />} />
+          <Route path="/today/:field" element={<Navigate to="/today" replace />} />
+          <Route path="/fate" element={<FateList />} />
+          <Route path="/love" element={<LoveList />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/talisman" element={<TalismanList />} />
+          <Route path="/talisman/:id" element={<TalismanDetail />} />
+          <Route path="/talisman/:id/make" element={<TalismanMake />} />
           <Route path="/checkout/:product" element={<Checkout />} />
           <Route path="/reading/:orderId" element={<ReadingPage />} />
+          <Route path="/box" element={<Box />} />
           <Route path="/premium" element={<Premium />} />
-          <Route path="/me" element={<Me />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/zodiac" element={<ZodiacList />} />
+          <Route path="/zodiac/:animal" element={<ZodiacDetail />} />
+          <Route path="/fun/zodiac-star" element={<StarPage />} />
+          <Route path="/fun/blood" element={<BloodPage />} />
+          <Route path="/fun/tarot" element={<TarotPage />} />
+          <Route path="/fun/dream" element={<DreamPage />} />
+          <Route path="/fun/factbomb" element={<FactbombPage />} />
+          <Route path="/fun/mbti" element={<MbtiPage />} />
           <Route path="/dev/components" element={<DevComponents />} />
-          <Route path="*" element={<Placeholder />} />
+          {/* v1 주소 호환 */}
+          <Route path="/me" element={<Navigate to="/box" replace />} />
+          <Route path="/consult" element={<Navigate to="/fate" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        {showTab && <TabBar />}
+        {!noTab(loc.pathname) && <TabBar />}
       </div>
     </ToastProvider>
   );

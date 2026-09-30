@@ -165,8 +165,8 @@ td img{width:72px;height:72px;border-radius:50%;vertical-align:middle;margin-rig
 <div class="chips">${chips}</div>
 <div class="type"><div class="b">본문 18px (실제 화면의 2배로 표시) — 오늘은 서두르지 말고 들어주는 쪽이 복을 불러요.</div><div class="s">설명 16px 이 가장 작은 글씨 · 설정에서 크게/아주 크게(115%·130%)</div></div>
 <table><tr><th>캐릭터</th><th>담당</th><th>말투</th></tr>
-<tr><td><img src="data:image/webp;base64,${face('dosa_face.webp')}">천궁도령</td><td>정통사주 · 재물 · 직장 · 신년운세 · 부적</td><td>점잖은 하오체 "~하시게"</td></tr>
-<tr><td><img src="data:image/webp;base64,${face('sunnyeo_face.webp')}">월하선녀</td><td>오늘의 운세 · 애정 · 궁합 · 띠별 · MBTI</td><td>다정한 해요체 "~해요"</td></tr></table></html>`;
+<tr><td><img src="data:image/webp;base64,${face('cheongung_face.webp')}">천궁도사</td><td>정통사주 · 재물 · 직장 · 신년운세 · 부적</td><td>점잖은 하오체 "~하시게"</td></tr>
+<tr><td><img src="data:image/webp;base64,${face('wolha_face.webp')}">월하선녀</td><td>오늘의 운세 · 애정 · 궁합 · 띠별 · MBTI</td><td>다정한 해요체 "~해요"</td></tr></table></html>`;
 const tmp = join(OUT, '_point.html');
 writeFileSync(tmp, html);
 const pp = await browser.newPage({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1 });

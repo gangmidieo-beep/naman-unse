@@ -7,7 +7,7 @@ export const ShareCard = forwardRef<HTMLDivElement, { title: string; sub?: strin
       <div className="share-card" ref={ref}>
         <div className="share-head"><span className="seal">運</span><b>{title}</b>{sub && <small>{sub}</small>}</div>
         <div className="share-body">{children}</div>
-        <div className="share-mark">나만의 운세</div>
+        <div className="share-mark"><small>{(__PUBLIC_WEB_ORIGIN__ || location.origin).replace(/^https?:\/\//, '')}</small>나만의 운세</div>
       </div>
     </div>
   );

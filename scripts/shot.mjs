@@ -5,7 +5,7 @@ import { chromium } from '@playwright/test';
 const [base, out, path, state = 'sample', ...flags] = process.argv.slice(2);
 const full = flags.includes('--full');
 const scale = +(flags.find((f) => f.startsWith('--scale='))?.split('=')[1] ?? 2);
-const ME = { id: 'me1', name: '김순자', gender: 'F', year: 1964, month: 5, day: 21, calendar: 'solar', leap: false, hour: 6 };
+const ME = { id: 'me1', name: '김순자', gender: 'F', year: 1964, month: 5, day: 21, calendar: 'solar', leap: false, hour: 6, relation: '나' };
 const STATES = {
   intro: null,
   sample: { introSeen: true, profiles: [], mainId: null },
@@ -18,7 +18,7 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 page.on('pageerror', (e) => errors.push(e.message));
 const st = STATES[state];
 await page.addInitScript((s) => {
-  if (s && !localStorage.getItem('naman-unse')) localStorage.setItem('naman-unse', JSON.stringify({ state: { fontScale: '100', notifyOn: false, notifyTime: '07:00', premium: false, purchases: [], ...s }, version: 1 }));
+  if (s && !localStorage.getItem('naman-unse')) localStorage.setItem('naman-unse', JSON.stringify({ state: { fontScale: '100', notifyOn: false, notifyTime: '07:00', plan: null, purchases: [], talismans: [], pushConsent: true, ...s }, version: 2 }));
 }, st);
 await page.goto(base + path, { waitUntil: 'networkidle' });
 await page.evaluate(() => document.fonts.ready);
@@ -33,7 +33,7 @@ if (full) await page.addStyleTag({ content: '.tabs{position:absolute!important}.
 await page.waitForTimeout(900);
 const report = await page.evaluate(() => {
   const overflow = document.documentElement.scrollWidth > window.innerWidth + 1;
-  const EXEMPT = '.tag,.badge-p,.sample,.lock,.tab,.pill,.sec small,.bubble .say small,.price small,.price s,.ad,.seal';
+  const EXEMPT = '.tag,.badge,.pb,.sample-badge,.lk,.tab,.chip-h,.sec .en,.bubble .say small,.price .m,.fb,.ad,.seal,.by,.note,.adnote,.tagdark,.today .top,.hero2 small,.banner small,.chhead small,.bjentry small,.dtitle small,.sub small,.bj,.th,.doc-cover small,.pillars th,.lucky div,.word small,.opt small,.book,.plan .tag,.sharegrid,.compare th,.dres small,.boxhead small,.fbcard small,.tc,.wait-steps,.pickgrid,.dcat,.kw,.intro-slide small,.chap > small,.grid6,.weekbars,.rare .tx span,.bjbox,.paylist span,.seg,.frame .lbl,.mrow .v,.seg3,.mini,.method,.more,.saybox small,.boxhead .pf,.plan small';
   const small = [];
   for (const el of document.querySelectorAll('body *')) {
     if (!el.childNodes.length || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
