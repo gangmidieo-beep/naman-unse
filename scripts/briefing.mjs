@@ -85,6 +85,15 @@ const cfg = SETS[SET];
 const OUT = join(root, cfg.out);
 mkdirSync(OUT, { recursive: true });
 
+// 관리자 캡처: 로컬 서버(API_ORIGIN, 기본 8791)에 ADMIN_EMAIL / ADMIN_PASSWORD 로 로그인
+let adminS = null;
+async function adminSession() {
+  if (adminS) return adminS;
+  const api = process.env.API_ORIGIN || 'http://localhost:8791';
+  const r = await fetch(`${api}/admin/api/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD }) });
+  if (!r.ok) throw new Error(`관리자 로그인 실패 ${r.status} — ADMIN_EMAIL/ADMIN_PASSWORD 를 확인하세요`);
+  return (adminS = await r.json());
+}
 const browser = await chromium.launch();
 const problems = [];
 for (const s of cfg.shots) {
@@ -94,7 +103,7 @@ for (const s of cfg.shots) {
   page.on('console', (m) => m.type() === 'error' && problems.push(`${s.file}: ${m.text()}`));
   const st = S[s.state];
   await page.addInitScript((x) => { if (x) localStorage.setItem('naman-unse', JSON.stringify({ state: x, version: 2 })); else if (x === null) localStorage.clear(); }, st ?? null);
-  if (s.state === 'admin') await page.addInitScript(() => localStorage.setItem('naman-admin', JSON.stringify({ token: 'dev', email: 'admin@local' })));
+  if (s.state === 'admin') await page.addInitScript((x) => localStorage.setItem('naman-admin', JSON.stringify(x)), await adminSession());
   await page.goto(BASE + s.path, { waitUntil: 'networkidle' });
   if (s.wait) await page.waitForTimeout(s.wait);
   if (s.act) await s.act(page);

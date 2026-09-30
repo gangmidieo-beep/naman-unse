@@ -18,3 +18,4 @@ playwright-report/
 scripts/tmp/
 web/public/img/_incoming/*
 !web/public/img/_incoming/.gitkeep
+server/.data/

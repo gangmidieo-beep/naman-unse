@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useApp } from './store/app';
 import { ToastProvider } from './components/ui';
@@ -20,6 +20,8 @@ import Box from './pages/Me';
 import Login, { AuthCallback } from './pages/Login';
 import { BloodPage, DreamPage, FactbombPage, MbtiPage, StarPage, TarotPage } from './pages/Fun';
 
+const Admin = lazy(() => import('./admin/Admin')); // 관리자는 따로 불러온다(앱 첫 화면 용량에 안 섞이게)
+
 // 하단 탭을 숨기는 화면(입력·결제·풀이·부적 작성·상세)
 const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev', '/product/', '/login', '/auth'];
 const noTab = (path: string) => NO_TAB.some((p) => path.startsWith(p)) || /^\/talisman\/[^/]+/.test(path);
@@ -33,6 +35,8 @@ export function App() {
     track('page_view', { path: loc.pathname });
     if (new URLSearchParams(loc.search).get('utm_source') === 'share') track('share_link_open', { path: loc.pathname });
   }, [loc.pathname]);
+  if (loc.pathname.startsWith('/admin'))
+    return <Suspense fallback={null}><Routes><Route path="/admin/*" element={<Admin />} /></Routes></Suspense>;
   if (!introSeen && loc.pathname === '/') return <Navigate to="/intro" replace />;
   return (
     <ToastProvider>

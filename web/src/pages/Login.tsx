@@ -57,9 +57,15 @@ export function AuthCallback() {
   const [sp] = useSearchParams();
   const setAccount = useApp((s) => s.setAccount);
   const token = sp.get('token');
+  const profiles = useApp((s) => s.profiles);
   if (token) {
     setAccount({ provider: (sp.get('provider') as Provider) ?? 'google', id: sp.get('uid') ?? '', name: sp.get('name') ?? '회원', token });
-    queueMicrotask(() => nav(sp.get('back') || '/box', { replace: true }));
+    // 이 기기에 저장해 둔 사주 정보를 계정으로 올린다(서버가 게스트 기록 합치기 /auth/merge 와 같은 역할)
+    queueMicrotask(async () => {
+      for (const p of profiles)
+        await fetch(`${__API_ORIGIN__}/profiles`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(p) }).catch(() => {});
+      nav(sp.get('back') || '/box', { replace: true });
+    });
   }
   return <main className="screen no-tab"><p className="muted center mt24">{token ? '로그인 중이에요…' : '로그인에 실패했어요. 다시 시도해 주세요.'}</p></main>;
 }

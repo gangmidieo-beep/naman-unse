@@ -3,16 +3,16 @@
 // 페이스북=facebook.com/sharer, 스레드=threads.com/intent/post. 카카오스토리는 API 종료(2023-11-15)로 숨김 — 결정필요 D14.
 import { type RefObject } from 'react';
 import { BottomSheet } from './ui';
-import { saveImage, shareLink, shareUrl, kakaoShare, CHANNELS, type Channel } from '../lib/share';
+import { saveImage, shareLink, shortLink, kakaoShare, CHANNELS, type Channel } from '../lib/share';
 import { track } from '../lib/track';
 
 export function ShareSheet({ open, onClose, card, title, text, path, contentId, onDone, imageName }: {
   open: boolean; onClose: () => void; card?: RefObject<HTMLDivElement>; title: string; text: string; path: string; contentId: string;
   onDone?: (msg?: string) => void; imageName?: string;
 }) {
-  const url = shareUrl(path, contentId);
   const go = async (c: Channel) => {
     track('share_click', { channel: c, contentId });
+    const url = c === 'image' ? '' : await shortLink(path, contentId, title, text);
     if (c === 'kakao') {
       const r = await kakaoShare({ title, text, url });
       onDone?.(r === 'copied' ? '카카오톡 연결 전이라 링크를 복사했어요. 카카오톡에 붙여 넣어 보내세요' : undefined);

@@ -4,9 +4,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
-    "db:migrate": "echo \"08 단계에서 구현\"",
-    "admin:create": "echo \"08 단계에서 구현\""
+    "dev": "tsx watch --env-file-if-exists=../.env src/index.ts",
+    "start": "tsx --env-file-if-exists=../.env src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=../.env src/cli.ts migrate",
+    "db:seed": "tsx --env-file-if-exists=../.env src/cli.ts seed",
+    "admin:create": "tsx --env-file-if-exists=../.env src/cli.ts admin"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.3",
+    "fastify": "^5.12.5",
+    "jose": "^6.2.12",
+    "postgres": "^3.4.9",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "drizzle-kit": "^0.31.11"
   }
 }

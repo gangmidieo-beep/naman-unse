@@ -23,6 +23,15 @@ export function shareUrl(path: string, contentId: string) {
   return u.toString();
 }
 
+// 서버가 있으면 짧은 공유 링크(/s/:code — 미리보기 카드·클릭 집계), 없으면 콘텐츠 주소
+export async function shortLink(path: string, contentId: string, title: string, text: string) {
+  if (__MOCK_MODE__ || !__API_ORIGIN__) return shareUrl(path, contentId);
+  try {
+    const r = await fetch(`${__API_ORIGIN__}/share`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ contentId, path, title, text }) });
+    return (await r.json()).url as string;
+  } catch { return shareUrl(path, contentId); }
+}
+
 async function copy(text: string) {
   try { await navigator.clipboard.writeText(text); } catch {
     const t = document.createElement('textarea');
