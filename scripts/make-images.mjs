@@ -35,7 +35,10 @@ for (const [id, both] of Object.entries(CHARS)) {
 }
 
 /* ---------- 1-2) 상품 썸네일 — 대표님이 보낸 시트(docs/대표님자료/상품썸네일_시트.png, 6열×4행)에서 잘라 쓴다 ---------- */
-// ponytail: 시트 칸 위치를 고정값으로 자름 — 시트가 바뀌면 THUMB_COLS/ROWS 를 다시 맞추거나 _incoming 의 thumb_{id}.png 로 교체
+// 대표님이 직접 만든 시트(저작권 문제 없음 — 결정필요 D15 해결). 낱장 원본이 올 때까지 임시로 잘라 쓴다.
+// 파일명 규칙: web/public/img/thumb/thumb_<상품id>.webp — 낱장 원본은 _incoming/thumb_<상품id>.png 로 넣으면 같은 이름으로 덮어쓰고,
+// 그 상품은 시트에서 다시 잘라내지 않는다.
+// ponytail: 시트 칸 위치를 고정값으로 자름 — 시트가 바뀌면 THUMB_COLS/ROWS 를 다시 맞출 것
 const SHEET = join(root, 'docs/대표님자료/상품썸네일_시트.png');
 const THUMB_COLS = [4, 236, 466, 694, 924, 1154];
 const THUMB_ROWS = [[4, 155], [224, 338], [406, 522], [588, 685]];
@@ -49,11 +52,12 @@ const thumbs = {};
 if (existsSync(SHEET)) {
   mk(join(PUB, 'thumb'));
   for (const [i, id] of THUMB_IDS.entries()) {
+    if (['png', 'jpg', 'jpeg', 'webp'].some((x) => existsSync(join(INCOMING, `thumb_${id}.${x}`)))) continue; // 낱장 원본 우선
     const [t, b] = THUMB_ROWS[Math.floor(i / 6)];
     const side = Math.min(b - t, 226);
     const left = THUMB_COLS[i % 6] + Math.round((226 - side) / 2);
-    await sharp(SHEET).extract({ left, top: t, width: side, height: side }).resize(224, 224, { kernel: 'lanczos3' }).webp({ quality: 84 }).toFile(join(PUB, 'thumb', `${id}.webp`));
-    thumbs[id] = `/img/thumb/${id}.webp`;
+    await sharp(SHEET).extract({ left, top: t, width: side, height: side }).resize(224, 224, { kernel: 'lanczos3' }).webp({ quality: 84 }).toFile(join(PUB, 'thumb', `thumb_${id}.webp`));
+    thumbs[id] = `/img/thumb/thumb_${id}.webp`;
   }
 }
 
@@ -79,8 +83,8 @@ for (const file of files) {
     manifest[name] = { src: `/img/cards/${name}_440.webp`, srcset: `/img/cards/${name}_440.webp 440w, /img/cards/${name}_660.webp 660w`, w: 440, h: 600 };
   } else if (name.startsWith('thumb_')) {
     const d = out('thumb');
-    await sharp(src).resize(448, 448, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name.slice(6)}.webp`));
-    thumbs[name.slice(6)] = `/img/thumb/${name.slice(6)}.webp`;
+    await sharp(src).resize(448, 448, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name}.webp`)); // thumb_<id>.webp 덮어쓰기
+    thumbs[name.slice(6)] = `/img/thumb/${name}.webp`;
   } else if (name.startsWith('tarot_')) {
     const d = out('tarot');
     await sharp(src).resize(300, 488, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name}.webp`));
