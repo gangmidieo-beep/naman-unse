@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나만의 운세 시안 v2</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-Regular.woff2);font-weight:400}
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-Medium.woff2);font-weight:500}
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-SemiBold.woff2);font-weight:600}
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-Bold.woff2);font-weight:700}
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-ExtraBold.woff2);font-weight:800}
+@font-face{font-family:Pretendard;src:url(fonts/Pretendard-Black.woff2);font-weight:900}
+
+/* ============ 디자인 토큰 v2 — 한지 + 먹색 + 골드 ============ */
+:root{
+  --hanji:#F5EFE1; --hanji-2:#EDE3CC; --paper:#FBF8F0; --line:#DCCDA8; --line-soft:#E8DDC4;
+  --ink:#1C1A17; --ink-2:#2D2925; --ink-3:#5A5249; --ink-4:#857B6E;
+  --navy:#141D36; --navy-2:#223056;
+  --gold:#B8892E; --gold-deep:#8A6418; --gold-light:#E6C877; --gold-pale:#F4E6BD;
+  --gold-grad:linear-gradient(120deg,#7C5A16 0%,#C99A3A 28%,#F2D98E 50%,#C99A3A 72%,#7C5A16 100%);
+  --ink-grad:linear-gradient(160deg,#2A2621 0%,#1C1A17 55%,#12110F 100%);
+  --rose:#9E3A55; --seal:#A8291E;
+  --serif:'Noto Serif KR',serif; --sans:Pretendard,sans-serif; --brush:'Song Myung',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:#D9D2C3;color:var(--ink);padding:30px 16px 60px;letter-spacing:-.01em}
+h1.page{font-family:var(--serif);font-weight:900;font-size:30px;text-align:center}
+p.lead{text-align:center;color:var(--ink-3);margin:8px 0 30px;font-size:16px}
+.screens{display:flex;flex-wrap:wrap;gap:36px 30px;justify-content:center;align-items:flex-start}
+.cap{text-align:center;font-weight:800;font-size:18px;margin-bottom:10px;color:var(--ink-2)}
+.phone{width:390px;height:844px;border-radius:44px;overflow:hidden;position:relative;display:flex;flex-direction:column;
+  box-shadow:0 0 0 10px #151412,0 30px 60px rgba(0,0,0,.3);
+  background-color:var(--hanji);
+  background-image:
+   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+body.long .phone{height:auto} body.long .scroll{overflow:visible}
+.scroll{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:24px}
+.scroll::-webkit-scrollbar{display:none}
+.status{height:38px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.pad{padding:0 18px}
+
+/* 헤더 */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 18px 14px}
+.logo{font-family:var(--brush);font-size:29px;color:var(--ink);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.logo i{font-style:normal;width:24px;height:24px;background:var(--seal);color:#F8E9C8;font-size:13px;display:grid;place-items:center;border-radius:3px}
+.chip-h{white-space:nowrap;font-size:13.5px;font-weight:700;color:var(--ink-2);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:7px 12px}
+.sub{display:flex;align-items:center;gap:8px;padding:6px 16px 12px;border-bottom:1px solid var(--line-soft)}
+.sub .bk{width:38px;height:38px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-size:22px;color:var(--ink-2);box-shadow:0 2px 6px rgba(60,40,10,.1)}
+.sub .t{flex:1;text-align:center;margin-right:46px}
+.sub .t b{font-family:var(--serif);font-weight:900;font-size:21px;display:block}
+.sub .t small{font-size:12.5px;color:var(--ink-4)}
+
+/* 섹션 제목 — 굵은 대비 */
+.sec{margin:34px 18px 14px}
+.sec .en{font-family:var(--serif);font-size:12px;letter-spacing:.34em;color:var(--gold-deep);font-weight:700}
+.sec h3{font-family:var(--serif);font-weight:900;font-size:27px;line-height:1.28;letter-spacing:-.03em;margin-top:4px}
+.sec h3 em{font-style:normal;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sec p{font-size:15.5px;color:var(--ink-3);margin-top:4px;line-height:1.5}
+.rule{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--gold)}
+.rule:before,.rule:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+
+/* 히어로: 두 캐릭터 */
+.hero2{margin:0 18px;height:300px;border-radius:26px;overflow:hidden;position:relative;background:var(--ink);box-shadow:0 14px 30px rgba(20,15,5,.35)}
+.hero2 img{position:absolute;top:0;height:100%;width:56%;object-fit:cover}
+.hero2 .l{left:0;object-position:50% 10%;-webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);mask-image:linear-gradient(90deg,#000 60%,transparent)}
+.hero2 .r{right:0;object-position:50% 12%;-webkit-mask-image:linear-gradient(270deg,#000 60%,transparent);mask-image:linear-gradient(270deg,#000 60%,transparent)}
+.hero2 .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,11,9,0) 35%,rgba(12,11,9,.92) 100%)}
+.hero2 .txt{position:absolute;left:0;right:0;bottom:18px;text-align:center;color:#fff}
+.hero2 .txt small{font-family:var(--serif);color:var(--gold-light);font-size:13px;letter-spacing:.2em}
+.hero2 .txt b{display:block;font-family:var(--serif);font-weight:900;font-size:23px;line-height:1.35;margin-top:4px}
+.hero2 .names{display:flex;justify-content:space-between;position:absolute;top:14px;left:14px;right:14px}
+.tagdark{font-size:12.5px;font-weight:700;color:var(--gold-light);background:rgba(20,18,15,.72);border:1px solid rgba(230,200,119,.5);border-radius:999px;padding:5px 11px}
+
+/* 오늘의 운세 먹색 카드 */
+.today{margin:18px 18px 0;border-radius:24px;padding:3px;background:var(--gold-grad);box-shadow:0 12px 26px rgba(40,28,6,.3)}
+.today .in{border-radius:21px;background:var(--ink-grad);color:#F4EBD6;padding:20px}
+.today .top{display:flex;justify-content:space-between;align-items:center}
+.today .top small{font-family:var(--serif);font-size:12px;letter-spacing:.25em;color:var(--gold-light)}
+.today .top span{font-size:13px;color:#BFB29A}
+.today h4{font-family:var(--serif);font-weight:900;font-size:22px;margin-top:8px}
+.today .sc{display:flex;align-items:baseline;gap:10px;margin:10px 0}
+.today .sc b{font-family:var(--serif);font-weight:900;font-size:50px;line-height:1;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stars{color:#E3B94E;letter-spacing:2px;font-size:19px}
+.today p{font-family:var(--serif);font-size:17px;line-height:1.7;color:#EFE5CF;border-top:1px solid rgba(230,200,119,.25);padding-top:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:56px;border-radius:14px;font-weight:800;font-size:18.5px;letter-spacing:-.02em;border:0;width:100%}
+.btn.gold{background:var(--gold-grad);color:#1C1A17;box-shadow:0 8px 18px rgba(120,86,20,.35)}
+.btn.ink{background:var(--ink);color:var(--gold-light);border:1px solid #4A3F2A}
+.btn.mt{margin-top:14px}
+
+/* 중간 배너 */
+.banner{margin:0 18px;height:190px;border-radius:22px;overflow:hidden;position:relative;background:var(--ink)}
+.banner img{width:100%;height:100%;object-fit:cover;object-position:50% 20%}
+.banner .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,12,9,.95) 10%,rgba(14,12,9,.4) 60%,rgba(14,12,9,0))}
+.banner .txt{position:absolute;left:20px;top:26px;color:#fff;max-width:62%}
+.banner small{font-family:var(--serif);color:var(--gold-light);font-size:13px;letter-spacing:.12em}
+.banner b{display:block;font-family:var(--serif);font-weight:900;font-size:24px;margin:4px 0 6px}
+.banner span{font-size:14.5px;color:#DCD0B8;line-height:1.45;display:block}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.dots i{width:7px;height:7px;border-radius:9px;background:#CDBF9F}
+.dots i.on{width:26px;background:var(--gold)}
+
+/* 무료 = 가벼운 한지 카드 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 18px}
+.free{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:15px 14px 14px;position:relative}
+.free .fi{width:44px;height:44px;border-radius:12px;background:var(--hanji-2);display:grid;place-items:center;font-family:var(--brush);font-size:23px;color:var(--ink-2);margin-bottom:10px}
+.free b{font-weight:800;font-size:18.5px;display:block;letter-spacing:-.03em}
+.free span{font-size:14px;color:var(--ink-4);line-height:1.4;display:block;margin-top:2px}
+.free .fb{position:absolute;top:13px;right:12px;font-size:11.5px;font-weight:800;color:var(--ink-3);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.free.wide{grid-column:1/3;display:flex;gap:12px;align-items:center}
+.free.wide .fi{margin:0}
+
+/* 유료 = 먹색 + 골드 레어 카드 */
+.hs{display:flex;gap:12px;overflow-x:auto;padding:4px 18px 8px;scrollbar-width:none}
+.rare{flex:0 0 200px;height:268px;border-radius:20px;padding:2.5px;background:var(--gold-grad);position:relative;box-shadow:0 10px 22px rgba(40,28,6,.3)}
+.rare .in{height:100%;border-radius:17.5px;overflow:hidden;position:relative;background:var(--ink-grad)}
+.rare .hz{position:absolute;inset:0;display:grid;place-items:center;padding-bottom:70px;font-family:var(--brush);font-size:96px;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.95}
+.rare img{width:100%;height:100%;object-fit:cover;object-position:50% 10%}
+.rare .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,17,15,0) 40%,rgba(18,17,15,.95) 88%)}
+.rare .tx{position:absolute;left:14px;right:14px;bottom:14px;color:#F6EEDB}
+.rare .tx b{font-family:var(--serif);font-weight:900;font-size:21px;display:block}
+.rare .tx span{font-size:13.5px;color:#CFC3A8;display:block;line-height:1.4;margin-top:2px}
+.rare .tx .pr{margin-top:8px;font-weight:800;font-size:15px;color:var(--gold-light)}
+.pb{position:absolute;top:11px;left:11px;z-index:2;font-size:11.5px;font-weight:900;color:#1C1A17;background:var(--gold-grad);border-radius:999px;padding:3px 9px}
+.rare::after{content:"";position:absolute;inset:2.5px;border-radius:17.5px;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,236,180,.22) 47%,transparent 58%);background-size:260% 100%;animation:sh 4s infinite}
+@keyframes sh{0%{background-position:160% 0}100%{background-position:-100% 0}}
+
+/* 캐릭터 섹션 머리 */
+.chhead{margin:36px 18px 14px;border-radius:22px;overflow:hidden;position:relative;height:150px;background:var(--ink)}
+.chhead img{position:absolute;right:0;top:0;height:100%;width:60%;object-fit:cover;object-position:50% 8%;-webkit-mask-image:linear-gradient(270deg,#000 55%,transparent);mask-image:linear-gradient(270deg,#000 55%,transparent)}
+.chhead .tx{position:absolute;left:18px;top:20px;right:40%;color:#F4EBD6}
+.chhead small{font-family:var(--serif);font-size:12px;color:var(--gold-light);letter-spacing:.2em}
+.chhead b{font-family:var(--serif);font-weight:900;font-size:25px;display:block;margin:2px 0 4px}
+.chhead span{font-size:13.5px;color:#CFC3A8;line-height:1.45;display:block}
+
+/* 하단 탭 */
+.tabs{height:82px;background:var(--paper);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:0 4px 8px}
+.tab{text-align:center;font-size:12.5px;font-weight:700;color:var(--ink-4)}
+.tab .i{display:block;height:34px;line-height:34px;font-family:var(--brush);font-size:22px}
+.tab.on{color:var(--ink)}
+.tab.on .i{background:var(--ink);color:var(--gold-light);border-radius:12px;width:50px;margin:0 auto 2px}
+
+/* 오늘의 운세 상세 */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);margin:14px 18px;background:var(--hanji-2);border-radius:14px;padding:4px}
+.seg div{text-align:center;padding:10px 0;font-weight:800;font-size:16px;color:var(--ink-4);border-radius:11px}
+.seg .on{background:var(--ink);color:var(--gold-light)}
+.seg .lk{font-size:11px;color:var(--gold-deep)}
+.grid6{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.grid6 div{background:rgba(255,255,255,.06);border:1px solid rgba(230,200,119,.18);border-radius:12px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;font-size:15.5px;font-weight:700}
+.grid6 .stars{font-size:13px;letter-spacing:0}
+.lucky{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 18px 0}
+.lucky div{background:var(--paper);border:1px solid var(--line);border-radius:14px;text-align:center;padding:10px 0;font-size:13.5px;color:var(--ink-4)}
+.lucky b{display:block;font-family:var(--serif);font-weight:900;font-size:19px;color:var(--ink)}
+.word{margin:14px 18px 0;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;gap:12px}
+.word img{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.word small{font-weight:800;font-size:13px;color:var(--gold-deep)}
+.word p{font-family:var(--serif);font-size:16.5px;line-height:1.65;margin-top:2px}
+.adnote{text-align:center;font-size:12.5px;color:var(--ink-4);margin-top:8px}
+
+/* 상품 목록 (도사 컨텐츠 형식) */
+.ctabs{display:flex;gap:6px;overflow-x:auto;padding:14px 18px 6px;scrollbar-width:none}
+.ctabs span{flex:0 0 auto;padding:9px 15px;border-radius:999px;font-weight:800;font-size:15px;color:var(--ink-3);border:1px solid var(--line);background:var(--paper)}
+.ctabs span.on{background:var(--ink);color:var(--gold-light);border-color:var(--ink)}
+.row{display:flex;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line-soft)}
+.th{flex:0 0 112px;height:112px;border-radius:18px;overflow:hidden;position:relative;background:var(--ink-grad);padding:2px}
+.th.g{background:var(--gold-grad)}
+.th .in{width:100%;height:100%;border-radius:16px;overflow:hidden;background:var(--ink-grad);display:grid;place-items:center;font-family:var(--brush);font-size:52px}
+.th .in span{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.th img{width:100%;height:100%;object-fit:cover;object-position:50% 12%}
+.row .by{font-size:13px;color:var(--ink-4);display:flex;align-items:center;gap:5px}
+.row .by img{width:20px;height:20px;border-radius:50%;object-fit:cover}
+.row b{font-family:var(--serif);font-weight:900;font-size:20px;display:block;margin:3px 0 2px;letter-spacing:-.03em}
+.row p{font-size:14.5px;color:var(--ink-3);line-height:1.45}
+.price{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.price .n{font-weight:900;font-size:17px;color:var(--ink)}
+.price .m{font-size:12.5px;font-weight:800;color:var(--gold-deep);background:var(--gold-pale);border-radius:6px;padding:2px 6px}
+.badge{font-size:11px;font-weight:900;padding:2px 7px;border-radius:5px;background:var(--seal);color:#fff}
+.badge.best{background:var(--ink);color:var(--gold-light)}
+
+/* 상품 상세 */
+.dhero{height:300px;position:relative;overflow:hidden;background:var(--ink)}
+.dhero img{width:100%;height:100%;object-fit:cover;object-position:50% 14%}
+.dhero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(18,17,15,0) 40%,var(--hanji) 100%)}
+.dtitle{text-align:center;margin-top:-26px;position:relative;padding:0 22px}
+.dtitle small{font-size:13px;color:var(--ink-4)}
+.dtitle h2{font-family:var(--serif);font-weight:900;font-size:32px;letter-spacing:-.04em;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin:2px 0}
+.dtitle p{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.55;color:var(--ink-2)}
+.frame{margin:22px 18px 0;border:1.5px solid var(--gold);border-radius:22px;padding:28px 18px 18px;position:relative;background:var(--paper)}
+.frame .lbl{position:absolute;top:-17px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--gold-light);font-weight:800;font-size:15px;padding:7px 18px;border-radius:999px;white-space:nowrap}
+.frame p.body{font-family:var(--serif);font-size:16.5px;line-height:1.85;color:var(--ink-2);text-align:center}
+.li{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px dashed var(--line)}
+.li:last-child{border:0}
+.li .n{flex:0 0 34px;height:34px;border-radius:50%;background:var(--ink);color:var(--gold-light);display:grid;place-items:center;font-family:var(--serif);font-weight:900}
+.li b{font-weight:800;font-size:17px;display:block}
+.li span{font-size:14.5px;color:var(--ink-3);line-height:1.5}
+.sticky{position:absolute;left:0;right:0;bottom:0;padding:12px 18px 18px;background:linear-gradient(180deg,rgba(245,239,225,0),var(--hanji) 30%)}
+.sticky .pp{text-align:center;font-size:14px;margin-bottom:8px;color:var(--ink-3)}
+.sticky .pp b{font-size:18px;color:var(--ink);margin:0 4px}
+.sticky .pp s{color:var(--ink-4)}
+.sticky .pp em{font-style:normal;color:var(--gold-deep);font-weight:800}
+
+/* 부적 */
+.bj{width:64px;height:100px;border-radius:3px;background:linear-gradient(170deg,#F0D27A,#E2B94F 60%,#D6A93E);border:2px solid var(--seal);outline:1px solid #E2B94F;outline-offset:-5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-family:var(--brush);color:var(--seal);box-shadow:0 4px 10px rgba(90,50,10,.35)}
+.bj em{font-style:normal;font-size:9px;line-height:1}
+.bj b{font-family:var(--brush);font-weight:400;font-size:22px;line-height:1.02}
+.bjth{flex:0 0 112px;height:112px;border-radius:18px;display:grid;place-items:center}
+.bjth.w{background:linear-gradient(160deg,#2A2621,#12110F)}
+.bjth.l{background:linear-gradient(160deg,#3A2433,#1C1418)}
+.bjth.s{background:linear-gradient(160deg,#1E2A44,#0F1524)}
+.bjth.p{background:linear-gradient(160deg,#23332A,#111A15)}
+.bigbj{margin:22px auto 0;width:150px;height:236px}
+.bigbj em{font-size:15px}.bigbj b{font-size:50px}
+.eff{margin:0 18px 12px;border-radius:18px;padding:2px;background:var(--gold-grad)}
+.eff .in{background:var(--paper);border-radius:16px;padding:16px;display:flex;gap:14px;align-items:center}
+.eff .ic{flex:0 0 52px;height:52px;border-radius:14px;background:var(--ink);color:var(--gold-light);display:grid;place-items:center;font-family:var(--brush);font-size:26px}
+.eff b{font-family:var(--serif);font-weight:900;font-size:18.5px}
+.eff span{display:block;font-size:14.5px;color:var(--ink-3);line-height:1.5;margin-top:2px}
+
+/* ===== 추가 화면 (타로·꿈해몽·운세함) ===== */
+.tarot{display:flex;justify-content:center;gap:10px;margin:18px 0 6px}
+.tc{width:92px;height:150px;border-radius:12px;padding:2px;background:var(--gold-grad);box-shadow:0 8px 16px rgba(30,20,5,.35)}
+.tc .in{width:100%;height:100%;border-radius:10px;background:var(--ink-grad);display:grid;place-items:center;font-family:var(--brush);font-size:30px}
+.tc .in span{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tc.pick{transform:translateY(-12px) scale(1.06)}
+.tc.pick .in{background:linear-gradient(170deg,#2A2140,#161020);flex-direction:column}
+.tc.pick small{font-family:var(--serif);font-size:12px;color:var(--gold-light);letter-spacing:.1em}
+.search{margin:16px 18px 0;display:flex;align-items:center;gap:10px;background:var(--paper);border:1.5px solid var(--ink);border-radius:16px;padding:0 14px;height:56px;font-size:17px;color:var(--ink-4)}
+.search b{margin-left:auto;background:var(--ink);color:var(--gold-light);border-radius:10px;padding:8px 14px;font-size:15px}
+.kw{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px 0}
+.kw span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:15px;font-weight:700;color:var(--ink-2)}
+.dcat{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px 0}
+.dcat div{background:var(--paper);border:1px solid var(--line);border-radius:14px;text-align:center;padding:12px 0 10px;font-size:14px;font-weight:700;color:var(--ink-2)}
+.dcat i{display:block;font-style:normal;font-family:var(--brush);font-size:24px;color:var(--ink);margin-bottom:2px}
+.dres{margin:16px 18px 0;border-radius:20px;padding:2px;background:var(--gold-grad)}
+.dres .in{background:var(--ink-grad);border-radius:18px;padding:18px;color:#EFE5CF}
+.dres small{color:var(--gold-light);font-weight:800;font-size:13px}
+.dres b{display:block;font-family:var(--serif);font-weight:900;font-size:21px;margin:4px 0 8px;color:#F6EEDB}
+.dres p{font-family:var(--serif);font-size:16px;line-height:1.75}
+.dres .lock{margin-top:12px;border-top:1px solid rgba(230,200,119,.25);padding-top:10px;font-size:14px;color:var(--gold-light);font-weight:700}
+.boxhead{margin:6px 18px 0;padding:20px;border-radius:22px;background:var(--ink-grad);color:#F4EBD6;position:relative;overflow:hidden}
+.boxhead small{color:var(--gold-light);font-family:var(--serif);letter-spacing:.2em;font-size:12px}
+.boxhead b{display:block;font-family:var(--serif);font-weight:900;font-size:21px;margin-top:4px;line-height:1.4}
+.boxhead .pf{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.boxhead .pf span{font-size:13px;font-weight:700;border:1px solid rgba(230,200,119,.45);border-radius:999px;padding:5px 11px;color:#EADFC6}
+.shelf{display:flex;gap:10px;overflow-x:auto;padding:4px 18px 6px;scrollbar-width:none}
+.book{flex:0 0 118px;height:170px;border-radius:6px 14px 14px 6px;position:relative;padding:14px 12px 12px 18px;color:#F4EBD6;box-shadow:0 8px 16px rgba(30,20,5,.3)}
+.book:before{content:"";position:absolute;left:6px;top:0;bottom:0;width:3px;background:var(--gold-grad)}
+.book.f{background:linear-gradient(160deg,#1E2A44,#0F1524)}
+.book.l{background:linear-gradient(160deg,#3A2433,#1C1418)}
+.book small{font-size:11.5px;color:var(--gold-light);font-weight:700}
+.book b{display:block;font-family:var(--serif);font-weight:900;font-size:17px;margin-top:6px;line-height:1.3}
+.book span{position:absolute;left:18px;bottom:12px;font-size:11.5px;color:#BFB29A}
+.menu{margin:12px 18px 0;background:var(--paper);border:1px solid var(--line);border-radius:18px}
+.menu div{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;border-bottom:1px solid var(--line-soft);font-size:16.5px;font-weight:700}
+.menu div:last-child{border:0}
+.menu div span{font-size:14px;color:var(--ink-4);font-weight:600}
+footer{text-align:center;color:var(--ink-3);font-size:14px;margin-top:40px;line-height:1.7}
+</style>
+</head>
+<body>
+<script>if(location.hash==='#long')document.body.classList.add('long')</script>
+<h1 class="page">나만의 운세 — 디자인 시안 v2</h1>
+<p class="lead">한지 아이보리 바탕 · 먹색·골드 강한 대비 · 무게감 있는 이미지 · 명조 제목과 본문 · 대표님 화면구성(HWP) 반영</p>
+
+<div class="screens">
+
+<!-- ============ ① 홈 ============ -->
+<div><div class="cap">① 홈</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="hdr"><span class="chip-h">☀ 18°</span><span class="logo"><i>運</i>나만의 운세</span><span class="chip-h">로그인</span></div>
+ <div class="scroll">
+  <div class="hero2">
+   <img class="l" src="img/dosa.jpg" alt="천궁도사"><img class="r" src="img/sunnyeo.jpg" alt="월하선녀">
+   <div class="names"><span class="tagdark">천궁도사</span><span class="tagdark">월하선녀</span></div>
+   <div class="shade"></div>
+   <div class="txt"><small>天 宮 · 月 下</small><b>천궁도사와 월하선녀가<br>당신의 운세를 알려드립니다</b></div>
+  </div>
+
+  <div class="today"><div class="in">
+   <div class="top"><small>TODAY'S FORTUNE</small><span>9월 30일 · 정해일</span></div>
+   <h4>홍길동님, 오늘의 운세예요</h4>
+   <div class="sc"><b>80</b><span class="stars">★★★★☆</span></div>
+   <p>“서두르지 말고 한 박자 늦게 답하면 오히려 좋은 기회가 먼저 다가오는 날입니다.”</p>
+   <button class="btn gold mt">오늘의 운세 자세히 보기</button>
+  </div></div>
+
+  <div class="sec"><div class="en">SPECIAL</div><h3>지금 많이 찾는 <em>풀이</em></h3></div>
+  <div class="banner"><img src="img/dosa_banner.jpg" alt=""><div class="shade"></div>
+   <div class="txt"><small>천궁도사 · 재물운</small><b>재물운</b><span>내 재물운이 좋아지는 시기는 언제일까?</span></div></div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+  <div class="sec"><div class="en">FOR FUN</div><h3>재미로 보는 운세</h3><p>가볍게 즐기고, 새롭게 발견하는 나의 이야기</p></div>
+  <div class="g2">
+   <div class="free"><span class="fb">무료</span><div class="fi">寅</div><b>띠별 운세</b><span>오늘 나의 띠 운세는?</span></div>
+   <div class="free"><span class="fb">무료</span><div class="fi">☆</div><b>별자리 운세</b><span>별자리가 알려주는 오늘의 운</span></div>
+   <div class="free"><span class="fb">무료</span><div class="fi">血</div><b>혈액형 운세</b><span>혈액형으로 보는 오늘의 운</span></div>
+   <div class="free"><span class="fb">무료</span><div class="fi">牌</div><b>오늘의 타로</b><span>카드 한 장, 오늘의 메시지</span></div>
+   <div class="free"><span class="fb">무료</span><div class="fi">性</div><b>MBTI 사주</b><span>MBTI와 사주로 본 진짜 나</span></div>
+   <div class="free"><span class="fb">무료</span><div class="fi">骨</div><b>MZ 팩폭 사주</b><span>뼈 때리는 나의 찐 성격</span></div>
+   <div class="free wide"><div class="fi">夢</div><div><b>꿈 해몽</b><span>어젯밤 꿈, 어떤 의미일까?</span></div></div>
+  </div>
+
+  <div class="chhead"><img src="img/dosa.jpg" alt=""><div class="tx"><small>天宮道士</small><b>나만의 운명</b><span>타고난 사주부터 재물과 성공, 운의 흐름까지</span></div></div>
+  <div class="hs">
+   <div class="rare"><span class="pb">✦ BEST</span><div class="in"><div class="hz">命</div><div class="shade"></div><div class="tx"><b>정통운세</b><span>사주로 풀어보는 나의 타고난 운명</span><div class="pr">29,000원</div></div></div></div>
+   <div class="rare"><span class="pb">✦ 인기</span><div class="in"><div class="hz">財</div><div class="shade"></div><div class="tx"><b>재물운</b><span>나는 언제 돈이 들어올까?</span><div class="pr">19,000원</div></div></div></div>
+   <div class="rare"><span class="pb">✦ NEW</span><div class="in"><div class="hz">丁未</div><div class="shade"></div><div class="tx"><b>2027 신년운세</b><span>어떤 기회와 변화가 찾아올까?</span><div class="pr">29,000원</div></div></div></div>
+  </div>
+
+  <div class="chhead"><img src="img/sunnyeo.jpg" alt=""><div class="tx"><small>月下仙女</small><b>나만의 인연</b><span>사랑과 인연 속에 숨겨진 이야기</span></div></div>
+  <div class="hs">
+   <div class="rare"><span class="pb">✦ BEST</span><div class="in"><img src="img/sunnyeo.jpg" alt=""><div class="shade"></div><div class="tx"><b>정통궁합</b><span>우리는 어떤 인연일까?</span><div class="pr">29,000원</div></div></div></div>
+   <div class="rare"><span class="pb">✦ 인기</span><div class="in"><div class="hz">緣</div><div class="shade"></div><div class="tx"><b>인연운</b><span>좋은 인연은 언제 찾아올까?</span><div class="pr">19,000원</div></div></div></div>
+   <div class="rare"><div class="in"><div class="hz">再</div><div class="shade"></div><div class="tx"><b>재회운</b><span>다시 이어질 인연일까?</span><div class="pr">19,000원</div></div></div></div>
+  </div>
+ </div>
+ <div class="tabs">
+  <div class="tab on"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div>
+ </div>
+</div></div>
+
+<!-- ============ ② 오늘의 운세 ============ -->
+<div><div class="cap">② 오늘의 운세</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>오늘의 운세</b><small>2026년 9월 30일 · 정해일(丁亥日)</small></span></div>
+ <div class="scroll">
+  <div class="seg"><div class="on">오늘</div><div>이번 주 <span class="lk">✦</span></div><div>이번 달 <span class="lk">✦</span></div></div>
+  <div class="today" style="margin-top:0"><div class="in">
+   <div class="top"><small>총 운</small><span>천궁도사 풀이</span></div>
+   <h4>홍길동님, 오늘의 운세예요!</h4>
+   <div class="sc"><b>80</b><span>점</span><span class="stars">★★★★☆</span></div>
+   <p><b style="color:#F2D98E">한 줄 요약 · 들어주는 쪽이 이기는 날</b><br>오전에는 말을 아끼고 오후에 결정을 내리면 일이 순하게 풀립니다. 가까운 어른의 조언에 답이 있습니다.</p>
+   <div class="grid6">
+    <div>일<span class="stars">★★★★☆</span></div><div>금전<span class="stars">★★★★☆</span></div>
+    <div>연애<span class="stars">★★★☆☆</span></div><div>건강<span class="stars">★★★☆☆</span></div>
+    <div>학업<span class="stars">★★★★☆</span></div><div>시험<span class="stars">★★★☆☆</span></div>
+   </div>
+  </div></div>
+  <div class="lucky"><div>행운의 색<b>남색</b></div><div>행운의 숫자<b>6</b></div><div>행운의 방향<b>북쪽</b></div></div>
+  <div class="word"><img src="img/dosa_face.jpg" alt=""><div><small>천궁도사의 오늘의 한 마디</small><p>“급한 물은 돌아가야 멀리 가는 법이지요.”</p></div></div>
+  <div class="pad" style="margin-top:16px"><button class="btn gold">✦ 상세 풀이 보기</button><div class="adnote">짧은 광고를 보시면 상세 풀이가 열립니다 · 프리미엄 회원은 광고 없음</div></div>
+ </div>
+ <div class="tabs">
+  <div class="tab on"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div>
+ </div>
+</div></div>
+
+<!-- ============ ③ 나만의 운명 목록 ============ -->
+<div><div class="cap">③ 나만의 운명 (천궁도사 상품 목록)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>나만의 운명</b><small>천궁도사가 풀어드리는 운명서</small></span></div>
+ <div class="scroll">
+  <div class="ctabs"><span class="on">나의 운명</span><span>재물과 성공</span><span>중요한 선택</span><span>올해의 운세</span></div>
+  <div class="row"><div class="th g"><div class="in"><img src="img/dosa_face.jpg" alt=""></div></div><div><div class="by"><img src="img/dosa_face.jpg" alt="">나의 운명 · 천궁도사 <span class="badge best">BEST</span></div><b>정통운세</b><p>사주로 풀어보는 나의 타고난 운명</p><div class="price"><span class="n">29,000원</span><span class="m">회원 26,100원</span></div></div></div>
+  <div class="row"><div class="th g"><div class="in"><span>生</span></div></div><div><div class="by"><img src="img/dosa_face.jpg" alt="">나의 운명 · 천궁도사</div><b>평생운세</b><p>내 인생의 큰 흐름과 변화의 시기는?</p><div class="price"><span class="n">29,000원</span><span class="m">회원 26,100원</span></div></div></div>
+  <div class="row"><div class="th g"><div class="in"><span>運</span></div></div><div><div class="by"><img src="img/dosa_face.jpg" alt="">나의 운명 · 천궁도사 <span class="badge">HOT</span></div><b>대운</b><p>내 인생에 큰 운이 들어올 때는 언제일까?</p><div class="price"><span class="n">19,000원</span><span class="m">회원 17,100원</span></div></div></div>
+  <div class="row"><div class="th g"><div class="in"><span>五</span></div></div><div><div class="by"><img src="img/dosa_face.jpg" alt="">나의 운명 · 천궁도사</div><b>사주오행</b><p>나에게 강한 기운과 부족한 기운은?</p><div class="price"><span class="n">14,900원</span><span class="m">회원 13,410원</span></div></div></div>
+ </div>
+ <div class="tabs">
+  <div class="tab"><span class="i">家</span>홈</div><div class="tab on"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div>
+ </div>
+</div></div>
+
+<!-- ============ ④ 상품 상세 ============ -->
+<div><div class="cap">④ 상품 상세 (재물운)</div>
+<div class="phone">
+ <div class="status" style="position:absolute;left:0;right:0;z-index:3;color:#fff"><span>9:41</span><span>●●▮</span></div>
+ <div class="scroll" style="padding-bottom:140px">
+  <div class="dhero"><img src="img/dosa_banner.jpg" alt=""><div class="shade"></div></div>
+  <div class="dtitle"><small>천궁도사 · 재물과 성공 · 최소 10,000자</small><h2>재물운</h2><p>나는 언제 돈이 들어올까?<br>타고난 재물 그릇과 돈이 모이는 때</p></div>
+  <div class="frame"><span class="lbl">운명서에 담기는 내용</span>
+   <div class="li"><span class="n">一</span><div><b>타고난 재물 그릇</b><span>사주 원국으로 보는 돈을 모으는 방식</span></div></div>
+   <div class="li"><span class="n">二</span><div><b>돈이 들어오는 시기</b><span>대운·세운으로 짚는 앞으로 10년의 흐름</span></div></div>
+   <div class="li"><span class="n">三</span><div><b>새는 돈 막는 법</b><span>조심할 달과 피해야 할 선택</span></div></div>
+   <div class="li"><span class="n">四</span><div><b>천궁도사의 당부</b><span>지금 바로 할 수 있는 재물 습관</span></div></div>
+  </div>
+  <div class="frame" style="margin-top:30px"><span class="lbl">이용 방법</span>
+   <div class="li"><span class="n">1</span><div><b>상세풀이 받기</b><span>아래 버튼을 눌러 결제해 주세요</span></div></div>
+   <div class="li"><span class="n">2</span><div><b>운명서 완성</b><span>천궁도사가 사주를 읽고 풀이를 씁니다 (약 1분)</span></div></div>
+   <div class="li"><span class="n">3</span><div><b>나의 운세함에 보관</b><span>언제든 다시 열어보고 저장·공유할 수 있어요</span></div></div>
+  </div>
+ </div>
+ <div class="sticky"><div class="pp"><s>19,000원</s><b>17,100원</b><em>프리미엄 회원가</em></div><button class="btn gold">천궁도사의 상세풀이 받기</button></div>
+</div></div>
+
+<!-- ============ ⑤ 나만의 부적 목록 ============ -->
+<div><div class="cap">⑤ 나만의 부적 (종류별 목록)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>나만의 부적</b><small>간절한 소망을 담은 나만의 부적</small></span></div>
+ <div class="scroll">
+  <div class="ctabs"><span class="on">재물·성공</span><span>사랑·인연</span><span>소원·성취</span><span>평안·보호</span></div>
+  <div class="row"><div class="bjth w"><div class="bj"><em>招財符</em><b>財</b><b>福</b></div></div><div><div class="by">재물·성공 <span class="badge best">BEST</span></div><b>재물운 부적</b><p>재물의 좋은 기운과 풍요를 기원합니다</p><div class="price"><span class="n">14,900원</span><span class="m">회원 13,410원</span></div></div></div>
+  <div class="row"><div class="bjth w"><div class="bj"><em>興旺符</em><b>興</b><b>旺</b></div></div><div><div class="by">재물·성공</div><b>사업번창 부적</b><p>사업의 번창과 좋은 기회를 기원합니다</p><div class="price"><span class="n">14,900원</span><span class="m">회원 13,410원</span></div></div></div>
+  <div class="row"><div class="bjth s"><div class="bj"><em>昇進符</em><b>昇</b><b>進</b></div></div><div><div class="by">재물·성공</div><b>직장성공 부적</b><p>직장에서의 좋은 기회와 성취를 기원합니다</p><div class="price"><span class="n">9,900원</span><span class="m">회원 8,910원</span></div></div></div>
+  <div class="row"><div class="bjth s"><div class="bj"><em>合格符</em><b>合</b><b>格</b></div></div><div><div class="by">재물·성공 <span class="badge">HOT</span></div><b>취업·합격 부적</b><p>원하는 결과와 좋은 소식을 기원합니다</p><div class="price"><span class="n">9,900원</span><span class="m">회원 8,910원</span></div></div></div>
+ </div>
+ <div class="tabs">
+  <div class="tab"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab on"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div>
+ </div>
+</div></div>
+
+<!-- ============ ⑥ 부적 상세 ============ -->
+<div><div class="cap">⑥ 부적 상세 (설명·효험·사용법·구매)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>재물운 부적</b><small>소원을 새기는 나만의 부적</small></span></div>
+ <div class="scroll" style="padding-bottom:140px">
+  <div style="background:linear-gradient(180deg,#1C1A17,#2A2621);padding:10px 0 26px"><div class="bj bigbj"><em>招財進寶符</em><b>招</b><b>財</b><b>進</b></div></div>
+  <div class="frame" style="margin-top:30px"><span class="lbl">부적 설명서</span>
+   <p class="body">재물의 좋은 흐름과 풍요를 기원하는 부적입니다.<br>금전적인 안정과 새로운 기회를 바라는 마음을 담아, 이름과 생년월일 그리고 간절한 소원을 새긴 나만의 재물운 부적을 완성해보세요.</p>
+  </div>
+  <div class="sec" style="text-align:center"><div class="en">EFFECT</div><h3>부적의 <em>효험</em></h3></div>
+  <div class="eff"><div class="in"><div class="ic">財</div><div><b>재물운 상승</b><span>막혔던 돈의 흐름이 풀리길 기원합니다</span></div></div></div>
+  <div class="eff"><div class="in"><div class="ic">機</div><div><b>새로운 기회</b><span>좋은 제안과 인연이 찾아오길 기원합니다</span></div></div></div>
+  <div class="eff"><div class="in"><div class="ic">守</div><div><b>새는 돈 막기</b><span>모은 재물이 오래 지켜지길 기원합니다</span></div></div></div>
+  <div class="frame" style="margin-top:28px"><span class="lbl">사용 방법</span>
+   <div class="li"><span class="n">1</span><div><b>소원 적기</b><span>이름·생년월일과 간절한 소원을 적어요</span></div></div>
+   <div class="li"><span class="n">2</span><div><b>부적 완성</b><span>천궁도사가 소원을 담아 부적을 씁니다</span></div></div>
+   <div class="li"><span class="n">3</span><div><b>부적함 보관 · 저장 · 선물</b><span>휴대폰에 저장하고 소중한 사람에게 선물해요</span></div></div>
+  </div>
+ </div>
+ <div class="sticky"><div class="pp"><s>14,900원</s><b>13,410원</b><em>프리미엄 회원가</em></div><button class="btn gold">나만의 재물부적 받기 · 14,900원</button></div>
+</div></div>
+
+
+<!-- ============ ⑦ 오늘의 타로 ============ -->
+<div><div class="cap">⑦ 오늘의 타로 (무료 · 재미로 보는 운세)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>오늘의 타로</b><small>카드 한 장으로 보는 오늘의 메시지</small></span></div>
+ <div class="scroll">
+  <div class="tarot"><div class="tc"><div class="in"><span>月</span></div></div><div class="tc pick"><div class="in"><span>☀</span><small>THE SUN</small></div></div><div class="tc"><div class="in"><span>星</span></div></div></div>
+  <div class="dres"><div class="in"><small>오늘의 카드 · 태양(THE SUN) 정방향</small><b>숨겨둔 마음을 밝게 꺼내도 좋은 날</b><p>그동안 망설이던 이야기를 꺼내면 생각보다 따뜻한 답이 돌아옵니다. 오늘은 나를 드러낼수록 운이 따라옵니다.</p><div class="lock">✦ 프리미엄 — 연애·금전·일 카드 3장 상세 해석</div></div></div>
+  <div class="pad" style="margin-top:14px"><button class="btn ink">결과 이미지로 공유하기</button><div class="adnote">결과 보기 전 짧은 광고가 나옵니다 · 하루 횟수 제한 · 프리미엄은 광고 없음</div></div>
+ </div>
+ <div class="tabs"><div class="tab on"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div></div>
+</div></div>
+
+<!-- ============ ⑧ 꿈 해몽 ============ -->
+<div><div class="cap">⑧ 꿈 해몽 (검색 + 꿈별 카테고리)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="sub"><span class="bk">‹</span><span class="t"><b>꿈 해몽</b><small>어젯밤 꿈, 어떤 의미일까?</small></span></div>
+ <div class="scroll">
+  <div class="search">🔍 어떤 꿈을 꾸셨나요?<b>풀이</b></div>
+  <div class="kw"><span>돼지꿈</span><span>이빨 빠지는 꿈</span><span>뱀꿈</span><span>돌아가신 부모님</span><span>물에 빠지는 꿈</span></div>
+  <div class="dcat"><div><i>獸</i>동물</div><div><i>人</i>사람</div><div><i>財</i>돈·재물</div><div><i>水</i>자연</div><div><i>身</i>몸·건강</div><div><i>家</i>집·장소</div><div><i>事</i>사건</div><div><i>物</i>물건</div></div>
+  <div class="dres"><div class="in"><small>돼지꿈 · 재물·길몽</small><b>큰 재물이 들어올 조짐</b><p>살찐 돼지가 집 안으로 들어오는 꿈은 뜻밖의 수입이나 좋은 소식을 뜻합니다. 가까운 사람이 도움을 줄 수 있습니다.</p><div class="lock">✦ 프리미엄 — 꿈의 상황별 상세 해몽 · 오늘의 행동 조언</div></div></div>
+ </div>
+ <div class="tabs"><div class="tab on"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab"><span class="i">函</span>나의 운세함</div></div>
+</div></div>
+
+<!-- ============ ⑨ 나의 운세함 ============ -->
+<div><div class="cap">⑨ 나의 운세함 (개인 서재)</div>
+<div class="phone">
+ <div class="status"><span>9:41</span><span>●●▮</span></div>
+ <div class="hdr"><span class="chip-h">설정</span><span class="logo" style="font-family:var(--serif);font-weight:900;font-size:22px">나의 운세함</span><span class="chip-h">프리미엄</span></div>
+ <div class="scroll">
+  <div class="boxhead"><small>MY LIBRARY</small><b>홍길동님, 오늘도 좋은 운이<br>함께 하기를 바랍니다.</b><div class="pf"><span>나 · 1978.03.15</span><span>배우자</span><span>+ 사주 추가</span></div></div>
+  <div class="sec" style="margin-top:22px"><div class="en">DESTINY</div><h3>나의 <em>운명서</em></h3></div>
+  <div class="shelf"><div class="book f"><small>천궁도사</small><b>2026<br>재물운</b><span>2026.10.18</span></div><div class="book f"><small>천궁도사</small><b>정통운세</b><span>2026.10.02</span></div><div class="book f"><small>천궁도사</small><b>2027<br>신년운세</b><span>2026.10.01</span></div></div>
+  <div class="sec" style="margin-top:18px"><div class="en">FATE</div><h3>나의 <em>인연서</em></h3></div>
+  <div class="shelf"><div class="book l"><small>월하선녀</small><b>부부궁합</b><span>2026.10.05</span></div><div class="book l"><small>월하선녀</small><b>인연운</b><span>2026.10.03</span></div></div>
+  <div class="menu"><div>나의 부적함<span>3장 ›</span></div><div>결제 내역<span>›</span></div><div>알림 설정<span>오전 7:00 ›</span></div><div>계정 · 약관 · 문의<span>›</span></div></div>
+ </div>
+ <div class="tabs"><div class="tab"><span class="i">家</span>홈</div><div class="tab"><span class="i">命</span>나만의 운명</div><div class="tab"><span class="i">緣</span>나만의 인연</div><div class="tab"><span class="i">符</span>나만의 부적</div><div class="tab on"><span class="i">函</span>나의 운세함</div></div>
+</div></div>
+</div>
+<footer>시안 v2 · 2026-09-30 · 상품명·가격·문구는 대표님 「화면구성과 카테고리」 문서 기준<br>캐릭터는 대표님이 새로 주신 이미지로 교체 예정 · 썸네일 한자 자리는 상품 이미지로 교체 예정</footer>
+</body>
+</html>
