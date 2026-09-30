@@ -81,6 +81,10 @@ for (const file of files) {
     const d = out('thumb');
     await sharp(src).resize(448, 448, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name.slice(6)}.webp`));
     thumbs[name.slice(6)] = `/img/thumb/${name.slice(6)}.webp`;
+  } else if (name.startsWith('tarot_')) {
+    const d = out('tarot');
+    await sharp(src).resize(300, 488, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name}.webp`));
+    manifest[name] = { src: `/img/tarot/${name}.webp`, w: 300, h: 488 };
   } else if (name.startsWith('hero_')) {
     const d = out('banner');
     await sharp(src).resize(1200, 800, { fit: 'cover' }).webp({ quality: 78 }).toFile(join(d, `${name}.webp`));

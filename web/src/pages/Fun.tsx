@@ -11,6 +11,7 @@ import { AdSlot, Button, CharacterBubble, PremiumLock, Stars, useToast } from '.
 import { ShareSheet } from '../components/ShareSheet';
 import { ShareCard } from '../components/ShareCard';
 import { useRewarded } from '../components/Rewarded';
+import { optionalImg } from '../assets/images';
 import { isUnlockedToday, useApp, useMainProfile, usePremium, type Profile } from '../store/app';
 import { useSaju } from '../lib/fortune';
 import { koDate } from '../lib/dates';
@@ -172,7 +173,7 @@ export function TarotPage() {
             const picked = pickI === i;
             return (
               <button key={i} className={`tc${picked ? ` pick${flip ? ' flip' : ''}${d.reversed ? ' rev' : ''}` : ''}`} onClick={() => choose(i)} disabled={pickI != null && !picked} aria-label={picked ? `${d.card.nameKo}${d.reversed ? ' 역방향' : ''}` : `${i + 1}번째 카드 고르기`}>
-                <div className="in">{picked ? <><span>{d.card.symbol}</span><small>{d.card.nameEn}</small></> : <span>{['月', '星', '日'][i]}</span>}</div>
+                <div className="in">{picked ? (optionalImg(`tarot_${d.card.id}`) ? <img src={optionalImg(`tarot_${d.card.id}`)!.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} /> : <><span>{d.card.symbol}</span><small>{d.card.nameEn}</small></>) : <span>{['月', '星', '日'][i]}</span>}</div>
               </button>
             );
           })}

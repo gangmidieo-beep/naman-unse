@@ -6,6 +6,8 @@ import saju from '@naman/content/data/sample-readings/saju.json';
 import gunghap from '@naman/content/data/sample-readings/gunghap.json';
 import newyear from '@naman/content/data/sample-readings/newyear.json';
 import { sajuOf } from '@naman/content';
+import { solarToLunar, tojeong } from '@naman/engine';
+import { newYearTarget } from '../lib/dates';
 import { SubHeader } from '../components/layout';
 import { Button, CharacterBubble, useToast } from '../components/ui';
 import { Img } from '../components/Img';
@@ -44,6 +46,13 @@ function PillarTable({ p }: { p: Profile }) {
       </tbody>
     </table>
   );
+}
+
+// 토정비결: 그해 괘 번호(상·중·하) — 계산은 엔진 tojeong(), 풀이는 11 단계 AI 가 이 번호로 새로 쓴다
+function Gwae({ p }: { p: Profile }) {
+  const l = p.calendar === 'lunar' ? { year: p.year, month: p.month, day: p.day } : solarToLunar(p.year, p.month, p.day);
+  const g = tojeong({ lunarYear: l.year, lunarMonth: l.month, lunarDay: l.day, targetYear: newYearTarget().year });
+  return <p className="note" style={{ margin: '10px 18px 0', fontSize: 16 }}>{newYearTarget().year}년 괘 번호 <b>{g.number}</b> · 상괘 {g.upper} · 중괘 {g.middle} · 하괘 {g.lower}</p>;
 }
 
 export default function ReadingPage() {
@@ -113,6 +122,7 @@ export default function ReadingPage() {
               {partner && <p>{partner.name}님 · {birthLabel(partner)}</p>}
             </div>
             <PillarTable p={person} />
+            {p.id === 'tojeong' && <Gwae p={person} />}
             {person.id !== SAMPLE_PROFILE.id && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
             <div className="chap"><CharacterBubble who={who}>{r.intro}</CharacterBubble></div>
             <nav className="toc" aria-label="목차">

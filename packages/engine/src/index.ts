@@ -136,3 +136,5 @@ export const kstDateString = (date: Date) => {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 export { jeolgiOfYear, MONTH_STEM_BASE };
+export { tojeong, ganjiNum, type TojeongInput } from './tojeong.ts';
+export { lunarMonthDays } from './lunar.ts';

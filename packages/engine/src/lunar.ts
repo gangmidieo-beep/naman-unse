@@ -55,3 +55,12 @@ export function solarToLunar(year: number, month: number, day: number): LunarDat
   }
   throw new RangeError(`양력 ${year}-${month}-${day} 는 음력 변환 범위 밖이에요`);
 }
+
+// 음력 달의 날수(29|30). 없는 달이면 RangeError
+export function lunarMonthDays(year: number, month: number, leap = false): number {
+  const r = rows.find((x) => x.y === year);
+  if (!r) throw new RangeError(`음력 ${year}년은 지원 범위 밖이에요`);
+  const m = monthsOf(r).find((x) => x.month === month && x.leap === leap);
+  if (!m) throw new RangeError(`${year}년에는 ${leap ? '윤' : ''}${month}월이 없어요`);
+  return m.days;
+}
