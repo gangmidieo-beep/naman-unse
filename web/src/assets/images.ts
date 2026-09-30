@@ -3,22 +3,20 @@
 import { INCOMING } from './incoming';
 
 const BASE = {
-  dosaFace: { src: '/img/char/dosa_face.webp', w: 240, h: 240, alt: '천궁도령 얼굴' },
-  sunnyeoFace: { src: '/img/char/sunnyeo_face.webp', w: 240, h: 240, alt: '월하선녀 얼굴' },
-  dosaBanner: { src: '/img/char/dosa_banner.webp', w: 800, h: 547, alt: '별자리 부채를 든 천궁도령' },
-  sunnyeoBanner: { src: '/img/char/sunnyeo_banner.webp', w: 800, h: 547, alt: '붉은 실을 든 월하선녀' },
-  dosaCard: { src: '/img/char/dosa_card.webp', w: 640, h: 960, alt: '천궁도령' },
-  sunnyeoCard: { src: '/img/char/sunnyeo_card.webp', w: 640, h: 960, alt: '월하선녀' },
+  cheongungFace: { src: '/img/char/cheongung_face.webp', w: 240, h: 240, alt: '천궁도사 얼굴' },
+  wolhaFace: { src: '/img/char/wolha_face.webp', w: 240, h: 240, alt: '월하선녀 얼굴' },
+  cheongungBanner: { src: '/img/char/cheongung_banner.webp', w: 800, h: 547, alt: '별자리 부채를 든 천궁도사' },
+  wolhaBanner: { src: '/img/char/wolha_banner.webp', w: 800, h: 547, alt: '붉은 실을 든 월하선녀' },
+  cheongungCard: { src: '/img/char/cheongung_card.webp', w: 640, h: 960, alt: '천궁도사' },
+  wolhaCard: { src: '/img/char/wolha_card.webp', w: 640, h: 960, alt: '월하선녀' },
 } as const;
 export type ImgKey = keyof typeof BASE;
 type Entry = { src: string; srcset?: string; w: number; h: number; alt: string };
 
-// 들어온 이미지 파일명(docs/이미지프롬프트.md) → 화면 키
+// 들어온 이미지 파일명(docs/이미지프롬프트_v2.md) → 화면 키
 const INCOMING_FOR: Partial<Record<ImgKey, string>> = {
-  dosaBanner: 'banner_dosa',
-  sunnyeoBanner: 'banner_sunnyeo',
-  dosaCard: 'card_saju',
-  sunnyeoCard: 'card_gunghap',
+  cheongungBanner: 'banner_jeongtong',
+  wolhaBanner: 'banner_love',
 };
 export const IMG: Record<ImgKey, Entry> = Object.fromEntries(
   (Object.keys(BASE) as ImgKey[]).map((k) => {
@@ -27,5 +25,5 @@ export const IMG: Record<ImgKey, Entry> = Object.fromEntries(
   }),
 ) as Record<ImgKey, Entry>;
 
-// 선택 이미지(없으면 undefined → 화면이 CSS 대체)
-export const optionalImg = (name: 'card_newyear' | 'card_talisman' | 'banner_premium' | 'loading_dosa' | 'logo_seal') => INCOMING[name];
+// 선택 이미지(없으면 undefined → 화면이 CSS 대체). 예) logo_brand, logo_seal, hero_duo, banner_premium, loading_cheongung, banner_{상품id}
+export const optionalImg = (name: string) => INCOMING[name];

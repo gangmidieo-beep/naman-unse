@@ -14,17 +14,47 @@ const INCOMING = join(PUB, '_incoming');
 const SOURCE = join(root, 'docs/assets-source');
 const mk = (d) => mkdirSync(d, { recursive: true });
 
-/* ---------- 1) 캐릭터 ---------- */
+/* ---------- 1) 캐릭터 (v2 원본이 있으면 v2, 없으면 v1) ---------- */
 const CHARS = {
-  dosa: { src: '천궁도령.png', face: { left: 432, top: 36, width: 270, height: 270 }, bannerTop: 20 },
-  sunnyeo: { src: '월하선녀.png', face: { left: 380, top: 100, width: 270, height: 270 }, bannerTop: 74 },
+  cheongung: {
+    v2: { src: '천궁도사_v2.png', face: { left: 295, top: 170, width: 340, height: 340 }, banner: { left: 0, top: 30, width: 1024, height: 700 }, card: { left: 0, top: 0, width: 1024, height: 1536 } },
+    v1: { src: '천궁도사_v1.png', face: { left: 432, top: 36, width: 270, height: 270 }, banner: { left: 0, top: 20, width: 1024, height: 700 }, card: { left: 0, top: 0, width: 1024, height: 1536 } },
+  },
+  wolha: {
+    v2: { src: '월하선녀_v2.png', face: { left: 300, top: 225, width: 340, height: 340 }, banner: { left: 0, top: 130, width: 941, height: 643 }, card: { left: 0, top: 60, width: 941, height: 1411 } },
+    v1: { src: '월하선녀_v1.png', face: { left: 380, top: 100, width: 270, height: 270 }, banner: { left: 0, top: 74, width: 1024, height: 700 }, card: { left: 0, top: 0, width: 1024, height: 1536 } },
+  },
 };
 mk(join(PUB, 'char'));
-for (const [id, c] of Object.entries(CHARS)) {
+for (const [id, both] of Object.entries(CHARS)) {
+  const c = existsSync(join(root, 'assets/characters', both.v2.src)) ? both.v2 : both.v1;
   const src = join(root, 'assets/characters', c.src);
   await sharp(src).extract(c.face).resize(240, 240).webp({ quality: 82 }).toFile(join(PUB, 'char', `${id}_face.webp`));
-  await sharp(src).extract({ left: 0, top: c.bannerTop, width: 1024, height: 700 }).resize(800, 547).webp({ quality: 78 }).toFile(join(PUB, 'char', `${id}_banner.webp`));
-  await sharp(src).resize(640, 960).webp({ quality: 78 }).toFile(join(PUB, 'char', `${id}_card.webp`));
+  await sharp(src).extract(c.banner).resize(800, 547).webp({ quality: 78 }).toFile(join(PUB, 'char', `${id}_banner.webp`));
+  await sharp(src).extract(c.card).resize(640, 960).webp({ quality: 78 }).toFile(join(PUB, 'char', `${id}_card.webp`));
+}
+
+/* ---------- 1-2) 상품 썸네일 — 대표님이 보낸 시트(docs/대표님자료/상품썸네일_시트.png, 6열×4행)에서 잘라 쓴다 ---------- */
+// ponytail: 시트 칸 위치를 고정값으로 자름 — 시트가 바뀌면 THUMB_COLS/ROWS 를 다시 맞추거나 _incoming 의 thumb_{id}.png 로 교체
+const SHEET = join(root, 'docs/대표님자료/상품썸네일_시트.png');
+const THUMB_COLS = [4, 236, 466, 694, 924, 1154];
+const THUMB_ROWS = [[4, 155], [224, 338], [406, 522], [588, 685]];
+const THUMB_IDS = [
+  'jeongtong', 'pyeongsaeng', 'daewoon', 'ohaeng', 'wealth', 'career',
+  'business', 'startup', 'exam', 'newyear', 'tojeong', 'monthly',
+  'love', 'inyeon', 'marriage', 'lifelove', 'gunghap', 'couple',
+  'spouse', 'reunion', 'fun_tarot', 'fun_dream', 'fun_mbti', 'fun_factbomb',
+];
+const thumbs = {};
+if (existsSync(SHEET)) {
+  mk(join(PUB, 'thumb'));
+  for (const [i, id] of THUMB_IDS.entries()) {
+    const [t, b] = THUMB_ROWS[Math.floor(i / 6)];
+    const side = Math.min(b - t, 226);
+    const left = THUMB_COLS[i % 6] + Math.round((226 - side) / 2);
+    await sharp(SHEET).extract({ left, top: t, width: side, height: side }).resize(224, 224, { kernel: 'lanczos3' }).webp({ quality: 84 }).toFile(join(PUB, 'thumb', `${id}.webp`));
+    thumbs[id] = `/img/thumb/${id}.webp`;
+  }
 }
 
 /* ---------- 2) _incoming ---------- */
@@ -47,9 +77,17 @@ for (const file of files) {
     const d = out('cards');
     for (const [w, h] of [[440, 600], [660, 900]]) await sharp(src).resize(w, h, { fit: 'cover', position: 'top' }).webp({ quality: 78 }).toFile(join(d, `${name}_${w}.webp`));
     manifest[name] = { src: `/img/cards/${name}_440.webp`, srcset: `/img/cards/${name}_440.webp 440w, /img/cards/${name}_660.webp 660w`, w: 440, h: 600 };
-  } else if (name.startsWith('icon_') || name.startsWith('zodiac_') || name === 'loading_dosa') {
+  } else if (name.startsWith('thumb_')) {
+    const d = out('thumb');
+    await sharp(src).resize(448, 448, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name.slice(6)}.webp`));
+    thumbs[name.slice(6)] = `/img/thumb/${name.slice(6)}.webp`;
+  } else if (name.startsWith('hero_')) {
+    const d = out('banner');
+    await sharp(src).resize(1200, 800, { fit: 'cover' }).webp({ quality: 78 }).toFile(join(d, `${name}.webp`));
+    manifest[name] = { src: `/img/banner/${name}.webp`, w: 1200, h: 800 };
+  } else if (name.startsWith('icon_') || name.startsWith('zodiac_') || name === 'loading_cheongung') {
     const d = out('icons');
-    const sizes = name === 'loading_dosa' ? [240, 480] : [128, 256];
+    const sizes = name === 'loading_cheongung' ? [240, 480] : [128, 256];
     for (const s of sizes) await sharp(src).resize(s, s, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 85 }).toFile(join(d, `${name}_${s}.webp`));
     manifest[name] = { src: `/img/icons/${name}_${sizes[1]}.webp`, w: sizes[0], h: sizes[0] };
   } else if (name === 'logo_seal') {
@@ -75,6 +113,12 @@ for (const file of files) {
   }
   report.push(`변환: ${file}`);
 }
+writeFileSync(
+  join(root, 'web/src/assets/thumbs.ts'),
+  `// scripts/make-images.mjs 가 만드는 파일 — 상품 id → 썸네일. 없는 상품은 먹색+금 한자로 대체. 직접 고치지 말 것.
+export const THUMBS: Partial<Record<string, string>> = ${JSON.stringify(thumbs, null, 2)};
+`,
+);
 writeFileSync(
   join(root, 'web/src/assets/incoming.ts'),
   `// scripts/make-images.mjs 가 만드는 파일 — _incoming 에서 변환된 이미지 목록. 직접 고치지 말 것.\n` +

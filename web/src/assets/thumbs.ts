@@ -1,0 +1,27 @@
+// scripts/make-images.mjs 가 만드는 파일 — 상품 id → 썸네일. 없는 상품은 먹색+금 한자로 대체. 직접 고치지 말 것.
+export const THUMBS: Partial<Record<string, string>> = {
+  "jeongtong": "/img/thumb/jeongtong.webp",
+  "pyeongsaeng": "/img/thumb/pyeongsaeng.webp",
+  "daewoon": "/img/thumb/daewoon.webp",
+  "ohaeng": "/img/thumb/ohaeng.webp",
+  "wealth": "/img/thumb/wealth.webp",
+  "career": "/img/thumb/career.webp",
+  "business": "/img/thumb/business.webp",
+  "startup": "/img/thumb/startup.webp",
+  "exam": "/img/thumb/exam.webp",
+  "newyear": "/img/thumb/newyear.webp",
+  "tojeong": "/img/thumb/tojeong.webp",
+  "monthly": "/img/thumb/monthly.webp",
+  "love": "/img/thumb/love.webp",
+  "inyeon": "/img/thumb/inyeon.webp",
+  "marriage": "/img/thumb/marriage.webp",
+  "lifelove": "/img/thumb/lifelove.webp",
+  "gunghap": "/img/thumb/gunghap.webp",
+  "couple": "/img/thumb/couple.webp",
+  "spouse": "/img/thumb/spouse.webp",
+  "reunion": "/img/thumb/reunion.webp",
+  "fun_tarot": "/img/thumb/fun_tarot.webp",
+  "fun_dream": "/img/thumb/fun_dream.webp",
+  "fun_mbti": "/img/thumb/fun_mbti.webp",
+  "fun_factbomb": "/img/thumb/fun_factbomb.webp"
+};
