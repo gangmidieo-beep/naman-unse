@@ -1,22 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { buyLabel, productById, memberPrice, FATE, LOVE, TALISMANS } from './catalog';
+import { applyServerProducts, buyLabel, priceView, productById, recommendFor, TAROTS } from './catalog';
 
-describe('카탈로그', () => {
-  it('상품 26 + 부적 14', () => {
-    expect(FATE.length + LOVE.length).toBe(26);
-    expect(TALISMANS).toHaveLength(14);
+describe('관리자 값 반영(서버 products 덮어쓰기)', () => {
+  it('정가·할인 표시·버튼·추천 부적이 앱에 반영된다', () => {
+    expect(priceView(productById('career')!).label).toBe('회원');
+    applyServerProducts([{ id: 'career', listPrice: 25000, price: 19000, buttonLabel: '지금 풀이 받기', recommend: ['t_pass'] }]);
+    const p = productById('career')!;
+    expect(priceView(p)).toMatchObject({ rate: 24, strike: 25000, final: 19000 });
+    expect(buyLabel(p)).toBe('지금 풀이 받기');
+    expect(recommendFor('career').map((t) => t.id)).toEqual(['t_pass']);
+    applyServerProducts([{ id: 'career', showDiscount: false }]);
+    expect(priceView(p).rate).toBe(0);
   });
-  it('부적 버튼 문구 (HWP)', () => {
-    expect(buyLabel(productById('t_wealth')!)).toBe('나만의 재물부적 받기 – 14,900원');
-    expect(buyLabel(productById('t_luck')!)).toBe('나만의 행운부적 받기 – 9,900원');
-    expect(buyLabel(productById('t_pass')!)).toBe('나만의 취업합격부적 받기 – 9,900원');
-  });
-  it('회원가 10%', () => {
-    expect(memberPrice(productById('wealth')!)).toBe(17100);
-    expect(memberPrice(productById('t_wealth')!)).toBe(13410);
-  });
-  it('캐릭터 버튼', () => {
-    expect(buyLabel(productById('wealth')!)).toBe('천궁도사의 상세풀이 받기');
-    expect(buyLabel(productById('gunghap')!)).toBe('나의 인연서 열어보기');
+  it('기본 추천 부적 매핑 · 타로 버튼', () => {
+    expect(recommendFor('gunghap').map((t) => t.id)).toEqual(['t_couple']);
+    expect(recommendFor('jeongtong').map((t) => t.id)).toEqual(['t_wish', 't_luck']);
+    expect(buyLabel(TAROTS[0])).toBe('타로 리딩 받기');
   });
 });

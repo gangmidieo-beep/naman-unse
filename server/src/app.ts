@@ -13,6 +13,7 @@ import { newId, signAdmin, signUser, verify, type AdminClaims, type UserClaims }
 import { exchange, isConfigured, isProvider, startUrl, takeState } from './services/oauth.ts';
 import { contentStats, dashboard, memberDetail, members, payments, range, subscriptionStats, toCsv } from './services/stats.ts';
 import { shareCard } from './services/card.ts';
+import photoSample from '../../packages/content/data/photo-sample.json' with { type: 'json' };
 
 const MOCK = process.env.MOCK_MODE !== 'false';
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
@@ -144,6 +145,13 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       or(isNull(S.banners.startsAt), lte(S.banners.startsAt, now)), or(isNull(S.banners.endsAt), gt(S.banners.endsAt, now)))).orderBy(asc(S.banners.sort));
   });
   app.get('/ads', async () => db.select().from(S.adSettings));
+  app.get('/categories', async () => db.select().from(S.categories).where(eq(S.categories.visible, true)).orderBy(asc(S.categories.tab), asc(S.categories.sort)));
+  // 손금·관상 사진 — 메모리에서만 처리하고 저장·로그하지 않는다. 지금은 예시 결과(mock). AI 비전 호출은 비용 보고 후 연결(11 단계 파이프라인).
+  app.post('/photo/analyze', { bodyLimit: 8 * 1024 * 1024, logLevel: 'silent', config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const { kind, image } = (req.body ?? {}) as { kind?: string; image?: string };
+    if ((kind !== 'palm' && kind !== 'face') || typeof image !== 'string' || !/^data:image\/(png|jpe?g|webp|heic|svg\+xml);base64,/.test(image)) return rep.code(400).send({ error: '사진 형식을 확인해 주세요' });
+    return photoSample[kind]; // image 변수는 여기서 버려진다(어디에도 쓰지 않음)
+  });
 
   /* ---------- 주문(결제) ---------- */
   app.post('/orders', async (req, rep) => {
@@ -267,7 +275,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.patch(`${A}/products/:id`, { preHandler: guard() }, async (req: Req, rep) => {
     const id = (req.params as any).id;
     const b = req.body as Record<string, any>;
-    const allowed = ['title', 'cardCopy', 'detail', 'badge', 'visible', 'sort', 'imageUrl', ...(req.admin!.role === 'super' ? ['price', 'memberPrice', 'googleProductId'] : [])];
+    const allowed = ['title', 'cardCopy', 'detail', 'badge', 'visible', 'sort', 'imageUrl', 'category', 'showDiscount', 'buttonLabel', 'resultTitle', 'recommend', 'detailCopy',
+      ...(req.admin!.role === 'super' ? ['price', 'memberPrice', 'listPrice', 'googleProductId'] : [])];
     if (Object.keys(b).some((k) => !allowed.includes(k))) return rep.code(403).send({ error: '가격 변경은 최고관리자만 할 수 있어요' });
     const [p] = await db.update(S.products).set({ ...b, updatedAt: new Date() }).where(eq(S.products.id, id)).returning();
     await audit(req, 'product.update', id, b);
@@ -323,7 +332,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     return o;
   });
   // 6 푸시 — 문구 → 딥링크 → 대상 → 즉시/예약. FCM 연결(10 단계) 전에는 발송 대상 수만 기록(MOCK)
-  const DEEP_LINKS = ['/today', '/today?tab=week', '/fate', '/love', '/talisman', '/box', '/premium', '/zodiac', '/fun/tarot', '/fun/dream', ...(await db.select({ id: S.products.id }).from(S.products).where(eq(S.products.kind, 'reading'))).map((p) => `/product/${p.id}`)];
+  const DEEP_LINKS = ['/today', '/today?tab=week', '/unse', '/unse?cat=fate', '/unse?cat=love', '/tarot', '/talisman', '/box', '/premium', '/zodiac', '/fun/dream', '/fun/small', '/fun/oneline', ...(await db.select({ id: S.products.id }).from(S.products).where(inArray(S.products.kind, ['reading', 'tarot', 'photo']))).map((p) => `/product/${p.id}`)];
   app.get(`${A}/push/links`, { preHandler: guard() }, async () => DEEP_LINKS);
   app.get(`${A}/push`, { preHandler: guard() }, async () => db.select().from(S.pushCampaigns).orderBy(desc(S.pushCampaigns.createdAt)));
   const targetCount = async (target: string) => {

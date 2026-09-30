@@ -21,7 +21,7 @@ export default function ProductDetail() {
   if (isTalisman(p)) return <Navigate to={`/talisman/${p.id}`} replace />;
   const who = charOf(p);
   const c = CHAR[who];
-  const d = (detailDb as Record<string, Detail>)[p.id];
+  const d = ((p as any).detailCopy ?? (detailDb as Record<string, Detail>)[p.id]) as Detail | undefined; // 관리자 값 우선
   const t = thumbOf(p);
   const book = isTarot(p) ? '타로 리딩' : isPhoto(p) ? `${p.title.replace(' 풀이', '')} 풀이` : c.book;
   const steps = isPhoto(p)

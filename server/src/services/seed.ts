@@ -1,6 +1,8 @@
 // 초기 데이터 — 상품·배너·광고 설정은 brand.config.json(=docs/상품카탈로그_v2.json)에서. 이미 있으면 건드리지 않는다(관리자 수정 보존).
 // demo=true 면 관리자 화면 확인용 가짜 회원·주문·이벤트 30일치를 만든다(개발 전용, 운영 DB 에 쓰지 말 것).
-import { sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
+import detailDb from '../../../packages/content/data/product-detail.json' with { type: 'json' };
+import talismanMap from '../../../packages/content/data/talisman-map.json' with { type: 'json' };
 import bcrypt from 'bcryptjs';
 import brand from '../../../brand.config.json' with { type: 'json' };
 import type { Db } from '../db/index.ts';
@@ -8,23 +10,49 @@ import { schema } from '../db/index.ts';
 import { newId } from './auth.ts';
 
 const S = schema;
+// v3: 상품마다 탭·분류·버튼 문구·결과 제목·추천 부적·상세 문구
+const recommendOf = (id: string) => (talismanMap.rules.find((r) => r.products.includes(id))?.talismans ?? ['t_luck']).slice(0, 2);
+const TAB: Record<string, string> = { reading: 'unse', photo: 'unse', tarot: 'tarot', talisman: 'talisman' };
+function v3Fields(p: any) {
+  const talismanBtn = () => {
+    let base = p.title.replace(/\s*부적$/, '').replace(/·/g, '');
+    if (base.length > 2 && base.endsWith('운')) base = base.slice(0, -1);
+    return brand.buttons.talisman.replace('{name}', `${base}부적`).replace('{price}', `${p.price.toLocaleString('ko-KR')}원`);
+  };
+  const button = p.kind === 'talisman' ? talismanBtn() : p.kind === 'tarot' ? brand.buttons.tarot : p.kind === 'photo' ? brand.buttons.photo : (brand.buttons as any)[p.character][0];
+  const result = p.kind === 'tarot' ? brand.resultTitles.tarot : p.kind === 'photo' ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : p.kind === 'talisman' ? null : (brand.resultTitles as any)[p.character];
+  return {
+    tab: TAB[p.kind], category: p.kind === 'reading' ? (p.character === 'cheongung' ? 'fate' : 'love') : p.kind,
+    listPrice: p.listPrice ?? null, showDiscount: true, buttonLabel: button, resultTitle: result,
+    recommend: p.kind === 'talisman' ? null : recommendOf(p.id), detailCopy: (detailDb as any)[p.id] ?? null,
+  };
+}
 export async function seedBase(db: Db) {
   const rows = [
     ...brand.fate.map((p) => ({ ...p, kind: 'reading' })),
     ...brand.love.map((p) => ({ ...p, kind: 'reading' })),
     ...brand.talisman.map((p) => ({ ...p, kind: 'talisman' })),
+    ...brand.tarot.map((p) => ({ ...p, kind: 'tarot' })),
+    ...brand.photo.map((p) => ({ ...p, kind: 'photo' })),
   ].map((p: any) => ({
     id: p.id, kind: p.kind, character: p.character, group: p.group, title: p.title, cardCopy: p.cardCopy, detail: p.detail ?? null,
     price: p.price, memberPrice: p.memberPrice ?? null, thumbHanja: p.thumbHanja ?? null, badge: p.badge ?? null, visible: p.visible !== false,
-    sort: p.sort ?? 0, googleProductId: p.googleProductId || null, meta: p.hanjaPhrase ? { hanjaPhrase: p.hanjaPhrase } : null,
+    sort: p.sort ?? 0, googleProductId: p.googleProductId || null,
+    meta: p.hanjaPhrase ? { hanjaPhrase: p.hanjaPhrase } : p.kind === 'tarot' ? { cards: p.cards, positions: p.positions } : null,
+    ...v3Fields(p),
   }));
   rows.push(
     { id: brand.subscription.monthly.id, kind: 'subscription', character: null, group: '프리미엄', title: '프리미엄 월간', cardCopy: null, detail: null, price: brand.subscription.monthly.price, memberPrice: null, thumbHanja: null, badge: null, visible: true, sort: 0, googleProductId: null, meta: null } as any,
     { id: brand.subscription.yearly.id, kind: 'subscription', character: null, group: '프리미엄', title: '프리미엄 연간', cardCopy: null, detail: null, price: brand.subscription.yearly.price, memberPrice: null, thumbHanja: null, badge: null, visible: true, sort: 1, googleProductId: null, meta: null } as any,
-    ...brand.fun.map((f, i) => ({ id: `fun_${f.id}`, kind: 'fun', character: 'wolha', group: '재미로 보는 운세', title: f.title, cardCopy: f.copy, detail: null, price: 0, memberPrice: null, thumbHanja: f.hanja, badge: null, visible: true, sort: i, googleProductId: null, meta: { link: f.link } }) as any),
+    ...brand.fun.map((f, i) => ({ id: `fun_${f.id}`, kind: 'fun', tab: 'unse', category: 'fun', character: 'wolha', group: '재미로 보는 운세', title: f.title, cardCopy: f.copy, detail: null, price: 0, memberPrice: null, thumbHanja: f.hanja, badge: null, visible: true, sort: i, googleProductId: null, meta: { link: f.link } }) as any),
     { id: 'today', kind: 'today', character: 'cheongung', group: '오늘의 운세', title: '오늘의 운세', cardCopy: '오늘 / 이번 주 / 이번 달', detail: null, price: 0, memberPrice: null, thumbHanja: '今', badge: null, visible: true, sort: 0, googleProductId: null, meta: null } as any,
   );
   await db.insert(S.products).values(rows).onConflictDoNothing();
+  // v3 이전에 만든 DB: 새 칸이 비어 있는 상품만 채운다(관리자가 고친 값은 보존)
+  for (const r of rows) if (r.tab) await db.update(S.products).set({ tab: r.tab, category: r.category, buttonLabel: r.buttonLabel, resultTitle: r.resultTitle, recommend: r.recommend, detailCopy: r.detailCopy }).where(and(eq(S.products.id, r.id), isNull(S.products.tab)));
+  await db.insert(S.categories).values(brand.categories.filter((c) => c.id !== 'all').map((c: any, i) => ({ id: c.id, tab: 'unse', label: c.label, sub: c.sub ?? null, character: c.character ?? null, groups: c.groups ?? null, sort: i })))
+    .onConflictDoNothing();
+  await db.insert(S.categories).values(brand.groups.tarot.map((g, i) => ({ id: `tarot_${i}`, tab: 'tarot', label: g, sort: i }))).onConflictDoNothing();
   await db.insert(S.banners).values(brand.banners.map((b, i) => ({ id: b.id, slot: 'home', title: b.title, copy: b.copy, link: b.link, character: b.character, sort: i, active: true }))).onConflictDoNothing();
   await db.insert(S.banners).values({ id: 'exit_default', slot: 'exit_popup', title: '앱 종료 팝업', copy: 'AdMob 전면 광고', link: null, sort: 0, active: true }).onConflictDoNothing();
   await db.insert(S.adSettings).values([

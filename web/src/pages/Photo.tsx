@@ -9,7 +9,21 @@ import type { PhotoProduct } from '../lib/catalog';
 
 type Kind = 'palm' | 'face';
 type Result = (typeof sample)['palm'];
-const readFile = (f: File) => new Promise<string>((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result as string); r.onerror = no; r.readAsDataURL(f); });
+// 휴대폰 원본(수 MB)을 긴 변 1280px JPEG 로 줄여서 보낸다 — 전송량·서버 메모리 절약
+async function readFile(f: File): Promise<string> {
+  const url = URL.createObjectURL(f);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const k = Math.min(1, 1280 / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round((img.naturalWidth || 300) * k));
+    c.height = Math.max(1, Math.round((img.naturalHeight || 300) * k));
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85);
+  } finally { URL.revokeObjectURL(url); }
+}
 
 async function analyze(kind: Kind, image: string): Promise<Result> {
   if (MOCK_MODE) { await new Promise((r) => setTimeout(r, 2400)); return sample[kind]; }

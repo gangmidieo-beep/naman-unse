@@ -130,7 +130,22 @@ const PRODUCT_TABS = [
   ['today', '오늘의 운세', (p: any) => p.kind === 'today'], ['fun', '재미로 보는 운세', (p: any) => p.kind === 'fun'],
   ['cheongung', '천궁도사', (p: any) => p.kind === 'reading' && p.character === 'cheongung'], ['wolha', '월하선녀', (p: any) => p.kind === 'reading' && p.character === 'wolha'],
   ['talisman', '나만의 부적', (p: any) => p.kind === 'talisman'],
+  ['tarot', '타로', (p: any) => p.kind === 'tarot'], ['photo', '손금·관상', (p: any) => p.kind === 'photo'],
 ] as const;
+// v3 공통 틀 설정 — 버튼 문구·결과 제목·추천 부적·상세(대상 3줄·이유)
+function V3Fields({ p, set }: { p: any; set: (v: Record<string, unknown>) => void }) {
+  const d = p.detailCopy ?? {};
+  return (
+    <details className="ad-v3">
+      <summary>버튼 · 결과 제목 · 추천 부적 · 상세 문구</summary>
+      <label>버튼 문구<input value={p.buttonLabel ?? ''} onChange={(e) => set({ buttonLabel: e.target.value })} /></label>
+      {p.kind !== 'talisman' && <label>결과 제목<input value={p.resultTitle ?? ''} onChange={(e) => set({ resultTitle: e.target.value })} /></label>}
+      {p.kind !== 'talisman' && <label>추천 부적 id (쉼표로, 최대 2개)<input value={(p.recommend ?? []).join(', ')} onChange={(e) => set({ recommend: e.target.value.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 2) })} placeholder="t_wealth, t_biz" /></label>}
+      <label>이런 분께 필요해요 (한 줄에 하나, 3줄)<textarea rows={3} value={(d.target ?? []).join('\n')} onChange={(e) => set({ detailCopy: { ...d, target: e.target.value.split('\n').slice(0, 3) } })} /></label>
+      <label>지금 봐야 하는 이유 (2~3문장)<textarea rows={2} value={d.why ?? ''} onChange={(e) => set({ detailCopy: { ...d, why: e.target.value } })} /></label>
+    </details>
+  );
+}
 export function Products() {
   const [tab, setTab] = useState<string>('cheongung');
   const { data, err, reload } = useLoad(() => adminApi<any[]>('/products'), []);
@@ -141,8 +156,9 @@ export function Products() {
   useEffect(() => { if (data) setRows(data.filter(filter as any).sort((a, b) => a.sort - b.sort)); }, [data, tab]);
   const patch = (i: number, v: Record<string, unknown>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...v, _dirty: true } : x)));
   const save = async (p: any) => {
-    const body: any = { title: p.title, cardCopy: p.cardCopy, detail: p.detail, badge: p.badge || null, visible: p.visible, imageUrl: p.imageUrl };
-    if (isSuper()) Object.assign(body, { price: +p.price, memberPrice: p.memberPrice ? +p.memberPrice : null });
+    const body: any = { title: p.title, cardCopy: p.cardCopy, detail: p.detail, badge: p.badge || null, visible: p.visible, imageUrl: p.imageUrl,
+      showDiscount: p.showDiscount, buttonLabel: p.buttonLabel || null, resultTitle: p.resultTitle || null, recommend: p.recommend, detailCopy: p.detailCopy };
+    if (isSuper()) Object.assign(body, { price: +p.price, memberPrice: p.memberPrice ? +p.memberPrice : null, listPrice: p.listPrice ? +p.listPrice : null });
     try { await adminApi(`/products/${p.id}`, { method: 'PATCH', json: body }); setMsg(`${p.title} 저장 — 앱에 바로 반영돼요`); reload(); } catch (e) { setMsg((e as Error).message); }
   };
   const drop = async (to: number) => {
@@ -167,7 +183,7 @@ export function Products() {
       {msg && <p className="ad-ok">{msg}</p>}
       <p className="ad-muted">줄을 끌어 놓으면 노출 순서가 바뀌어요 · 가격은 최고관리자만 바꿀 수 있어요{!isSuper() && ' (지금은 운영자)'}</p>
       <table className="ad-table">
-        <thead><tr><th /><th>노출</th><th>상품명 · 카드 문구 · 상세설명</th><th>가격</th><th>할인가(회원)</th><th>배지</th><th>대표 이미지</th><th /></tr></thead>
+        <thead><tr><th /><th>노출</th><th>상품명 · 카드 문구 · 상세설명</th><th>가격</th><th>회원가 · 정가</th><th>배지</th><th>대표 이미지</th><th /></tr></thead>
         <tbody>{rows.map((p, i) => (
           <tr key={p.id} draggable onDragStart={() => setDrag(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => drop(i)} className={drag === i ? 'dragging' : ''}>
             <td className="grip" title="끌어서 순서 바꾸기">⋮⋮</td>
@@ -176,9 +192,12 @@ export function Products() {
               <input value={p.title} onChange={(e) => patch(i, { title: e.target.value })} aria-label="상품명" />
               <input value={p.cardCopy ?? ''} onChange={(e) => patch(i, { cardCopy: e.target.value })} aria-label="카드 문구" />
               {p.kind === 'talisman' && <textarea value={p.detail ?? ''} onChange={(e) => patch(i, { detail: e.target.value })} aria-label="상세설명" rows={2} />}
+              {p.tab && <V3Fields p={p} set={(v) => patch(i, v)} />}
             </td>
             <td><input type="number" value={p.price} disabled={!isSuper()} onChange={(e) => patch(i, { price: e.target.value })} aria-label="가격" /></td>
-            <td><input type="number" value={p.memberPrice ?? ''} disabled={!isSuper()} onChange={(e) => patch(i, { memberPrice: e.target.value })} aria-label="할인가" /></td>
+            <td><input type="number" value={p.memberPrice ?? ''} disabled={!isSuper()} onChange={(e) => patch(i, { memberPrice: e.target.value })} aria-label="회원가" />
+              <input type="number" value={p.listPrice ?? ''} placeholder="정가(할인 전)" disabled={!isSuper()} onChange={(e) => patch(i, { listPrice: e.target.value })} aria-label="정가" />
+              <label className="ad-check sm"><input type="checkbox" checked={p.showDiscount !== false} onChange={(e) => patch(i, { showDiscount: e.target.checked })} />할인율 표시</label></td>
             <td><select value={p.badge ?? ''} onChange={(e) => patch(i, { badge: e.target.value })}><option value="">없음</option><option>NEW</option><option>BEST</option><option>HOT</option><option>인기</option></select></td>
             <td>{p.imageUrl ? <img src={p.imageUrl} alt="" className="ad-thumb" /> : <span className="ad-thumb hz">{p.thumbHanja ?? '—'}</span>}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => upload(i, e.target.files?.[0])} aria-label="이미지 올리기" /></td>
             <td><button className={`ad-btn ${p._dirty ? 'gold' : 'line'} sm`} onClick={() => save(p)}>저장</button></td>

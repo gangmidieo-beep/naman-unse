@@ -8,7 +8,9 @@ import './styles/app.css';
 import './styles/pages.css';
 import './styles/v3.css';
 import { App } from './App';
+import { loadServerCatalog } from './lib/catalog';
 
+if (!__MOCK_MODE__ && __API_ORIGIN__) await loadServerCatalog(__API_ORIGIN__);
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

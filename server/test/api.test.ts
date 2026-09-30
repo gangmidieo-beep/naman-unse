@@ -38,6 +38,24 @@ describe('공개 API', () => {
     expect(list.filter((p) => p.kind === 'subscription')).toHaveLength(2);
     expect((await app.inject({ url: '/banners?slot=home' })).json()).toHaveLength(10);
   });
+  it('v3: 타로 6·사진 2 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
+    const list = (await app.inject({ url: '/products' })).json() as any[];
+    expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(6);
+    expect(list.filter((p) => p.kind === 'photo')).toHaveLength(2);
+    const wealth = list.find((p) => p.id === 'wealth');
+    expect(wealth).toMatchObject({ tab: 'unse', category: 'fate', buttonLabel: '천궁도사의 상세풀이 받기', resultTitle: '천궁도사가 풀어드린 나의 운명서', recommend: ['t_wealth', 't_biz'] });
+    expect(wealth.detailCopy.target).toHaveLength(3);
+    expect(list.find((p) => p.id === 't_wealth').buttonLabel).toBe('나만의 재물부적 받기 – 14,900원');
+    expect(list.find((p) => p.id === 'tarot_celtic').meta.cards).toBe(10);
+    const cats = (await app.inject({ url: '/categories' })).json() as any[];
+    expect(cats.filter((c) => c.tab === 'unse').map((c) => c.id)).toEqual(['fate', 'love', 'fun', 'photo']);
+  });
+  it('v3: 사진 분석 — 형식 검사, 결과만 돌려주고 저장 안 함', async () => {
+    expect((await app.inject({ method: 'POST', url: '/photo/analyze', payload: { kind: 'palm', image: 'hello' } })).statusCode).toBe(400);
+    const r = await app.inject({ method: 'POST', url: '/photo/analyze', payload: { kind: 'face', image: 'data:image/jpeg;base64,AAAA' } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().sections).toHaveLength(5);
+  });
   it('주문(mock) → 권한 → 구독 후 회원가 10%·사주 무제한', async () => {
     const o = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 'wealth' } });
     expect(o.json().status).toBe('paid');
@@ -107,7 +125,7 @@ describe('관리자 API', () => {
     const sent = (await app.inject({ method: 'POST', url: '/admin/api/push', headers: auth(staff), payload: { title: '오늘 재물운이 좋은 시간은 언제일까요?', body: '확인해 보세요', deepLink: '/today', target: 'all' } })).json();
     expect(sent.status).toBe('sent');
     expect(sent.sentCount).toBeGreaterThan(0);
-    const later = (await app.inject({ method: 'POST', url: '/admin/api/push', headers: auth(staff), payload: { title: 'a', body: 'b', deepLink: '/fate', target: 'premium', scheduledAt: new Date(Date.now() + 3600e3).toISOString() } })).json();
+    const later = (await app.inject({ method: 'POST', url: '/admin/api/push', headers: auth(staff), payload: { title: 'a', body: 'b', deepLink: '/unse?cat=fate', target: 'premium', scheduledAt: new Date(Date.now() + 3600e3).toISOString() } })).json();
     expect(later.status).toBe('scheduled');
     expect((await app.inject({ method: 'POST', url: '/admin/api/push', headers: auth(staff), payload: { title: 'a', body: 'b', deepLink: 'https://evil.example', target: 'all' } })).statusCode).toBe(400);
   });

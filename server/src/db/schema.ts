@@ -57,7 +57,28 @@ export const products = pgTable('products', {
   sort: integer().default(0).notNull(),
   googleProductId: text(),
   meta: jsonb(),
+  // v3 공통 틀 필드
+  tab: text(), // unse | tarot | talisman | fun | today | premium
+  category: text(), // categories.id (fate | love | fun | photo | tarot ...)
+  listPrice: integer(), // 정가(있으면 카드에 할인율% + 취소선)
+  showDiscount: boolean().default(true).notNull(),
+  buttonLabel: text(),
+  resultTitle: text(),
+  recommend: jsonb().$type<string[]>(), // 결과 화면 추천 부적 id (talisman-map 기본값)
+  detailCopy: jsonb(), // 상세 문구 {subtitle,target,why,contents,say}
   updatedAt: now(),
+});
+
+// 탭 → 분류 → 순서 (운세 탭 칩·타로 탭 묶음). 관리자 수정 가능
+export const categories = pgTable('categories', {
+  id: text().primaryKey(),
+  tab: text().notNull(),
+  label: text().notNull(),
+  sub: text(),
+  character: text(),
+  groups: jsonb().$type<string[]>(),
+  sort: integer().default(0).notNull(),
+  visible: boolean().default(true).notNull(),
 });
 
 export const orders = pgTable('orders', {
