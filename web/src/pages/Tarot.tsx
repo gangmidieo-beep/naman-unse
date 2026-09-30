@@ -140,7 +140,7 @@ export default function TarotTab() {
         </section>
       ))}
       <Records />
-      <AdSlot premium={premium} kind="타로 하단" />
+      <AdSlot premium={premium} kind="타로 하단" slot="tarot_banner" />
     </main>
   );
 }

@@ -94,3 +94,4 @@
   .ad-grid, .ad-split, .ad-cards.four, .ad-cards.two { grid-template-columns: 1fr; }
   .adm main { padding: 16px; overflow-x: auto; }
 }
+.ad-row1 { display: grid; gap: 4px; font-size: 13px; margin-top: 8px; } .ad-row1 input { padding: 6px 8px; }

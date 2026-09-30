@@ -92,7 +92,7 @@ export default function Today() {
                     </article>
                   );
                 })}
-                <AdSlot premium={premium} kind="상세 운세 네이티브" />
+                <AdSlot premium={premium} kind="상세 운세 네이티브" slot="detail_native" />
               </section>
             )}
             <div className="pad mt14">

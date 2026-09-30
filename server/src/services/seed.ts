@@ -28,10 +28,12 @@ export async function seedBase(db: Db) {
   await db.insert(S.banners).values(brand.banners.map((b, i) => ({ id: b.id, slot: 'home', title: b.title, copy: b.copy, link: b.link, character: b.character, sort: i, active: true }))).onConflictDoNothing();
   await db.insert(S.banners).values({ id: 'exit_default', slot: 'exit_popup', title: '앱 종료 팝업', copy: 'AdMob 전면 광고', link: null, sort: 0, active: true }).onConflictDoNothing();
   await db.insert(S.adSettings).values([
-    { slot: 'home_banner', enabled: brand.ads.homeBanner, config: null },
-    { slot: 'detail_native', enabled: brand.ads.detailNative, config: null },
+    { slot: 'home_banner', enabled: brand.ads.homeBanner, config: { adsenseSlot: '' } },
+    { slot: 'detail_native', enabled: brand.ads.detailNative, config: { adsenseSlot: '' } },
     { slot: 'rewarded', enabled: brand.ads.rewardedResult.enabled, config: { maxPerDay: brand.ads.rewardedResult.maxPerDay, minIntervalSec: brand.ads.rewardedResult.minIntervalSec } },
     { slot: 'exit', enabled: true, config: { mode: brand.ads.exitPopup.mode } },
+    { slot: 'content_banner', enabled: true, config: { adsenseSlot: '' } },
+    { slot: 'tarot_banner', enabled: true, config: { adsenseSlot: '' } },
   ]).onConflictDoNothing();
 }
 

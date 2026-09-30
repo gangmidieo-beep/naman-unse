@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Link } from 'react-router-dom';
 import { Img } from './Img';
 import type { ImgKey } from '../assets/images';
+import { usePremium } from '../store/app';
+import { adProvider, adSlots, isNativeApp, loadAdSense } from '../lib/ads';
 import { CHAR, charOf, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
 
 /* ---------- 버튼·칩·탭 ---------- */
@@ -102,7 +104,7 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
   const [anim, setAnim] = useState(true);
   const [drag, setDrag] = useState(0);
   const hold = useRef(false);
-  const start = useRef<{ x: number; moved: boolean } | null>(null);
+  const start = useRef<{ x: number; dx: number; moved: boolean } | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const go = useCallback((to: number) => { setAnim(true); setPos(to); }, []);
   useEffect(() => {
@@ -115,19 +117,20 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
     if (pos === 0) { setAnim(false); setPos(n); }
     else if (pos === n + 1) { setAnim(false); setPos(1); }
   };
-  const down = (e: React.PointerEvent) => { start.current = { x: e.clientX, moved: false }; setAnim(false); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); };
+  const down = (e: React.PointerEvent) => { start.current = { x: e.clientX, dx: 0, moved: false }; setAnim(false); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); };
   const move = (e: React.PointerEvent) => {
     if (!start.current) return;
     const dx = e.clientX - start.current.x;
+    start.current.dx = dx;
     if (Math.abs(dx) > 6) start.current.moved = true;
     setDrag(dx);
   };
   const up = () => {
     if (!start.current) return;
     const w = wrap.current?.clientWidth ?? 1;
-    const moved = start.current.moved;
-    if (drag < -w * 0.18) go(pos + 1);
-    else if (drag > w * 0.18) go(pos - 1);
+    const { moved, dx } = start.current;
+    if (dx < -w * 0.18) go(pos + 1);
+    else if (dx > w * 0.18) go(pos - 1);
     else setAnim(true);
     setDrag(0);
     // 드래그였으면 링크 클릭 막기
@@ -321,10 +324,23 @@ export function PremiumLock({ children, label = '✦ 프리미엄 회원은 전�
     </div>
   );
 }
-// 웹 = 자리 표시, 앱 = AdMob(10 단계). 프리미엄은 숨김.
-export function AdSlot({ premium, kind = '배너' }: { premium?: boolean; kind?: string }) {
-  if (premium) return null;
-  return <div className="ad" role="complementary" aria-label="광고">광고 영역 (AdMob {kind} · 프리미엄 회원은 숨김)</div>;
+// 광고 자리 — 프리미엄이면 아예 렌더하지 않음. 앱 = AdMob(네이티브 플러그인 자리), 웹 = 애드센스(ADSENSE_CLIENT_ID 있을 때만), 둘 다 아니면 자리 표시.
+// slot 은 관리자 광고 관리의 위치 키(home_banner · detail_native · content_banner · tarot_banner) — OFF 면 숨김, 애드센스 슬롯 ID 도 여기서.
+export function AdSlot({ premium, kind = '배너', slot = 'content_banner' }: { premium?: boolean; kind?: string; slot?: string }) {
+  const isPremium = usePremium() || !!premium;
+  const provider = adProvider({ premium: isPremium, native: isNativeApp(), adsenseClient: __ADSENSE_CLIENT_ID__ });
+  const [cfg, setCfg] = useState<{ enabled: boolean; config: { adsenseSlot?: string } | null } | null | undefined>(undefined);
+  const ins = useRef<HTMLModElement>(null);
+  useEffect(() => { if (provider !== 'none') adSlots().then((m) => setCfg(m[slot] ?? null)); }, [provider, slot]);
+  useEffect(() => {
+    if (provider !== 'adsense' || !cfg?.config?.adsenseSlot || !ins.current) return;
+    loadAdSense(__ADSENSE_CLIENT_ID__);
+    try { ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({}); } catch { /* 광고 차단 등 */ }
+  }, [provider, cfg]);
+  if (provider === 'none' || cfg?.enabled === false) return null;
+  if (provider === 'adsense' && cfg?.config?.adsenseSlot)
+    return <ins ref={ins} className="adsbygoogle ad-web" style={{ display: 'block' }} data-ad-client={__ADSENSE_CLIENT_ID__} data-ad-slot={cfg.config.adsenseSlot} data-ad-format="auto" data-full-width-responsive="true" />;
+  return <div className="ad" role="complementary" aria-label="광고" data-ad-provider={provider}>광고 영역 ({provider === 'admob' ? 'AdMob' : '웹 광고'} {kind} · 프리미엄 회원은 숨김)</div>;
 }
 
 /* ---------- 바텀시트·토스트·스켈레톤 ---------- */

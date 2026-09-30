@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
       __API_ORIGIN__: JSON.stringify(env.API_ORIGIN || ''),
       __PUBLIC_WEB_ORIGIN__: JSON.stringify(env.PUBLIC_WEB_ORIGIN || ''),
       __KAKAO_JS_KEY__: JSON.stringify(env.KAKAO_JS_KEY || ''),
+      __ADSENSE_CLIENT_ID__: JSON.stringify(env.ADSENSE_CLIENT_ID || ''),
     },
     css: { postcss: { plugins: [pxToRem()] } },
     preview: { port: 5392 },

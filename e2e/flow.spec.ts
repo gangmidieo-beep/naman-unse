@@ -1,4 +1,4 @@
-// v2 시나리오: 첫 실행 → 사주 입력(푸시 동의) → 홈 → 오늘의 운세(보상형 광고 → 상세) → 나만의 운명 → 상품 상세 → 로그인 → 결제(mock)
+// v3 시나리오: 첫 실행 → 사주 입력(푸시 동의) → 홈 → 오늘의 운세(보상형 광고 → 상세) → 운세 탭 → 상품 상세 → 로그인 → 결제(mock)
 // → 운명서 → 부적 상세 → 결제 → 소원 → 작성 연출 → 완성 → 나의 운세함에 보관
 import { test, expect } from '@playwright/test';
 
@@ -38,11 +38,13 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 8000 });
   await expect(page.getByRole('region', { name: '상세 풀이' })).toBeVisible();
 
-  // 나만의 운명 → 재물운 상세 → 결제
-  await page.getByRole('link', { name: /나만의 운명/ }).first().click();
+  // 운세 탭 → 천궁도사 → 재물과 성공 → 재물운 상세 → 결제
+  await page.getByRole('navigation', { name: '주 메뉴' }).getByRole('link', { name: /운세$/ }).first().click();
+  await page.getByRole('tab', { name: '천궁도사' }).click();
   await page.getByRole('tab', { name: '재물과 성공' }).click();
   await page.getByRole('link', { name: /재물운/ }).first().click();
   await expect(page.getByText('운명서에 담기는 내용')).toBeVisible();
+  await expect(page.getByText('이런 분께 필요해요')).toBeVisible();
   await page.getByRole('button', { name: '천궁도사의 상세풀이 받기' }).click();
   await page.getByRole('button', { name: 'Google로 시작하기' }).click();
   await page.getByRole('checkbox').check();
@@ -50,6 +52,8 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await expect(page.getByText('별을 읽고 있소…')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('heading', { name: '천궁도사가 풀어드린 나의 운명서' }).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('table', { name: /원국/ })).toBeVisible();
+  // 결과 맨 아래 추천 부적(재물운 → 재물·사업번창)
+  await expect(page.getByRole('region', { name: '추천 부적' }).getByRole('link', { name: /재물운 부적/ })).toBeVisible();
 
   // 부적
   await page.goto('/talisman/t_wealth');
@@ -72,11 +76,11 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   expect(errors).toEqual([]);
 });
 
-test('재미로 보는 운세 6종이 열린다', async ({ page }) => {
+test('재미로 보는 운세 7종 + 타로 탭이 열린다', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('naman-unse', JSON.stringify({ state: { introSeen: true, profiles: [], plan: 'monthly', purchases: [], talismans: [] }, version: 2 })));
-  for (const [path, text] of [['/fun/zodiac-star', '별자리'], ['/fun/blood', '혈액형'], ['/fun/tarot', '타로'], ['/fun/dream', '꿈 해몽'], ['/fun/factbomb', '팩폭'], ['/fun/mbti', 'MBTI']] as const) {
+  for (const [path, text] of [['/fun/zodiac-star', '별자리'], ['/fun/blood', '혈액형'], ['/fun/small', '스몰사주'], ['/fun/oneline', '한줄사주'], ['/fun/dream', '꿈 해몽'], ['/fun/factbomb', '팩폭'], ['/fun/mbti', 'MBTI']] as const) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: new RegExp(text) }).first()).toBeVisible();
   }
@@ -84,8 +88,9 @@ test('재미로 보는 운세 6종이 열린다', async ({ page }) => {
   await page.getByLabel('꿈 검색').fill('이빨 빠지는 꿈');
   await page.getByRole('button', { name: '풀이' }).click();
   await expect(page.getByText(/상황별 상세 해몽/)).toBeVisible();
-  await page.goto('/fun/tarot');
+  await page.goto('/tarot');
+  await page.getByRole('button', { name: '카드 섞고 펼치기' }).click();
   await page.getByRole('button', { name: '2번째 카드 고르기' }).click();
-  await expect(page.getByText(/오늘의 카드/)).toBeVisible();
+  await expect(page.getByText('연애', { exact: true })).toBeVisible(); // 프리미엄은 광고 없이 바로 풀이
   expect(errors).toEqual([]);
 });

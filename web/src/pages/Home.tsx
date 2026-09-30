@@ -70,7 +70,7 @@ export default function Home() {
           </section>
         )}
 
-        <AdSlot premium={premium} kind="홈 하단 배너" />
+        <AdSlot premium={premium} kind="홈 하단 배너" slot="home_banner" />
       </main>
     </>
   );

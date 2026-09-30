@@ -323,6 +323,8 @@ const AD_LABEL: Record<string, [string, string]> = {
   detail_native: ['상세 운세 네이티브', '오늘의 운세 상세 풀이 안 네이티브 광고 1개'],
   rewarded: ['결과 보상형 전면', '띠별·혈액형·MBTI·타로 결과, 오늘의 운세 상세 풀이 전'],
   exit: ['앱 종료 팝업', '뒤로가기로 종료할 때 AdMob 또는 이미지+링크'],
+  content_banner: ['콘텐츠 하단 배너', '재미로 보는 운세·띠별 결과 아래 배너'],
+  tarot_banner: ['타로 탭 하단 배너', '타로 탭 맨 아래 배너'],
 };
 export function Ads() {
   const { data, reload, err } = useLoad(() => adminApi<any[]>('/ads'), []);
@@ -333,7 +335,7 @@ export function Ads() {
   return (
     <>
       <Head title="광고 관리" />
-      <p className="ad-muted">프리미엄 회원에게는 모든 광고가 자동으로 빠져요 · 앱 시작 시 전면 광고는 없어요 · 변경은 최고관리자만</p>
+      <p className="ad-muted">프리미엄 회원에게는 모든 광고가 자동으로 빠져요 · 앱은 AdMob, 웹은 애드센스(앱 안에서는 애드센스를 불러오지 않음) · 앱 시작 시 전면 광고는 없어요 · 변경은 최고관리자만</p>
       {err && <p className="ad-err">{err}</p>}
       {msg && <p className="ad-ok">{msg}</p>}
       <div className="ad-cards two">
@@ -347,6 +349,9 @@ export function Ads() {
                 <label>하루 최대 횟수<input type="number" defaultValue={a.config?.maxPerDay} disabled={!isSuper()} onBlur={(e) => save(a.slot, a.enabled, { ...a.config, maxPerDay: +e.target.value })} /></label>
                 <label>최소 간격(초)<input type="number" defaultValue={a.config?.minIntervalSec} disabled={!isSuper()} onBlur={(e) => save(a.slot, a.enabled, { ...a.config, minIntervalSec: +e.target.value })} /></label>
               </div>
+            )}
+            {a.config && 'adsenseSlot' in a.config && (
+              <label className="ad-row1">웹 애드센스 슬롯 ID<input defaultValue={a.config.adsenseSlot} placeholder="예) 1234567890" disabled={!isSuper()} onBlur={(e) => save(a.slot, a.enabled, { ...a.config, adsenseSlot: e.target.value.trim() })} /></label>
             )}
             {a.slot === 'exit' && (
               <select value={a.config?.mode ?? 'admob'} disabled={!isSuper()} onChange={(e) => save(a.slot, a.enabled, { ...a.config, mode: e.target.value })}>
