@@ -9,12 +9,14 @@ import { sajuOf } from '@naman/content';
 import { solarToLunar, tojeong } from '@naman/engine';
 import { newYearTarget } from '../lib/dates';
 import { SubHeader } from '../components/layout';
-import { Button, CharacterBubble, useToast } from '../components/ui';
+import { Button, CharacterBubble, ProductCard, toCardItem, useToast } from '../components/ui';
 import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
 import { ShareCard } from '../components/ShareCard';
 import { SAMPLE_PROFILE, useApp, type Profile } from '../store/app';
-import { CHAR, charOf, displayTitle, productById, resultTitle } from '../lib/catalog';
+import { CHAR, charOf, displayTitle, isPhoto, isTarot, productById, recommendFor, resultTitle, type Product } from '../lib/catalog';
+import { TarotReading } from './Tarot';
+import { PhotoReading } from './Photo';
 import { optionalImg } from '../assets/images';
 import { birthLabel, hourLabel } from './ProfileNew';
 
@@ -63,7 +65,9 @@ export default function ReadingPage() {
   // /reading/sample-<상품id> 는 예시 주소(시안·공유 미리보기용)
   const order = purchases.find((x) => x.orderId === orderId) ?? (orderId.startsWith('sample-') ? { orderId, productId: orderId.slice(7), profileId: 'sample', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null);
   const p = order ? productById(order.productId) : null;
-  const [step, setStep] = useState(orderId.startsWith('sample-') ? STEPS.length : 0);
+  const pre = order ? productById(order.productId) : null;
+  // 타로·사진 풀이는 자체 연출(카드 뒤집기·분석 중)이 있어 대기 화면을 건너뛴다
+  const [step, setStep] = useState(orderId.startsWith('sample-') || (pre && (isTarot(pre) || isPhoto(pre))) ? STEPS.length : 0);
   const [share, setShare] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -121,9 +125,10 @@ export default function ReadingPage() {
               <p>{person.name}님 · {birthLabel(person)} · {hourLabel(person.hour)}</p>
               {partner && <p>{partner.name}님 · {birthLabel(partner)}</p>}
             </div>
+            {isTarot(p) ? <TarotReading p={p} orderId={order.orderId} /> : isPhoto(p) ? <PhotoReading p={p} orderId={order.orderId} /> : <>
             <PillarTable p={person} />
             {p.id === 'tojeong' && <Gwae p={person} />}
-            {person.id !== SAMPLE_PROFILE.id && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
+            {person.id !== SAMPLE_PROFILE.id && !isTarot(p) && !isPhoto(p) && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
             <div className="chap"><CharacterBubble who={who}>{r.intro}</CharacterBubble></div>
             <nav className="toc" aria-label="목차">
               <h2>목차</h2>
@@ -142,6 +147,7 @@ export default function ReadingPage() {
               <Body text={r.closing.body} highlight="" />
               <ul className="tips">{r.closing.tips.map((t) => <li key={t}>{t}</li>)}</ul>
             </section>
+            </>}
             <div className="doc-seal">{c.name}<span className="seal" aria-hidden>運</span></div>
           </div>
         </article>
@@ -149,10 +155,11 @@ export default function ReadingPage() {
         <div className="pad mt24">
           <div className="btn-row">
             <Button kind="ink" onClick={() => setShare(true)}>핵심만 공유하기</Button>
-            <Button kind="line" onClick={() => nav(who === 'cheongung' ? '/fate' : '/love')}>다른 풀이 보기</Button>
+            <Button kind="line" onClick={() => nav(isTarot(p) ? '/tarot' : `/unse?cat=${isPhoto(p) ? 'photo' : who === 'cheongung' ? 'fate' : 'love'}`)}>다른 풀이 보기</Button>
           </div>
           <p className="note">풀이는 <Link to="/box" className="u">나의 운세함</Link>에 보관돼요. 공유 카드에는 전체 풀이가 아닌 핵심 한 줄만 담겨요.</p>
         </div>
+        <TalismanRecommend p={p} />
       </main>
       <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${resultTitle(p)} · ${title}`} text={`“${r.chapters[0].highlight}” — ${c.name}`} path={`/product/${p.id}`} contentId={p.id} onDone={(m) => m && toast(m)} />
       <ShareCard ref={cardRef} title={title} sub={c.name}>
@@ -161,5 +168,17 @@ export default function ReadingPage() {
         <p style={{ marginTop: 18, fontSize: 16, color: 'var(--ink-3)' }}>전체 풀이는 나만의 운세 앱에서 볼 수 있어요</p>
       </ShareCard>
     </>
+  );
+}
+
+// 결과 맨 아래 — 이 풀이와 함께 받으면 좋은 부적 1~2개 (packages/content/data/talisman-map.json)
+function TalismanRecommend({ p }: { p: Product }) {
+  const list = recommendFor(p.id);
+  if (!list.length) return null;
+  return (
+    <section className="recom" aria-label="추천 부적">
+      <h2><small>WITH TALISMAN</small>이 풀이와 함께 받으면 좋은 부적</h2>
+      {list.map((t) => <ProductCard key={t.id} c={toCardItem(t)} mode="list" talisman={t} />)}
+    </section>
   );
 }

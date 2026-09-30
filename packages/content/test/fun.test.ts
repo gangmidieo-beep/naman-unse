@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { calcSaju } from '@naman/engine';
 import {
   starSignOf, starToday, STAR_SIGNS, bloodToday, BLOOD_TYPES, tarotDraw, TAROT_DECK, tarotSide, DREAMS, searchDream, normDream,
-  factbomb, mbtiResult, MBTI_TYPES,
+  factbomb, mbtiResult, MBTI_TYPES, tarotSpread, smallSaju, oneLineSaju,
 } from '../src/index';
 
 const me = calcSaju({ year: 1968, month: 3, day: 15, hour: 7, calendar: 'solar', gender: 'M' });
@@ -85,5 +85,27 @@ describe('팩폭·MBTI', () => {
     const r = mbtiResult('INFP', me)!;
     expect(r.element).toBe('wood');
     expect(r.saju.length).toBeGreaterThan(5);
+  });
+});
+
+describe('v3 타로 스프레드 · 스몰사주 · 한줄사주', () => {
+  it('스프레드: 같은 주문 = 같은 카드, 켈틱 10장 중복 없음', () => {
+    const a = tarotSpread('ord1:tarot_celtic', 10);
+    expect(a).toHaveLength(10);
+    expect(new Set(a.map((c) => c.card.id)).size).toBe(10);
+    expect(tarotSpread('ord1:tarot_celtic', 10)).toEqual(a);
+    expect(tarotSpread('ord2:tarot_celtic', 10)).not.toEqual(a);
+  });
+  it('스몰사주: 사람 고정 + 문구 채움', () => {
+    const s = smallSaju(me, 'p1', D);
+    expect(s.name).toContain('(');
+    expect(s.lines).toHaveLength(3);
+    expect(s.strongLine && s.weakLine && s.tip).toBeTruthy();
+    expect(smallSaju(me, 'p1', new Date('2026-10-01T03:00:00Z')).strongLine).toBe(s.strongLine);
+  });
+  it('한줄사주: 십신 10종 모두 문구', () => {
+    const r = oneLineSaju(me, 'p1', D);
+    expect(r.line).toMatch(/요[.!]?$/);
+    for (let i = 0; i < 10; i++) expect(oneLineSaju(me, 'p1', new Date(D.getTime() + i * 86400000)).line).toBeTruthy();
   });
 });

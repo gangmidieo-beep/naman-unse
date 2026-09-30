@@ -1,5 +1,6 @@
-// 상품 카탈로그 — 원본은 brand.config.json (docs/상품카탈로그_v2.json 에서 생성). 08 단계 이후에는 서버 products 가 우선.
+// 상품 카탈로그 — 원본은 brand.config.json (docs/상품카탈로그_v2.json + v3 추가 상품). 서버 연결 시 서버 products 가 우선(관리자 수정 반영).
 import brand from '../../../brand.config.json';
+import talismanMap from '@naman/content/data/talisman-map.json';
 import { THUMBS } from '../assets/thumbs';
 import { newYearTarget } from './dates';
 
@@ -7,16 +8,23 @@ export const BRAND = brand;
 export type CharId = 'cheongung' | 'wolha';
 export type Reading = (typeof brand.fate)[number] | (typeof brand.love)[number];
 export type Talisman = (typeof brand.talisman)[number];
-export type Product = Reading | Talisman;
+export type TarotProduct = (typeof brand.tarot)[number];
+export type PhotoProduct = (typeof brand.photo)[number];
+export type Product = Reading | Talisman | TarotProduct | PhotoProduct;
 
 export const FATE = brand.fate as Reading[];
 export const LOVE = brand.love as Reading[];
 export const TALISMANS = brand.talisman as Talisman[];
-export const ALL: Product[] = [...FATE, ...LOVE, ...TALISMANS];
+export const TAROTS = brand.tarot as TarotProduct[];
+export const PHOTOS = brand.photo as PhotoProduct[];
+export const ALL: Product[] = [...FATE, ...LOVE, ...TALISMANS, ...TAROTS, ...PHOTOS];
 export const productById = (id: string) => ALL.find((p) => p.id === id);
 export const isTalisman = (p: Product): p is Talisman => p.kind === 'talisman';
+export const isTarot = (p: Product): p is TarotProduct => p.kind === 'tarot';
+export const isPhoto = (p: Product): p is PhotoProduct => p.kind === 'photo';
 export const isTwoPerson = (id: string) => brand.twoPerson.includes(id);
 export const charOf = (p: Product) => p.character as CharId;
+export const productPath = (p: Product) => (isTalisman(p) ? `/talisman/${p.id}` : `/product/${p.id}`);
 export const CHAR = {
   cheongung: { name: '천궁도사', hanja: '天宮道士', book: '운명서', face: 'cheongungFace' as const, banner: 'cheongungBanner' as const, card: 'cheongungCard' as const },
   wolha: { name: '월하선녀', hanja: '月下仙女', book: '인연서', face: 'wolhaFace' as const, banner: 'wolhaBanner' as const, card: 'wolhaCard' as const },
@@ -26,6 +34,13 @@ export const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 // 회원가 = 정가에서 memberDiscountRate 할인, 10원 단위 반올림 (카탈로그 memberPrice 가 있으면 그 값)
 export const memberPrice = (p: Product) => (p as any).memberPrice ?? Math.round((p.price * (1 - brand.subscription.memberDiscountRate)) / 10) * 10;
 export const payPrice = (p: Product, premium: boolean) => (premium ? memberPrice(p) : p.price);
+// 카드 가격 표시(결정필요 D25): 정가(listPrice)가 있으면 "할인율% 정가(취소선) 판매가", 없으면 "10% 판매가(취소선) 회원가"
+export function priceView(p: Product) {
+  const list = (p as any).listPrice as number | undefined;
+  if (list && list > p.price) return { rate: Math.round(((list - p.price) / list) * 100), strike: list, final: p.price, label: '' };
+  const m = memberPrice(p);
+  return { rate: Math.round(((p.price - m) / p.price) * 100), strike: p.price, final: m, label: '회원' };
+}
 
 // 신년운세·토정비결은 대상 해를 자동으로(9월부터 다음 해)
 export function displayTitle(p: Product) {
@@ -36,7 +51,7 @@ export function displayTitle(p: Product) {
 export function displayCopy(p: Product) {
   return p.cardCopy.replace(/20\d\d년/, `${newYearTarget().year}년`);
 }
-// 썸네일: 이미지가 있으면 이미지, 없으면 먹색+금 한자
+// 썸네일: 이미지가 있으면 이미지(web/public/img/thumb/thumb_<id>.webp), 없으면 먹색+금 한자
 export function thumbOf(p: Product): { src?: string; hanja: string } {
   const hanja = p.id === 'newyear' ? newYearTarget().pillar.hanja : (p as any).thumbHanja ?? '符';
   return { src: THUMBS[p.id], hanja };
@@ -48,7 +63,14 @@ export const buyLabel = (p: Product) => {
     if (base.length > 2 && base.endsWith('운')) base = base.slice(0, -1);
     return brand.buttons.talisman.replace('{name}', `${base}부적`).replace('{price}', won(p.price));
   }
+  if (isTarot(p)) return brand.buttons.tarot;
+  if (isPhoto(p)) return brand.buttons.photo;
   return charOf(p) === 'cheongung' ? brand.buttons.cheongung[0] : brand.buttons.wolha[0];
 };
-export const resultTitle = (p: Product) => brand.resultTitles[charOf(p)];
-export const BADGE_LABEL: Record<string, string> = { BEST: 'BEST', HOT: 'HOT', NEW: 'NEW', 인기: '인기' };
+export const resultTitle = (p: Product) =>
+  isTarot(p) ? brand.resultTitles.tarot : isPhoto(p) ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : brand.resultTitles[charOf(p)];
+// 결과 화면 아래 추천 부적(1~2개) — packages/content/data/talisman-map.json (서버 연결 시 관리자 값 우선)
+export function recommendFor(productId: string): Talisman[] {
+  const rule = talismanMap.rules.find((r) => r.products.includes(productId));
+  return (rule?.talismans ?? ['t_luck']).slice(0, 2).map((id) => TALISMANS.find((t) => t.id === id)!).filter(Boolean);
+}

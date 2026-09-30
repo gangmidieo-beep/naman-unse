@@ -10,7 +10,9 @@ import ProfileNew from './pages/ProfileNew';
 import DevComponents from './pages/DevComponents';
 import Today from './pages/Today';
 import { ZodiacDetail, ZodiacList } from './pages/Zodiac';
-import { FateList, LoveList } from './pages/Catalog';
+import { UnseTab } from './pages/Catalog';
+import TarotTab from './pages/Tarot';
+import { Contact, Privacy, Terms } from './pages/Legal';
 import ProductDetail from './pages/ProductDetail';
 import { TalismanDetail, TalismanList, TalismanMake } from './pages/Talisman';
 import Checkout from './pages/Checkout';
@@ -18,7 +20,7 @@ import ReadingPage from './pages/Reading';
 import Premium from './pages/Premium';
 import Box from './pages/Me';
 import Login, { AuthCallback } from './pages/Login';
-import { BloodPage, DreamPage, FactbombPage, MbtiPage, StarPage, TarotPage } from './pages/Fun';
+import { BloodPage, DreamPage, FactbombPage, MbtiPage, OnelinePage, SmallPage, StarPage } from './pages/Fun';
 
 const Admin = lazy(() => import('./admin/Admin')); // 관리자는 따로 불러온다(앱 첫 화면 용량에 안 섞이게)
 
@@ -48,8 +50,11 @@ export function App() {
           <Route path="/profile/:id/edit" element={<ProfileNew />} />
           <Route path="/today" element={<Today />} />
           <Route path="/today/:field" element={<Navigate to="/today" replace />} />
-          <Route path="/fate" element={<FateList />} />
-          <Route path="/love" element={<LoveList />} />
+          <Route path="/unse" element={<UnseTab />} />
+          <Route path="/tarot" element={<TarotTab />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/talisman" element={<TalismanList />} />
           <Route path="/talisman/:id" element={<TalismanDetail />} />
@@ -64,14 +69,19 @@ export function App() {
           <Route path="/zodiac/:animal" element={<ZodiacDetail />} />
           <Route path="/fun/zodiac-star" element={<StarPage />} />
           <Route path="/fun/blood" element={<BloodPage />} />
-          <Route path="/fun/tarot" element={<TarotPage />} />
+          <Route path="/fun/small" element={<SmallPage />} />
+          <Route path="/fun/oneline" element={<OnelinePage />} />
           <Route path="/fun/dream" element={<DreamPage />} />
           <Route path="/fun/factbomb" element={<FactbombPage />} />
           <Route path="/fun/mbti" element={<MbtiPage />} />
           <Route path="/dev/components" element={<DevComponents />} />
           {/* v1 주소 호환 */}
           <Route path="/me" element={<Navigate to="/box" replace />} />
-          <Route path="/consult" element={<Navigate to="/fate" replace />} />
+          <Route path="/consult" element={<Navigate to="/unse?cat=fate" replace />} />
+          {/* v2 주소 호환 — 나만의 운명·인연 탭은 운세 탭 분류로 합침(결정필요 D12) */}
+          <Route path="/fate" element={<Navigate to="/unse?cat=fate" replace />} />
+          <Route path="/love" element={<Navigate to="/unse?cat=love" replace />} />
+          <Route path="/fun/tarot" element={<Navigate to="/tarot" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         {!noTab(loc.pathname) && <TabBar />}

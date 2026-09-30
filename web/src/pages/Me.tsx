@@ -4,13 +4,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SubHeader, SectionHeader } from '../components/layout';
 import { BottomSheet, Button, TalismanPaper, useToast } from '../components/ui';
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
-import { BRAND, CHAR, charOf, displayTitle, productById, won, type Talisman } from '../lib/catalog';
+import { BRAND, CHAR, charOf, displayTitle, isTarot, productById, won, type Talisman } from '../lib/catalog';
 import { api } from '../lib/api';
 import { getPayments } from '../platform/payments';
 import { birthLabel, hourLabel } from './ProfileNew';
 
 type Notice = { id: number; title: string; date: string; body: string };
-const VERSION = '0.2.0 (시안 v2)';
+const VERSION = '0.3.0 (구조 v3)';
 const dot = (s: string) => s.slice(0, 10).replace(/-/g, '.');
 
 export default function Box() {
@@ -26,7 +26,8 @@ export default function Box() {
   useEffect(() => { api<Notice[]>('/notices').then(setNotices).catch(() => setNotices([])); }, []);
   const books = s.purchases.filter((o) => o.kind === 'reading').map((o) => ({ o, p: productById(o.productId) })).filter((x) => x.p);
   const fate = books.filter((x) => charOf(x.p!) === 'cheongung');
-  const love = books.filter((x) => charOf(x.p!) === 'wolha');
+  const tarot = books.filter((x) => isTarot(x.p!));
+  const love = books.filter((x) => charOf(x.p!) === 'wolha' && !isTarot(x.p!));
   const restore = async () => {
     const owned = await getPayments().restore();
     toast(owned.length ? '구매 내역을 되살렸어요' : '되살릴 구매 내역이 없어요');
@@ -53,14 +54,21 @@ export default function Box() {
           <div className="shelf">
             {fate.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book f"><small>천궁도사</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
           </div>
-        ) : <div className="shelf-empty">아직 운명서가 없어요. <Link to="/fate" className="u">나만의 운명 보기</Link></div>}
+        ) : <div className="shelf-empty">아직 운명서가 없어요. <Link to="/unse?cat=fate" className="u">나만의 운명 보기</Link></div>}
 
         <SectionHeader en="FATE" title={<>나의 <em>인연서</em></>} style={{ marginTop: 22 }} />
         {love.length ? (
           <div className="shelf">
             {love.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book l"><small>월하선녀</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
           </div>
-        ) : <div className="shelf-empty">아직 인연서가 없어요. <Link to="/love" className="u">나만의 인연 보기</Link></div>}
+        ) : <div className="shelf-empty">아직 인연서가 없어요. <Link to="/unse?cat=love" className="u">나만의 인연 보기</Link></div>}
+
+        {tarot.length > 0 && <>
+          <SectionHeader en="TAROT" title={<>나의 <em>타로 기록</em></>} style={{ marginTop: 22 }} />
+          <div className="shelf">
+            {tarot.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book t"><small>타로</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
+          </div>
+        </>}
 
         <SectionHeader en="TALISMAN" title={<>나의 <em>부적함</em></>} style={{ marginTop: 22 }} />
         <div id="talismans" />
@@ -132,7 +140,7 @@ export default function Box() {
         <Button kind="line" onClick={() => setSheet(null)}>닫기</Button>
       </BottomSheet>
       <BottomSheet open={sheet === 'terms'} onClose={() => setSheet(null)} title="이용약관 · 개인정보처리방침">
-        <p>{BRAND.links.terms ? <a className="u" href={BRAND.links.terms}>이용약관 보기</a> : '약관은 대표님 사업자 정보를 받은 뒤 넣을 예정이에요.'}</p>
+        <p><Link className="u" to="/terms">이용약관 보기</Link> · <Link className="u" to="/privacy">개인정보처리방침 보기</Link></p>
         <Button kind="line" onClick={() => setSheet(null)}>닫기</Button>
       </BottomSheet>
       <BottomSheet open={sheet === 'biz'} onClose={() => setSheet(null)} title="사업자 정보">

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { AppHeader, SectionHeader, SubHeader } from '../components/layout';
 import {
   AdSlot, BottomSheet, Button, CategoryTabs, CharacterBubble, CharacterSectionHead, ChipGroup, EffectCard, FreeCard, HeroDuo, PremiumLock,
-  ProductRow, RareCard, RollingBanner, SegTabs, Skeleton, StepList, TalismanPaper, TodayCard, useToast,
+  ProductCard, ProductRow, RollingBanner, toCardItem, SegTabs, Skeleton, StepList, TalismanPaper, TodayCard, useToast,
 } from '../components/ui';
 import { BRAND, FATE, LOVE, TALISMANS } from '../lib/catalog';
 
@@ -26,7 +26,8 @@ export default function DevComponents() {
         <SectionHeader en="FREE" title="무료 카드" />
         <div className="g2">{BRAND.fun.slice(0, 2).map((x) => <FreeCard key={x.id} to="#" hanja={x.hanja} title={x.title} desc={x.copy} />)}<FreeCard to="#" hanja="夢" title="꿈 해몽" desc="어젯밤 꿈, 어떤 의미일까?" wide /></div>
         <CharacterSectionHead who="cheongung" title="나만의 운명" desc="캐릭터 섹션 머리" to="#" />
-        <div className="hs">{[FATE[0], FATE[4], FATE[11]].map((p) => <RareCard key={p.id} p={p} />)}<RareCard p={LOVE[4]} owned /></div>
+        <div className="hs">{[FATE[0], FATE[4], FATE[11]].map((p) => <ProductCard key={p.id} c={toCardItem(p)} mode="scroll" />)}<ProductCard c={toCardItem(LOVE[4], true)} mode="scroll" /></div>
+        <div className="pgrid">{[FATE[0], LOVE[1]].map((p) => <ProductCard key={p.id} c={toCardItem(p)} mode="grid" />)}</div>
         <CategoryTabs tabs={BRAND.groups.fate} value={cat} onChange={setCat} />
         <ProductRow p={FATE[4]} />
         <ProductRow p={TALISMANS[0]} owned />

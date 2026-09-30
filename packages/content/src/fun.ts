@@ -8,6 +8,8 @@ import mbtiDb from '../data/mbti.json';
 import deck from '../data/tarot/deck.json';
 import dream1 from '../data/dream/part1.json';
 import dream2 from '../data/dream/part2.json';
+import smallDb from '../data/smallsaju.json';
+import onelineDb from '../data/onelinesaju.json';
 
 type Band = '1' | '2' | '3' | '4' | '5';
 const ymd = (d: Date) => { const k = kstParts(d); return `${k.year}${String(k.month).padStart(2, '0')}${String(k.day).padStart(2, '0')}`; };
@@ -111,8 +113,11 @@ export type TarotCard = (typeof deck)[number];
 export const TAROT_DECK = deck as TarotCard[];
 // 오늘 뒤집힌 채 보여줄 3장(날짜·프로필 고정) — 같은 날 다시 와도 같은 3장
 export function tarotDraw(date: Date, profileId: string) {
-  const seed = `${ymd(date)}:${profileId}:tarot`;
-  return pickN(TAROT_DECK.map((_, i) => i), 3, seed).map((i, n) => ({ card: TAROT_DECK[i], reversed: hash(`${seed}:r${n}`) % 100 < 30 }));
+  return tarotSpread(`${ymd(date)}:${profileId}:tarot`, 3);
+}
+// 유료 타로(주제별·스프레드): 주문 번호를 시드로 n장 — 같은 주문은 다시 열어도 같은 카드
+export function tarotSpread(seed: string, n: number) {
+  return pickN(TAROT_DECK.map((_, i) => i), n, seed).map((i, k) => ({ card: TAROT_DECK[i], reversed: hash(`${seed}:r${k}`) % 100 < 30 }));
 }
 export const tarotSide = (c: { card: TarotCard; reversed: boolean }) => (c.reversed ? c.card.reversed : c.card.upright);
 
@@ -178,4 +183,25 @@ export function mbtiResult(type: string, saju: SajuResult) {
   if (!m) return null;
   const el = EL_KEY[STEM_ELEMENT[saju.dayMaster.stem]];
   return { type, ...m, element: el, elementKo: ELEMENTS[STEM_ELEMENT[saju.dayMaster.stem]] as string, saju: m.withSaju[el] };
+}
+
+/* ---------------- 스몰사주 · 한줄사주 (v3) ---------------- */
+type SmallDb = { dayMaster: Record<string, { name: string; image: string; lines: string[] }>; strong: Record<string, string[]>; weak: Record<string, string[]>; luckyTip: string[] };
+const SMALL = smallDb as SmallDb;
+// 스몰사주: 사람마다 고정(일간·가장 강한/약한 오행) + 오늘의 작은 팁만 날마다 바뀜
+export function smallSaju(saju: SajuResult, profileId: string, date: Date) {
+  const dm = SMALL.dayMaster[String(saju.dayMaster.stem)];
+  const strong = EL_KEY[ELEMENTS.indexOf(saju.elementRatio.strongest)];
+  const weak = EL_KEY[ELEMENTS.indexOf(saju.elementRatio.weakest)];
+  return {
+    ...dm, strong, weak,
+    strongLine: pick(SMALL.strong[strong], `${profileId}:small:s`),
+    weakLine: pick(SMALL.weak[weak], `${profileId}:small:w`),
+    tip: pick(SMALL.luckyTip, `${ymd(date)}:${profileId}:small`),
+  };
+}
+// 한줄사주: 오늘 일진 천간이 내 일간에게 무엇(십신)인지로 한 줄 — 공유용
+export function oneLineSaju(saju: SajuResult, profileId: string, date: Date) {
+  const tg = sipsinOfStem(saju.dayMaster.stem, dailyPillar(date).stem) as string;
+  return { tenGod: tg, line: pick((onelineDb.byTenGod as Record<string, string[]>)[tg], `${ymd(date)}:${profileId}:oneline`) };
 }

@@ -42,9 +42,10 @@ export function SubHeader({ title, sub, back = true, right }: { title: string; s
   );
 }
 
-export function SectionHeader({ en, title, desc, center, style }: { en: string; title: ReactNode; desc?: string; center?: boolean; style?: React.CSSProperties }) {
+export function SectionHeader({ en, title, desc, center, style, more }: { en: string; title: ReactNode; desc?: string; center?: boolean; style?: React.CSSProperties; more?: { to: string; label: string } }) {
   return (
     <div className={`sec${center ? ' center' : ''}`} style={style}>
+      {more && <Link to={more.to} className="sec-more">{more.label} ›</Link>}
       <div className="en">{en}</div>
       <h3>{title}</h3>
       {desc && <p>{desc}</p>}
@@ -54,10 +55,10 @@ export function SectionHeader({ en, title, desc, center, style }: { en: string; 
 
 const TABS = [
   { to: '/', label: '홈', i: '家', end: true },
-  { to: '/fate', label: '나만의 운명', i: '命' },
-  { to: '/love', label: '나만의 인연', i: '緣' },
-  { to: '/talisman', label: '나만의 부적', i: '符' },
-  { to: '/box', label: '나의 운세함', i: '函' },
+  { to: '/unse', label: '운세', i: '命' },
+  { to: '/tarot', label: '타로', i: '牌' },
+  { to: '/talisman', label: '부적', i: '符' },
+  { to: '/box', label: '운세함', i: '函' },
 ];
 export function TabBar() {
   return (

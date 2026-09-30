@@ -56,7 +56,7 @@ export function TalismanDetail() {
         ]} />
         <p className="note" style={{ margin: '18px 18px 0' }}>당신의 마음을 담아 완성하는 하나뿐인 부적 — 이름과 생년월일, 마음속 소원을 담아 나만의 부적을 완성합니다.</p>
       </main>
-      <StickyBuyBar price={t.price} member={memberPrice(t)} premium={premium} label={buyLabel(t)} onBuy={() => nav(`/checkout/${t.id}`)} />
+      <StickyBuyBar p={t} premium={premium} label={buyLabel(t)} onBuy={() => nav(`/checkout/${t.id}`)} />
     </>
   );
 }

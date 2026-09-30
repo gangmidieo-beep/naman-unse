@@ -74,6 +74,10 @@
       "사랑·인연",
       "소원·성취",
       "평안·보호"
+    ],
+    "tarot": [
+      "주제별 타로",
+      "스프레드"
     ]
   },
   "fate": [
@@ -724,11 +728,15 @@
     "wolha": [
       "나의 인연서 열어보기"
     ],
-    "talisman": "나만의 {name} 받기 – {price}"
+    "talisman": "나만의 {name} 받기 – {price}",
+    "tarot": "타로 리딩 받기",
+    "photo": "사진으로 풀이 받기"
   },
   "resultTitles": {
     "cheongung": "천궁도사가 풀어드린 나의 운명서",
-    "wolha": "월하선녀가 풀어드린 인연서"
+    "wolha": "월하선녀가 풀어드린 인연서",
+    "tarot": "오늘의 카드가 전하는 이야기",
+    "photo": "천궁도사가 읽어드린 나의 {name}"
   },
   "banners": [
     {
@@ -825,13 +833,6 @@
       "link": "/fun/blood"
     },
     {
-      "id": "tarot",
-      "title": "오늘의 타로",
-      "copy": "카드 한 장으로 보는 오늘의 메시지",
-      "hanja": "牌",
-      "link": "/fun/tarot"
-    },
-    {
       "id": "mbti",
       "title": "MBTI 사주",
       "copy": "MBTI와 사주로 알아보는 진짜 나의 성격",
@@ -851,6 +852,20 @@
       "copy": "어젯밤 꿈, 어떤 의미일까?",
       "hanja": "夢",
       "link": "/fun/dream"
+    },
+    {
+      "id": "small",
+      "title": "스몰사주",
+      "copy": "한 장으로 보는 나의 사주 요약",
+      "hanja": "小",
+      "link": "/fun/small"
+    },
+    {
+      "id": "oneline",
+      "title": "한줄사주",
+      "copy": "오늘 나에게 건네는 한 줄",
+      "hanja": "一",
+      "link": "/fun/oneline"
     }
   ],
   "profileLimit": {
@@ -881,5 +896,209 @@
     "mailOrderNo": "",
     "address": "",
     "contact": ""
+  },
+  "tarot": [
+    {
+      "id": "tarot_love",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "연애 타로",
+      "cardCopy": "그 사람의 마음, 카드 세 장으로 들여다봐요",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "戀",
+      "badge": "인기",
+      "visible": true,
+      "sort": 0,
+      "cards": 3,
+      "positions": [
+        "그 사람의 마음",
+        "지금 두 사람",
+        "가까운 흐름"
+      ]
+    },
+    {
+      "id": "tarot_money",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "재물 타로",
+      "cardCopy": "돈의 흐름과 들어올 때를 카드로 봐요",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "財",
+      "badge": null,
+      "visible": true,
+      "sort": 1,
+      "cards": 3,
+      "positions": [
+        "지금 돈의 흐름",
+        "막고 있는 것",
+        "열리는 길"
+      ]
+    },
+    {
+      "id": "tarot_work",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "일·직장 타로",
+      "cardCopy": "이직·승진·새 일, 지금 선택의 방향은?",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "職",
+      "badge": null,
+      "visible": true,
+      "sort": 2,
+      "cards": 3,
+      "positions": [
+        "지금 자리",
+        "기회",
+        "조심할 점"
+      ]
+    },
+    {
+      "id": "tarot_reunion",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "재회 타로",
+      "cardCopy": "다시 이어질 수 있을까, 카드가 답해요",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "再",
+      "badge": "HOT",
+      "visible": true,
+      "sort": 3,
+      "cards": 3,
+      "positions": [
+        "그 사람의 지금",
+        "남아 있는 마음",
+        "다시 만날 흐름"
+      ]
+    },
+    {
+      "id": "tarot_spread3",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "스프레드",
+      "title": "과거·현재·미래",
+      "cardCopy": "세 장으로 보는 내 이야기의 흐름",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "三",
+      "badge": null,
+      "visible": true,
+      "sort": 10,
+      "cards": 3,
+      "positions": [
+        "과거",
+        "현재",
+        "미래"
+      ]
+    },
+    {
+      "id": "tarot_celtic",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "스프레드",
+      "title": "켈틱 크로스",
+      "cardCopy": "열 장으로 깊이 읽는 한 가지 고민",
+      "price": 19000,
+      "memberPrice": 17100,
+      "thumbHanja": "十",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 11,
+      "cards": 10,
+      "positions": [
+        "지금 상황",
+        "가로막는 것",
+        "마음 깊은 곳",
+        "지나온 일",
+        "바라는 것",
+        "가까운 앞날",
+        "나의 태도",
+        "주변 사람",
+        "희망과 걱정",
+        "결과"
+      ]
+    }
+  ],
+  "photo": [
+    {
+      "id": "palm",
+      "kind": "photo",
+      "character": "cheongung",
+      "group": "사진으로 보는",
+      "title": "손금 풀이",
+      "cardCopy": "손바닥 사진 한 장으로 보는 나의 손금",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "掌",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 0
+    },
+    {
+      "id": "face",
+      "kind": "photo",
+      "character": "cheongung",
+      "group": "사진으로 보는",
+      "title": "관상 풀이",
+      "cardCopy": "얼굴 사진 한 장으로 보는 나의 관상",
+      "price": 9900,
+      "memberPrice": 8910,
+      "thumbHanja": "相",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 1
+    }
+  ],
+  "categories": [
+    {
+      "id": "all",
+      "label": "전체"
+    },
+    {
+      "id": "fate",
+      "label": "천궁도사",
+      "sub": "나만의 운명",
+      "character": "cheongung",
+      "groups": [
+        "나의 운명",
+        "재물과 성공",
+        "중요한 선택",
+        "올해의 운세"
+      ]
+    },
+    {
+      "id": "love",
+      "label": "월하선녀",
+      "sub": "나만의 인연",
+      "character": "wolha",
+      "groups": [
+        "나의 사랑",
+        "두 사람의 인연",
+        "다시 이어지는 인연",
+        "새로운 만남",
+        "올해의 애정운"
+      ]
+    },
+    {
+      "id": "fun",
+      "label": "재미로 보는",
+      "sub": "무료"
+    },
+    {
+      "id": "photo",
+      "label": "사진으로 보는",
+      "sub": "손금·관상"
+    }
+  ],
+  "discountDisplay": {
+    "mode": "member",
+    "note": "listPrice(정가)가 있으면 정가 대비 판매가 할인율, 없으면 회원가 할인율을 표시"
   }
 }

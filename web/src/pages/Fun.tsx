@@ -1,9 +1,9 @@
-// 재미로 보는 운세 (무료·비회원 이용 가능) — 별자리 · 혈액형 · 오늘의 타로 · 꿈 해몽 · MZ 팩폭 사주 · MBTI 사주
+// 재미로 보는 운세 (무료·비회원 이용 가능) — 별자리 · 혈액형 · 꿈 해몽 · MZ 팩폭 사주 · MBTI 사주
 // 띠별·혈액형·MBTI·타로 결과는 보상형 광고 후(하루 제한·프리미엄 제외). 문구는 월하선녀 해요체(팩폭만 가벼운 말투).
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  STAR_SIGNS, starSignOf, starToday, BLOOD_TYPES, bloodToday, tarotDraw, tarotSide, DREAM_CATS, DREAM_POPULAR, DREAMS, searchDream,
-  factbomb, mbtiResult, MBTI_TYPES, type StarId, type Blood, type DreamEntry,
+  STAR_SIGNS, starSignOf, starToday, BLOOD_TYPES, bloodToday, DREAM_CATS, DREAM_POPULAR, DREAMS, searchDream,
+  factbomb, mbtiResult, MBTI_TYPES, smallSaju, oneLineSaju, type StarId, type Blood, type DreamEntry,
 } from '@naman/content';
 import { lunarToSolar } from '@naman/engine';
 import { SubHeader, SectionHeader } from '../components/layout';
@@ -20,12 +20,12 @@ import { track } from '../lib/track';
 const solarOf = (p: Profile) => (p.calendar === 'lunar' ? lunarToSolar(p.year, p.month, p.day, p.leap) : { year: p.year, month: p.month, day: p.day });
 
 // 결과 공유 공통: 공유 버튼 + 시트 + 카드
-function useShare() {
+export function useShare() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   return { open, setOpen, ref };
 }
-function ShareBlock({ s, title, text, path, id, children }: { s: ReturnType<typeof useShare>; title: string; text: string; path: string; id: string; children: ReactNode }) {
+export function ShareBlock({ s, title, text, path, id, children }: { s: ReturnType<typeof useShare>; title: string; text: string; path: string; id: string; children: ReactNode }) {
   const toast = useToast();
   return (
     <>
@@ -135,77 +135,6 @@ export function BloodPage() {
               <p style={{ fontSize: 17, lineHeight: 1.7 }}>관계 팁 · {r.tip}<br />잘 맞는 혈액형 · {r.best}형</p>
             </ShareBlock>
           </Gate>
-        )}
-        <AdSlot premium={premium} />
-      </main>
-    </>
-  );
-}
-
-/* ---------------- 오늘의 타로 ---------------- */
-export function TarotPage() {
-  const { profile } = useMainProfile();
-  const premium = usePremium();
-  const { unlocked, unlock } = useApp();
-  const { run, modal } = useRewarded();
-  const draw = useMemo(() => tarotDraw(new Date(), profile.id), [profile.id]);
-  const dayKey = `tarot:${profile.id}`;
-  // 오늘 고른 카드(같은 날 다시 와도 같은 카드) — unlocked 에 "tarot:<프로필>:<번호>" 로 기록
-  const saved = [0, 1, 2].find((i) => isUnlockedToday(unlocked, `${dayKey}:${i}`));
-  const [pickI, setPickI] = useState<number | null>(saved ?? null);
-  const [flip, setFlip] = useState(false);
-  const share = useShare();
-  const choose = (i: number) => {
-    if (pickI != null) return;
-    run(() => { setPickI(i); setFlip(true); unlock(`${dayKey}:${i}`); track('content_view', { content: 'tarot' }); }, 'tarot');
-  };
-  const c = pickI != null ? draw[pickI] : null;
-  const side = c ? tarotSide(c) : null;
-  const FIELDS: [string, 'love' | 'money' | 'work'][] = [['연애', 'love'], ['금전', 'money'], ['일', 'work']];
-  return (
-    <>
-      <SubHeader title="오늘의 타로" sub="카드 한 장으로 보는 오늘의 메시지" />
-      <main className="screen">
-        <div className="mt14" />
-        {!c && <CharacterBubble who="wolha">마음을 가라앉히고, 끌리는 카드 한 장을 골라 보세요.</CharacterBubble>}
-        <div className="tarot">
-          {draw.map((d, i) => {
-            const picked = pickI === i;
-            return (
-              <button key={i} className={`tc${picked ? ` pick${flip ? ' flip' : ''}${d.reversed ? ' rev' : ''}` : ''}`} onClick={() => choose(i)} disabled={pickI != null && !picked} aria-label={picked ? `${d.card.nameKo}${d.reversed ? ' 역방향' : ''}` : `${i + 1}번째 카드 고르기`}>
-                <div className="in">{picked ? (optionalImg(`tarot_${d.card.id}`) ? <img src={optionalImg(`tarot_${d.card.id}`)!.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} /> : <><span>{d.card.symbol}</span><small>{d.card.nameEn}</small></>) : <span>{['月', '星', '日'][i]}</span>}</div>
-              </button>
-            );
-          })}
-        </div>
-        {modal}
-        {c && side && (
-          <>
-            <section className="dres">
-              <div className="in">
-                <small>오늘의 카드 · {c.card.nameKo}({c.card.nameEn}) {c.reversed ? '역방향' : '정방향'} · {side.keywords.join(' · ')}</small>
-                <b className="t">{side.title}</b>
-                {side.message.map((m) => <p key={m}>{m}</p>)}
-                {!premium && <div className="lock">✦ 프리미엄 — 연애·금전·일 카드 3장 상세 해석</div>}
-              </div>
-            </section>
-            {premium ? (
-              <div className="spread">
-                {draw.map((d, i) => { const s = tarotSide(d); return <div key={i}><b>{FIELDS[i][0]}</b><strong>{d.card.nameKo}{d.reversed ? '(역)' : ''}</strong><p>{s[FIELDS[i][1]]}</p></div>; })}
-              </div>
-            ) : (
-              <PremiumLock label="✦ 연애·금전·일 3장 스프레드는 프리미엄 회원에게 열려요">
-                <div className="spread">{FIELDS.map(([l]) => <div key={l}><b>{l}</b><strong>카드</strong><p>상세 해석이 여기에 보여요.</p></div>)}</div>
-              </PremiumLock>
-            )}
-            <ShareBlock s={share} title="오늘의 타로" text={`오늘의 카드는 ${c.card.nameKo} — ${side.title}`} path="/fun/tarot" id="tarot">
-              <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-                <div className="tc big pick" style={{ transform: 'none' }}><div className="in"><span>{c.card.symbol}</span><small>{c.card.nameEn}</small></div></div>
-                <div><p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 22, lineHeight: 1.4 }}>{side.title}</p><p style={{ fontSize: 16, marginTop: 8 }}>{c.card.nameKo} · {c.reversed ? '역방향' : '정방향'}</p></div>
-              </div>
-              <p style={{ fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.75, marginTop: 16 }}>{side.message.join(' ')}</p>
-            </ShareBlock>
-          </>
         )}
         <AdSlot premium={premium} />
       </main>
@@ -359,6 +288,64 @@ export function MbtiPage() {
             </ShareBlock>
           </Gate>
         )}
+        <AdSlot premium={premium} />
+      </main>
+    </>
+  );
+}
+
+/* ---------------- 스몰사주 · 한줄사주 (v3, 문구 DB · AI 없음) ---------------- */
+const EL_KO: Record<string, string> = { wood: '목(木)', fire: '화(火)', earth: '토(土)', metal: '금(金)', water: '수(水)' };
+export function SmallPage() {
+  const { profile, isSample } = useMainProfile();
+  const saju = useSaju(profile);
+  const r = smallSaju(saju, profile.id, new Date());
+  const share = useShare();
+  const premium = usePremium();
+  return (
+    <>
+      <SubHeader title="스몰사주" sub="한 장으로 보는 나의 사주 요약" />
+      <main className="screen">
+        <section className="fbcard small">
+          <div className="in">
+            <small>{profile.name}님의 스몰사주{isSample ? ' (예시)' : ''}</small>
+            <h2>{r.name}<em>{r.image}</em></h2>
+            <ol>{r.lines.map((l) => <li key={l}>{l}</li>)}</ol>
+            <p className="good"><b>강한 기운 · {EL_KO[r.strong]}</b><br />{r.strongLine}</p>
+            <p className="good"><b>채우면 좋은 기운 · {EL_KO[r.weak]}</b><br />{r.weakLine}</p>
+            <p className="good"><b>오늘의 작은 팁</b><br />{r.tip}</p>
+          </div>
+        </section>
+        <p className="note pad">일간·오행 비율로 뽑은 요약이에요. 자세한 풀이는 천궁도사의 정통운세에서 볼 수 있어요.</p>
+        <ShareBlock s={share} title="스몰사주" text={`나는 ${r.name} — ${r.image}`} path="/fun/small" id="small">
+          <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 28, lineHeight: 1.35 }}>{r.name}</p>
+          <p style={{ fontFamily: 'var(--serif)', fontSize: 20, margin: '6px 0 16px', color: 'var(--gold-deep)' }}>{r.image}</p>
+          {r.lines.map((l) => <p key={l} style={{ fontSize: 18, lineHeight: 1.6, marginBottom: 8 }}>{l}</p>)}
+        </ShareBlock>
+        <AdSlot premium={premium} />
+      </main>
+    </>
+  );
+}
+
+export function OnelinePage() {
+  const { profile, isSample } = useMainProfile();
+  const saju = useSaju(profile);
+  const r = oneLineSaju(saju, profile.id, new Date());
+  const share = useShare();
+  const premium = usePremium();
+  return (
+    <>
+      <SubHeader title="한줄사주" sub="오늘 나에게 건네는 한 줄" />
+      <main className="screen">
+        <section className="oneline">
+          <small>{koDate()} · {profile.name}님{isSample ? ' (예시)' : ''}</small>
+          <p>“{r.line}”</p>
+        </section>
+        <p className="note pad">오늘 일진과 나의 일간이 만나는 관계로 고른 한 줄이에요. 내일은 또 다른 한 줄이 기다려요.</p>
+        <ShareBlock s={share} title="오늘의 한줄사주" text={`오늘의 한줄사주: “${r.line}”`} path="/fun/oneline" id="oneline">
+          <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 30, lineHeight: 1.5, textAlign: 'center', marginTop: 40 }}>“{r.line}”</p>
+        </ShareBlock>
         <AdSlot premium={premium} />
       </main>
     </>

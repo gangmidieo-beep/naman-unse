@@ -1,0 +1,12 @@
+{
+  "_설명": "상품 → 결과 화면 아래 추천 부적(1~2개). 관리자 상품관리에서 상품별로 바꿀 수 있다(서버 products.recommend).",
+  "rules": [
+    { "products": ["wealth", "business", "startup", "tarot_money"], "talismans": ["t_wealth", "t_biz"] },
+    { "products": ["career", "exam", "tarot_work"], "talismans": ["t_job", "t_pass"] },
+    { "products": ["love", "inyeon", "reunion", "solo", "crush", "meeting", "loveyear", "lifelove", "marriage", "tarot_love", "tarot_reunion"], "talismans": ["t_love", "t_inyeon", "t_romance"] },
+    { "products": ["gunghap", "couple", "spouse"], "talismans": ["t_couple"] },
+    { "products": ["newyear", "tojeong", "monthly", "tarot_spread3", "tarot_celtic"], "talismans": ["t_all", "t_luck"] },
+    { "products": ["moving", "contract"], "talismans": ["t_all", "t_guard"] },
+    { "products": ["jeongtong", "pyeongsaeng", "daewoon", "ohaeng", "palm", "face"], "talismans": ["t_wish", "t_luck"] }
+  ]
+}

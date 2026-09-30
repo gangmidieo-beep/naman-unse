@@ -29,7 +29,7 @@ export default function Checkout() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   useEffect(() => { if (p) track('checkout_open', { product: p.id }); }, [p]);
-  if (!p) return <Navigate to="/fate" replace />;
+  if (!p) return <Navigate to="/unse" replace />;
   const price = payPrice(p, premium);
   const two = isTwoPerson(p.id);
   const partnerId = partner && partner !== target ? partner : profiles.find((x) => x.id !== target)?.id ?? '';

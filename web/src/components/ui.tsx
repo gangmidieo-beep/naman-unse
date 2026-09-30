@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Link } from 'react-router-dom';
 import { Img } from './Img';
 import type { ImgKey } from '../assets/images';
-import { CHAR, charOf, displayCopy, displayTitle, isTalisman, memberPrice, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
+import { CHAR, charOf, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
 
 /* ---------- 버튼·칩·탭 ---------- */
 type BtnKind = 'gold' | 'ink' | 'line';
@@ -93,38 +93,121 @@ export function TodayCard({ name, isSample, date, total, stars, line, to = '/tod
   );
 }
 
-// 롤링 배너 — 4초 자동 넘김 + 스와이프 + 페이지 점. banners 는 관리자 데이터로 바꿀 수 있게 prop.
+// 롤링 배너 — 4초 자동 넘김 + 손가락·마우스 좌우 드래그 + 무한 루프 + "4/9" 숫자 표시(결정필요 D27)
+// 손 대는 동안(누르고 있거나 마우스를 올리면) 자동 넘김 멈춤, prefers-reduced-motion 이면 자동 넘김 끔. 라이브러리 없이 직접(결정필요 D26).
 export type BannerItem = { id: string; title: string; copy: string; link: string; character: string; img?: string; hanja?: string };
-export function RollingBanner({ items }: { items: BannerItem[] }) {
-  const track = useRef<HTMLDivElement>(null);
-  const [i, setI] = useState(0);
-  const paused = useRef(false);
-  const go = (n: number) => {
-    const el = track.current;
-    if (!el) return;
-    el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' });
-    setI(n);
-  };
+export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[]; interval?: number }) {
+  const n = items.length;
+  const [pos, setPos] = useState(1); // 앞뒤에 복제 슬라이드 1장씩 → 실제 i = pos-1
+  const [anim, setAnim] = useState(true);
+  const [drag, setDrag] = useState(0);
+  const hold = useRef(false);
+  const start = useRef<{ x: number; moved: boolean } | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const go = useCallback((to: number) => { setAnim(true); setPos(to); }, []);
   useEffect(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => { if (!paused.current) go((i + 1) % items.length); }, 4000);
+    if (n < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => { if (!hold.current && !start.current) go(pos + 1); }, interval);
     return () => clearInterval(t);
-  }, [i, items.length]);
+  }, [pos, n, interval, go]);
+  // 복제 슬라이드에 도착하면 애니메이션 없이 진짜 슬라이드로 순간 이동(무한 루프)
+  const onEnd = () => {
+    if (pos === 0) { setAnim(false); setPos(n); }
+    else if (pos === n + 1) { setAnim(false); setPos(1); }
+  };
+  const down = (e: React.PointerEvent) => { start.current = { x: e.clientX, moved: false }; setAnim(false); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); };
+  const move = (e: React.PointerEvent) => {
+    if (!start.current) return;
+    const dx = e.clientX - start.current.x;
+    if (Math.abs(dx) > 6) start.current.moved = true;
+    setDrag(dx);
+  };
+  const up = () => {
+    if (!start.current) return;
+    const w = wrap.current?.clientWidth ?? 1;
+    const moved = start.current.moved;
+    if (drag < -w * 0.18) go(pos + 1);
+    else if (drag > w * 0.18) go(pos - 1);
+    else setAnim(true);
+    setDrag(0);
+    // 드래그였으면 링크 클릭 막기
+    if (moved) wrap.current?.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); }, { capture: true, once: true });
+    start.current = null;
+  };
+  if (!n) return null;
+  const slides = [items[n - 1], ...items, items[0]];
+  const cur = ((pos - 1 + n) % n) + 1;
   return (
-    <div className="banner-wrap" onPointerDown={() => (paused.current = true)} onPointerUp={() => (paused.current = false)}>
-      <div className="banner-track" ref={track} onScroll={(e) => { const n = Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth); if (n !== i) setI(n); }}>
-        {items.map((b, n) => (
-          <Link key={b.id} to={b.link} className="banner" aria-label={`${b.title} — ${b.copy}`} tabIndex={n === i ? 0 : -1}>
-            {b.img ? <img src={b.img} alt="" loading={n === 0 ? 'eager' : 'lazy'} /> : <Img k={b.character === 'wolha' ? 'wolhaBanner' : 'cheongungBanner'} alt="" eager={n === 0} />}
-            <div className="shade" />
-            <div className="txt"><small>{CHAR[b.character as CharId]?.name ?? '나만의 운세'} · {b.title}</small><b>{b.title}</b><span>{b.copy}</span></div>
-          </Link>
-        ))}
+    <div className="banner-wrap" onMouseEnter={() => (hold.current = true)} onMouseLeave={() => (hold.current = false)} aria-roledescription="carousel" aria-label="추천 풀이">
+      <div className="banner-view" ref={wrap} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+        <div className="banner-track" onTransitionEnd={onEnd}
+          style={{ transform: `translateX(calc(${-pos * 100}% + ${drag}px))`, transition: anim ? 'transform .45s ease' : 'none' }}>
+          {slides.map((b, k) => (
+            <Link key={`${b.id}-${k}`} to={b.link} className="banner" draggable={false} aria-hidden={k !== pos} tabIndex={k === pos ? 0 : -1} aria-label={`${b.title} — ${b.copy}`}>
+              {b.img ? <img src={b.img} alt="" draggable={false} loading={k === 1 ? 'eager' : 'lazy'} /> : <Img k={b.character === 'wolha' ? 'wolhaBanner' : 'cheongungBanner'} alt="" eager={k === 1} />}
+              <div className="shade" />
+              <div className="txt"><small>{CHAR[b.character as CharId]?.name ?? '나만의 운세'}</small><b>{b.title}</b><span>{b.copy}</span></div>
+            </Link>
+          ))}
+        </div>
+        <span className="banner-count" aria-live="polite"><b>{cur}</b> / {n}</span>
       </div>
-      <div className="dots" role="tablist" aria-label="배너 넘기기">
-        {items.map((b, n) => <button key={b.id} role="tab" aria-selected={n === i} aria-label={`${n + 1}번째 배너`} className={n === i ? 'on' : ''} onClick={() => go(n)}><i /></button>)}
+      <div className="banner-nav">
+        <button onClick={() => go(pos - 1)} aria-label="이전 배너">‹</button>
+        <button onClick={() => go(pos + 1)} aria-label="다음 배너">›</button>
       </div>
     </div>
+  );
+}
+
+// 공통 상품 카드 — 목록형(list: 도사 컨텐츠 목록) / 그리드형(grid: 썸네일 그리드, scroll: 가로 스크롤)
+export type CardItem = { id: string; title: string; copy: string; link: string; hanja: string; img?: string; by?: string; face?: ImgKey; badge?: string | null; owned?: boolean; price?: { rate: number; strike: number; final: number; label: string } | null; free?: boolean };
+export function toCardItem(p: Product, owned = false): CardItem {
+  const t = thumbOf(p);
+  const who = CHAR[charOf(p)];
+  return {
+    id: p.id, title: displayTitle(p), copy: displayCopy(p), link: productPath(p), hanja: t.hanja, img: t.src,
+    by: `${p.group} · ${who.name}`, face: isTalisman(p) ? undefined : who.face, badge: (p as any).badge, owned, price: priceView(p),
+  };
+}
+const badgeCls = (b: string) => `badge${b === 'BEST' ? ' best' : b === 'NEW' ? ' new' : ''}`;
+function PriceLine({ c }: { c: CardItem }) {
+  if (c.free || !c.price) return <div className="pc-price"><span className="free-tag">무료</span></div>;
+  const p = c.price;
+  return (
+    <div className="pc-price">
+      {p.rate > 0 && <span className="rate">{p.rate}%</span>}
+      {p.rate > 0 && <s>{p.strike.toLocaleString('ko-KR')}</s>}
+      <b>{won(p.final)}</b>{p.label && <small>{p.label}</small>}
+    </div>
+  );
+}
+export function ProductCard({ c, mode = 'list', talisman }: { c: CardItem; mode?: 'list' | 'grid' | 'scroll'; talisman?: Talisman }) {
+  const thumb = talisman ? (
+    <div className={`bjth ${talismanTone(talisman)}`}><TalismanPaper t={talisman} /></div>
+  ) : (
+    <div className={`th${c.free ? ' light' : ''}`}><div className={`in${c.hanja.length > 1 ? ' two' : ''}`}>{c.img ? <img src={c.img} alt="" width={224} height={224} loading="lazy" /> : <span aria-hidden>{c.hanja}</span>}</div></div>
+  );
+  if (mode === 'list')
+    return (
+      <Link to={c.link} className="row">
+        {thumb}
+        <div className="meta">
+          <div className="by">{c.face && <Img k={c.face} alt="" />}{c.by}{c.badge && <span className={badgeCls(c.badge)}>{c.badge}</span>}{c.owned && <span className="badge owned">보유중</span>}</div>
+          <b className="nm">{c.title}</b>
+          <p>{c.copy}</p>
+          <PriceLine c={c} />
+        </div>
+      </Link>
+    );
+  return (
+    <Link to={c.link} className={`pcard${mode === 'scroll' ? ' scroll' : ''}${c.free ? ' free-card' : ''}`}>
+      <div className="pc-img">
+        {talisman ? <div className={`pc-bj ${talismanTone(talisman)}`}><TalismanPaper t={talisman} size={1.2} /></div> : c.img ? <img src={c.img} alt="" width={224} height={224} loading="lazy" /> : <span className={`hz${c.hanja.length > 1 ? ' two' : ''}`} aria-hidden><i>{c.hanja}</i></span>}
+        {(c.badge || c.owned) && <span className={c.owned ? 'badge owned' : badgeCls(c.badge!)}>{c.owned ? '보유중' : c.badge}</span>}
+      </div>
+      <div className="pc-tx"><b>{c.title}</b><span>{c.copy}</span><PriceLine c={c} /></div>
+    </Link>
   );
 }
 
@@ -139,22 +222,6 @@ export function FreeCard({ to, onClick, hanja, title, desc, wide }: { to?: strin
   );
   const cls = `free${wide ? ' wide' : ''}`;
   return to ? <Link to={to} className={cls}>{body}</Link> : <button type="button" className={cls} onClick={onClick}>{body}</button>;
-}
-
-// 유료 = 먹색+금 레어 카드
-export function RareCard({ p, owned }: { p: Product; owned?: boolean }) {
-  const t = thumbOf(p);
-  const badge = owned ? '✓ 보유중' : (p as any).badge ? `✦ ${(p as any).badge}` : null;
-  return (
-    <Link to={isTalisman(p) ? `/talisman/${p.id}` : `/product/${p.id}`} className="rare" aria-label={`${displayTitle(p)} ${won(p.price)}`}>
-      {badge && <span className={`pb${owned ? ' owned' : ''}`}>{badge}</span>}
-      <div className="in">
-        {t.src ? <img src={t.src} alt="" width={224} height={224} loading="lazy" /> : <div className={`hz${t.hanja.length > 1 ? ' two' : ''}`} aria-hidden>{t.hanja}</div>}
-        <div className="shade" />
-        <div className="tx"><b>{displayTitle(p)}</b><span>{displayCopy(p)}</span><div className="pr">{won(p.price)}</div></div>
-      </div>
-    </Link>
-  );
 }
 
 export function CharacterSectionHead({ who, title, desc, to }: { who: CharId; title: string; desc: string; to: string }) {
@@ -178,26 +245,9 @@ export function ProductThumb({ p, size = 112 }: { p: Product; size?: number }) {
   );
 }
 
-// 상품 목록 행 (도사 컨텐츠 형식)
+// 상품 목록 행 (도사 컨텐츠 형식) = ProductCard 목록형
 export function ProductRow({ p, owned }: { p: Product; owned?: boolean }) {
-  const who = charOf(p);
-  const badge = (p as any).badge as string | null;
-  return (
-    <Link to={isTalisman(p) ? `/talisman/${p.id}` : `/product/${p.id}`} className="row">
-      <ProductThumb p={p} />
-      <div className="meta">
-        <div className="by">
-          {!isTalisman(p) && <Img k={CHAR[who].face} alt="" />}
-          {p.group} · {CHAR[who].name}
-          {badge && <span className={`badge${badge === 'BEST' ? ' best' : badge === 'NEW' ? ' new' : ''}`}>{badge}</span>}
-          {owned && <span className="badge owned">보유중</span>}
-        </div>
-        <b className="nm">{displayTitle(p)}</b>
-        <p>{displayCopy(p)}</p>
-        <div className="price"><span className="n">{won(p.price)}</span><span className="m">회원 {won(memberPrice(p))}</span></div>
-      </div>
-    </Link>
-  );
+  return <ProductCard c={toCardItem(p, owned)} mode="list" talisman={isTalisman(p) ? p : undefined} />;
 }
 
 /* ---------- 부적 ---------- */
@@ -235,11 +285,15 @@ export function StepList({ label, steps, hanjaNums }: { label: string; steps: { 
     </div>
   );
 }
-export function StickyBuyBar({ price, member, premium, label, onBuy, disabled }: { price: number; member: number; premium: boolean; label: string; onBuy: () => void; disabled?: boolean }) {
+// 하단 고정 구매바 — [할인율%] 정가(취소선) 판매가 · 회원가 + 버튼. 프리미엄이면 회원가로 결제.
+export function StickyBuyBar({ p, premium, label, onBuy, disabled }: { p: Product; premium: boolean; label: string; onBuy: () => void; disabled?: boolean }) {
+  const list = (p as any).listPrice as number | undefined;
+  const m = memberPrice(p);
   return (
     <div className="sticky">
       <div className="pp">
-        {premium ? <><s>{won(price)}</s><b>{won(member)}</b><em>프리미엄 회원가</em></> : <><b>{won(price)}</b><em>· 회원 {won(member)}</em></>}
+        {premium ? <><s>{won(p.price)}</s><b>{won(m)}</b><em>프리미엄 회원가</em></>
+          : <>{list && list > p.price && <><span className="rate">{Math.round(((list - p.price) / list) * 100)}%</span><s>{won(list)}</s></>}<b>{won(p.price)}</b><em>· 회원 {won(m)}</em></>}
       </div>
       <Button kind="gold" onClick={onBuy} disabled={disabled}>{label}</Button>
     </div>
