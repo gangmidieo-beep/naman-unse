@@ -96,6 +96,25 @@ for (const d of [...load(D + 'dream/part1.json'), ...load(D + 'dream/part2.json'
   check(d.title, `dream.${d.id}.title`, { sentence: false, maxLen: 22 });
 }
 
+// v3: 상세 문구(대상·이유) · 타로/사진 상품 · 스몰사주 · 한줄사주 · 손금/관상 예시
+const brandCfg = load('brand.config.json');
+for (const it of [...cat.fate, ...cat.love, ...brandCfg.tarot, ...brandCfg.photo]) {
+  const d = pd[it.id];
+  if (!d) { errs.push(`product-detail: ${it.id} 없음`); continue; }
+  if (!Array.isArray(d.target) || d.target.length !== 3) errs.push(`product-detail.${it.id}.target 3줄 아님`);
+  each(d.target ?? [], (t, p) => check(t, p, { sentence: false, maxLen: 22 }), `product-detail.${it.id}.target`);
+  check(d.why ?? '', `product-detail.${it.id}.why`, { voice: 'wolha', maxSentence: 45 });
+  if (!it.id.startsWith('tarot') && it.kind === 'photo') check(d.say, `product-detail.${it.id}.say`, { voice: 'cheongung' });
+  if (it.id.startsWith('tarot')) check(d.say, `product-detail.${it.id}.say`, { voice: 'wolha' });
+}
+const small = load(D + 'smallsaju.json');
+each({ lines: Object.values(small.dayMaster).map((x) => x.lines), strong: small.strong, weak: small.weak, tip: small.luckyTip }, (t, p) => check(t, p, { voice: 'wolha' }), 'smallsaju');
+each(load(D + 'onelinesaju.json'), (t, p) => check(t, p, { voice: 'wolha', maxLen: 32 }), 'onelinesaju');
+const ph = load(D + 'photo-sample.json');
+for (const k of ['palm', 'face']) each({ intro: ph[k].intro, body: ph[k].sections.map((x) => x.body), closing: ph[k].closing }, (t, p) => check(t, p, { voice: 'cheongung' }), `photo.${k}`);
+each(ph.guide, (t, p) => check(t, p, { voice: 'wolha' }), 'photo.guide');
+each(ph.consent, (t, p) => check(t, p, { voice: 'hamnida' }), 'photo.consent');
+
 // 중복 문장
 const seen = new Map();
 each({ a: load(T + 'oneline.json'), b: f.summary, c: f.detail, d: load(T + 'advice.json') }, (t, p) => { if (seen.has(t)) errs.push(`중복: ${p} = ${seen.get(t)}`); seen.set(t, p); }, '');
