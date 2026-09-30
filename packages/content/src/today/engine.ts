@@ -10,10 +10,16 @@ import fieldsDb from '../../data/today/fields.json';
 import adviceDb from '../../data/today/advice.json';
 import weekDb from '../../data/today/week.json';
 import monthDb from '../../data/today/month.json';
+import extraDb from '../../data/today/extra.json';
 
-export const FIELDS = ['wealth', 'love', 'work', 'health'] as const;
+// 화면 순서: 일 · 금전 · 연애 · 건강 · 학업 · 시험 (대표님 HWP)
+export const FIELDS = ['work', 'wealth', 'love', 'health', 'study', 'exam'] as const;
 export type Field = (typeof FIELDS)[number];
-export const FIELD_LABEL: Record<Field, string> = { wealth: '재물', love: '애정', work: '직장', health: '건강' };
+export const FIELD_LABEL: Record<Field, string> = { work: '일', wealth: '금전', love: '연애', health: '건강', study: '학업', exam: '시험' };
+// 심화 문단·조언이 있는 4분야(분야 상세 화면)
+export const CORE_FIELDS = ['wealth', 'love', 'work', 'health'] as const;
+export type CoreField = (typeof CORE_FIELDS)[number];
+const isCore = (f: Field): f is CoreField => (CORE_FIELDS as readonly string[]).includes(f);
 type Stars = 1 | 2 | 3 | 4 | 5;
 type Band = '1' | '2' | '3' | '4' | '5';
 
@@ -94,24 +100,31 @@ export function todayFortune(saju: SajuResult, date: Date, profileId: string) {
     FIELDS.map((f) => {
       const stars = toStars(raw[f]);
       const s = String(stars) as Band;
+      if (!isCore(f)) {
+        const ex = extraDb as any;
+        return [f, { stars, summary: pick(ex.summary[f][s] as string[], `${seed}:${f}:s`), detail: pickN(ex.detail[f][s] as string[], 2, `${seed}:${f}:d`), detailCheongung: null, advice: null }];
+      }
       const detail = pickN((fieldsDb.detail as any)[f][s] as string[], 3, `${seed}:${f}:d`);
-      const dosaPool = (fieldsDb.detailDosa as any)[f]?.[s] as string[] | undefined;
+      const cheongungPool = (fieldsDb.detailCheongung as any)[f]?.[s] as string[] | undefined;
       const adv = (adviceDb as any)[f];
       return [f, {
         stars,
         summary: pick((fieldsDb.summary as any)[f][s] as string[], `${seed}:${f}:s`),
         detail,
-        detailDosa: dosaPool ? pickN(dosaPool, 3, `${seed}:${f}:dd`) : null,
+        detailCheongung: cheongungPool ? pickN(cheongungPool, 3, `${seed}:${f}:dd`) : null,
         advice: { do: pick(adv.do as string[], `${seed}:${f}:do`), avoid: pick(adv.avoid as string[], `${seed}:${f}:av`), word: pick(adviceDb.word, `${seed}:${f}:w`) },
       }];
     }),
-  ) as Record<Field, { stars: Stars; summary: string; detail: string[]; detailDosa: string[] | null; advice: { do: string; avoid: string; word: string } }>;
+  ) as Record<Field, { stars: Stars; summary: string; detail: string[]; detailCheongung: string[] | null; advice: { do: string; avoid: string; word: string } | null }>;
   return {
     date: ymd(date),
     total,
     stars: starsOfTotal(total),
     band,
     oneLine: pick((oneline as Record<Band, string[]>)[band], `${seed}:one`),
+    headline: pick((extraDb.headline as Record<Band, string[]>)[band], `${seed}:hl`),
+    brief: pick((extraDb.brief as Record<Band, string[]>)[band], `${seed}:br`),
+    word: pick((extraDb.word as Record<Band, string[]>)[band], `${seed}:wd`),
     fields,
     lucky: lucky(saju, seed),
     dayPillar,

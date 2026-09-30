@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calcSaju } from '@naman/engine';
-import { todayFortune, weekFortune, monthFortune, FIELDS, bandOf, zodiacToday, yearsOf, relationCategory } from '../src/index';
+import { todayFortune, weekFortune, monthFortune, FIELDS, CORE_FIELDS, bandOf, zodiacToday, yearsOf, relationCategory } from '../src/index';
 import rules from '../data/today/rules.json';
 
 const me = calcSaju({ year: 1968, month: 3, day: 15, hour: 7, calendar: 'solar', gender: 'M' });
@@ -28,17 +28,24 @@ describe('오늘의 운세 계산', () => {
           expect(f.fields[k].stars).toBeGreaterThanOrEqual(1);
           expect(f.fields[k].stars).toBeLessThanOrEqual(5);
           expect(f.fields[k].summary.length).toBeGreaterThan(3);
-          expect(f.fields[k].detail).toHaveLength(3);
-          expect(new Set(f.fields[k].detail).size).toBe(3);
+          const n = CORE_FIELDS.includes(k as any) ? 3 : 2;
+          expect(f.fields[k].detail).toHaveLength(n);
+          expect(new Set(f.fields[k].detail).size).toBe(n);
         }
         expect(f.oneLine.length).toBeGreaterThan(5);
+        expect(f.brief.length).toBeGreaterThan(10);
+        expect(f.word.length).toBeGreaterThan(5);
+        expect(f.headline.length).toBeGreaterThan(3);
       }
     expect(totals.size).toBeGreaterThan(15); // 날마다 골고루 달라진다
   });
-  it('재물·직장은 도령 문단도 있다', () => {
+  it('6항목(일·금전·연애·건강·학업·시험)', () => {
+    expect(Object.keys(todayFortune(me, D, 'p1').fields)).toEqual(['work', 'wealth', 'love', 'health', 'study', 'exam']);
+  });
+  it('재물·직장은 도사 문단도 있다', () => {
     const f = todayFortune(me, D, 'p1');
-    expect(f.fields.wealth.detailDosa).toHaveLength(3);
-    expect(f.fields.love.detailDosa).toBeNull();
+    expect(f.fields.wealth.detailCheongung).toHaveLength(3);
+    expect(f.fields.love.detailCheongung).toBeNull();
   });
   it('시간 모름도 계산된다', () => {
     const f = todayFortune(unknown, D, 'p1');
@@ -63,7 +70,7 @@ describe('오늘의 운세 계산', () => {
     expect(w.line.length).toBeGreaterThan(5);
     const m = monthFortune(me, D, 'p1');
     expect(m.pillar.text).toBe('정유');
-    expect(Object.keys(m.fields)).toHaveLength(4);
+    expect(Object.keys(m.fields)).toHaveLength(6);
   });
 });
 
