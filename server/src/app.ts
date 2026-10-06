@@ -16,6 +16,7 @@ import { shareCard } from './services/card.ts';
 import { fulfillOrder, revokeOrder } from './services/payments/fulfill.ts';
 import { normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRequest } from './services/payments/payapp.ts';
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
+import { fcmConfigured, sendPush } from './services/push/fcm.ts';
 import photoSample from '../../packages/content/data/photo-sample.json' with { type: 'json' };
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
@@ -29,7 +30,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   const db = opts.db ?? (await openDb()).db;
   await seedBase(db);
   if (opts.demo) await seedDemo(db);
-  const origins = [WEB(), 'capacitor://localhost', 'http://localhost', /^http:\/\/localhost:\d+$/];
+  const origins = [WEB(), 'https://localhost', 'capacitor://localhost', 'http://localhost', /^http:\/\/localhost:\d+$/]; // 앱(Capacitor 안드로이드)은 https://localhost
   await app.register(cors, { origin: origins, credentials: true });
   await app.register(rateLimit, { global: false });
   // PayApp 결제 통보는 form(x-www-form-urlencoded) 으로 온다
@@ -116,6 +117,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!id) return;
     const [u] = await db.select().from(S.users).where(eq(S.users.id, id));
     return { user: u, premium: await isPremium(id) };
+  });
+  // 앱 푸시 토큰·동의·받을 시각 저장(앱이 알림 허용 직후 부름)
+  app.post('/me/push', async (req, rep) => {
+    const id = await needUser(req, rep);
+    if (!id) return;
+    const b = (req.body ?? {}) as { token?: string; consent?: boolean; time?: string };
+    await db.update(S.users).set({ pushToken: b.token ? String(b.token).slice(0, 400) : null, pushConsent: !!b.consent, pushTime: /^\d{2}:\d{2}$/.test(b.time ?? '') ? b.time : '07:00', platform: 'android' }).where(eq(S.users.id, id));
+    return { ok: true };
   });
   app.get('/profiles', async (req, rep) => {
     const id = await needUser(req, rep);
@@ -237,7 +246,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.post('/billing/google/verify', async (req, rep) => {
     const userId = await needUser(req, rep);
     if (!userId) return;
-    const b = (req.body ?? {}) as { orderId?: string; productId?: string; purchaseToken?: string };
+    const b = (req.body ?? {}) as { orderId?: string; productId?: string; purchaseToken?: string; profileId?: string };
     if (!b.purchaseToken || !b.productId) return rep.code(400).send({ error: '구매 정보가 없어요' });
     if (!playConfigured()) return rep.code(503).send({ error: 'Google Play 결제 준비 중이에요' });
     const [dup] = await db.select().from(S.orders).where(and(eq(S.orders.providerRef, b.purchaseToken), eq(S.orders.status, 'paid')));
@@ -245,7 +254,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [o] = b.orderId ? await db.select().from(S.orders).where(and(eq(S.orders.id, b.orderId), eq(S.orders.userId, userId))) : [];
     const [p] = await db.select().from(S.products).where(eq(S.products.id, b.productId));
     if (!p) return rep.code(404).send({ error: '없는 상품이에요' });
-    const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount: p.price, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
+    const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount: p.price, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
     try {
       if (p.kind === 'subscription') {
         const s = await verifySubscription(b.purchaseToken, http);
@@ -449,7 +458,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     await audit(req, 'order.refund', id);
     return o;
   });
-  // 6 푸시 — 문구 → 딥링크 → 대상 → 즉시/예약. FCM 연결(10 단계) 전에는 발송 대상 수만 기록(MOCK)
+  // 6 푸시 — 문구 → 딥링크 → 대상 → 즉시/예약. FCM 키가 있으면 실제 발송, 없으면 대상 수만 기록
   const DEEP_LINKS = ['/today', '/today?tab=week', '/unse', '/unse?cat=fate', '/unse?cat=love', '/tarot', '/talisman', '/box', '/premium', '/zodiac', '/fun/dream', '/fun/small', '/fun/oneline', ...(await db.select({ id: S.products.id }).from(S.products).where(inArray(S.products.kind, ['reading', 'tarot', 'photo']))).map((p) => `/product/${p.id}`)];
   app.get(`${A}/push/links`, { preHandler: guard() }, async () => DEEP_LINKS);
   app.get(`${A}/push`, { preHandler: guard() }, async () => db.select().from(S.pushCampaigns).orderBy(desc(S.pushCampaigns.createdAt)));
@@ -461,12 +470,26 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const r = (await db.execute(q)) as unknown;
     return ((Array.isArray(r) ? r : (r as { rows: unknown[] }).rows)[0] as { n: number }).n;
   };
+  const targetTokens = async (target: string): Promise<string[]> => {
+    const where = target === 'premium' ? sql`and exists(select 1 from subscriptions s where s.user_id = u.id and s.status in ('active','grace') and s.expires_at > now())`
+      : target === 'free' ? sql`and not exists(select 1 from subscriptions s where s.user_id = u.id and s.status in ('active','grace') and s.expires_at > now())`
+      : target.startsWith('dormant') ? sql`and u.last_seen_at < now() - (${+target.slice(7) || 7} || ' days')::interval` : sql``;
+    const r = (await db.execute(sql`select u.push_token as t from users u where u.push_token is not null and u.push_consent = true and u.merged_into is null and u.deleted_at is null ${where}`)) as unknown;
+    return ((Array.isArray(r) ? r : (r as { rows: unknown[] }).rows) as { t: string }[]).map((x) => x.t);
+  };
+  // FCM 키가 있으면 실제 발송(보낸 수), 없으면 대상 수만 기록
+  const deliver = async (c: { title: string; body: string; deepLink: string; target: string }) => {
+    if (!fcmConfigured()) return targetCount(c.target);
+    const r = await sendPush(await targetTokens(c.target), { title: c.title, body: c.body, link: c.deepLink }, http);
+    if (r.dead.length) await db.update(S.users).set({ pushToken: null }).where(inArray(S.users.pushToken, r.dead));
+    return r.sent;
+  };
   app.post(`${A}/push`, { preHandler: guard() }, async (req: Req, rep) => {
     const b = req.body as any;
     if (!b.title || !b.body || !DEEP_LINKS.includes(b.deepLink)) return rep.code(400).send({ error: '문구·연결 화면을 확인해 주세요' });
     const now = !b.scheduledAt;
     const [c] = await db.insert(S.pushCampaigns).values({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all',
-      scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : new Date(), status: now ? 'sent' : 'scheduled', sentCount: now ? await targetCount(b.target ?? 'all') : 0, createdBy: req.admin!.email }).returning();
+      scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : new Date(), status: now ? 'sent' : 'scheduled', sentCount: now ? await deliver({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all' }) : 0, createdBy: req.admin!.email }).returning();
     await audit(req, now ? 'push.send' : 'push.schedule', String(c.id), b);
     return c;
   });
@@ -490,7 +513,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   // 예약 푸시 — 1분마다 도래한 캠페인을 발송 처리(FCM 연결 전 MOCK)
   const timer = setInterval(async () => {
     const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
-    for (const c of due) await db.update(S.pushCampaigns).set({ status: 'sent', sentCount: await targetCount(c.target) }).where(eq(S.pushCampaigns.id, c.id));
+    for (const c of due) {
+      await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시
+      await db.update(S.pushCampaigns).set({ status: 'sent', sentCount: await deliver(c) }).where(eq(S.pushCampaigns.id, c.id));
+    }
   }, 60_000);
   app.addHook('onClose', async () => clearInterval(timer));
   return { app, db };

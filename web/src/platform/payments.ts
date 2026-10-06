@@ -68,7 +68,7 @@ export type Pending = { orderId: string; productId: string; profileId: string; k
 
 /* ---------- 웹: PayApp ---------- */
 // 풀이를 서버가 쓰려면 사주 정보가 서버에 있어야 함 → 결제 전에 해당 프로필을 올림(이미 있으면 갱신)
-async function syncProfiles(profileId: string) {
+export async function syncProfiles(profileId: string) {
   const { profiles, mainId } = useApp.getState();
   for (const id of profileId.split('+').filter(Boolean)) {
     const x = profiles.find((p) => p.id === id);
@@ -107,8 +107,8 @@ export const webProvider: PaymentProvider = {
   },
 };
 
-// 앱 안(실결제 모드)에서는 Google Play 만 허용 — 10 단계 네이티브 연결 전에는 결제를 막는다(무료로 열리는 일 방지)
-const unavailable: PaymentProvider = {
+// 앱 안(실결제 모드)에서는 Google Play 만 허용(웹 결제 안내·링크 노출 금지). Play 키가 서버에 없으면 서버가 "준비 중"으로 막는다.
+export const unavailable: PaymentProvider = {
   id: 'unavailable',
   needsPhone: false,
   methods: () => [{ id: 'google', label: 'Google Play 결제' }],
@@ -118,9 +118,12 @@ const unavailable: PaymentProvider = {
 };
 
 export const isNativeApp = () => !!(window as any).Capacitor?.isNativePlatform?.();
+let gp: PaymentProvider | null = null;
+// 앱용 Google Play 구현은 앱에서만 불러옴(웹 번들에 결제 플러그인 코드가 섞이지 않게)
+export async function loadGooglePlay() { if (isNativeApp() && !MOCK_MODE && !gp) gp = (await import('./google-play')).googlePlayProvider; }
 export function getPayments(): PaymentProvider {
   if (MOCK_MODE) return mockProvider;
-  return isNativeApp() ? unavailable : webProvider;
+  return isNativeApp() ? gp ?? unavailable : webProvider;
 }
 
 // 결제 문자 받을 번호 — 한 번 입력하면 이 기기에 기억

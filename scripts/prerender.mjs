@@ -1,7 +1,7 @@
 // 빌드 후 정적 HTML 사전 렌더(결정필요 D30) — 애드센스·검색 크롤러가 JS 없이도 읽을 글을 각 주소의 index.html 에 넣는다.
 // 브라우저에서는 React 가 #root 를 그대로 덮어써서 화면은 똑같다. 서버 렌더·헤드리스 브라우저 없이 brand.config + 문구 DB 로 만든다.
 // 또 ads.txt 를 ADSENSE_CLIENT_ID 로 만든다(없으면 안내 주석만). 사용: npm run build (web postbuild 에서 자동)
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { rmSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,4 +58,6 @@ page('contact', `문의하기 | ${SITE}`, `${SITE} 문의`, `<h1>문의하기</h
 // ads.txt — 게시자 ID(ca-pub-XXXX → pub-XXXX)
 const pub = ADSENSE.replace(/^ca-/, '');
 writeFileSync(join(dist, 'ads.txt'), pub ? `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` : '# 대표님 애드센스 게시자 ID(ADSENSE_CLIENT_ID)를 .env 에 넣고 다시 빌드하면 채워집니다\n');
+// 원본 이미지 투입 폴더는 배포·앱 묶음에 넣지 않음(변환본만 사용)
+rmSync(join(dist, 'img/_incoming'), { recursive: true, force: true });
 console.log(`사전 렌더 ${4 + products.length + brand.talisman.length + 3}쪽 · ads.txt ${pub ? '작성' : '자리만'}`);

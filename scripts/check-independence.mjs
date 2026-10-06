@@ -21,7 +21,8 @@ function walk(dir) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name), rel = relative(ROOT, full);
     const st = statSync(full);
-    if (st.isDirectory()) { if (!EXCLUDE_DIRS.has(name)) walk(full); continue; }
+    // 앱 빌드 산출물(웹 복사본·gradle 결과)은 검사 대상 아님
+    if (st.isDirectory()) { if (!EXCLUDE_DIRS.has(name) && !/^app[\\/]android[\\/](app[\\/](build|src[\\/]main[\\/]assets)|build|\.gradle|capacitor-cordova-android-plugins)/.test(rel)) walk(full); continue; }
     if (EXCLUDE_FILES.has(rel) || BINARY.test(name) || st.size > 5_000_000) continue;
     const lines = readFileSync(full, 'utf8').split(/\r?\n/);
     lines.forEach((line, i) => {

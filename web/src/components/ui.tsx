@@ -1,4 +1,5 @@
 // 공통 컴포넌트 v2 — 시안 v2 기준. /dev/components 에 전부 나열.
+import { hideBanner, showBanner } from '../platform/native';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Img } from './Img';
@@ -337,7 +338,14 @@ export function AdSlot({ premium, kind = '배너', slot = 'content_banner' }: { 
     loadAdSense(__ADSENSE_CLIENT_ID__);
     try { ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({}); } catch { /* 광고 차단 등 */ }
   }, [provider, cfg]);
+  // 앱: AdMob 배너를 하단 탭 위에 띄우고, 화면에는 배너 높이만큼 빈칸(글이 가려지지 않게)
+  useEffect(() => {
+    if (provider !== 'admob' || cfg === undefined || cfg?.enabled === false) return;
+    void showBanner();
+    return () => { void hideBanner(); };
+  }, [provider, cfg]);
   if (provider === 'none' || cfg?.enabled === false) return null;
+  if (provider === 'admob' && isNativeApp()) return <div className="ad-native-space" aria-hidden style={{ height: 64 }} />;
   if (provider === 'adsense' && cfg?.config?.adsenseSlot)
     return <ins ref={ins} className="adsbygoogle ad-web" style={{ display: 'block' }} data-ad-client={__ADSENSE_CLIENT_ID__} data-ad-slot={cfg.config.adsenseSlot} data-ad-format="auto" data-full-width-responsive="true" />;
   return <div className="ad" role="complementary" aria-label="광고" data-ad-provider={provider}>광고 영역 ({provider === 'admob' ? 'AdMob' : '웹 광고'} {kind} · 프리미엄 회원은 숨김)</div>;

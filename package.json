@@ -8,7 +8,8 @@
   "workspaces": [
     "packages/*",
     "server",
-    "web"
+    "web",
+    "app"
   ],
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
@@ -22,7 +23,11 @@
     "db:migrate": "npm run db:migrate -w server",
     "admin:create": "npm run admin:create -w server",
     "check:secrets": "node scripts/scan-secrets.mjs",
-    "export:delivery": "node scripts/export-delivery.mjs"
+    "export:delivery": "node scripts/export-delivery.mjs",
+    "app:sync": "npm run build -w web && npm run sync -w app",
+    "app:open": "npm run open -w app",
+    "app:build:debug": "npm run build -w web && npm run build:debug -w app",
+    "app:assets": "node scripts/make-app-assets.mjs"
   },
   "devDependencies": {
     "@fullstackfamily/manseryeok": "^1.0.8",

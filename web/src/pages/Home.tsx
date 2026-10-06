@@ -1,4 +1,5 @@
 // 홈 v3 (도사 앱 레이아웃) — 헤더 → 오늘의 운세 카드 → 롤링 배너 → 재미로 보는 운세 2열 → 인기 상품(그리드형 가로 스크롤) → 타로 진입 → 부적 진입 → 알림 받기 → 광고
+import { enablePush } from '../platform/native';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader, SectionHeader } from '../components/layout';
@@ -66,7 +67,7 @@ export default function Home() {
           <section className="notify-card">
             <b>매일 아침 오늘의 운세를 받아 보세요</b>
             <span>원하는 시간에 한 줄 운세를 알림으로 보내 드려요</span>
-            <button className="btn gold" onClick={() => { setNotify(true); toast('매일 아침 알림을 보내 드릴게요'); }}>알림 받기</button>
+            <button className="btn gold" onClick={async () => { const r = await enablePush(); if (r === 'denied') { toast('휴대폰 설정에서 알림을 켜 주세요'); return; } setNotify(true); toast('매일 아침 알림을 보내 드릴게요'); }}>알림 받기</button>
           </section>
         )}
 

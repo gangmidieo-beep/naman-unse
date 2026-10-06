@@ -1,4 +1,5 @@
 // 공유 — 채널별 URL·카카오 SDK·Web Share·이미지 저장. 앱(10 단계)은 @capacitor/share 로 기본 공유 분기.
+import { saveImageNative } from '../platform/native';
 import { toPng } from 'html-to-image';
 import { track } from './track';
 
@@ -78,6 +79,7 @@ export async function kakaoShare(o: { title: string; text: string; url: string; 
 // 결과 카드를 이미지로 저장 — 카드는 540×675(CSS px) 로 그리고 2배로 뽑아 1080×1350.
 export async function saveImage(node: HTMLElement, filename: string) {
   const dataUrl = await toPng(node, { pixelRatio: 1080 / node.offsetWidth, cacheBust: true, backgroundColor: '#F5EFE1' });
+  if (await saveImageNative(dataUrl, filename)) { track('share', { kind: 'image', filename }); return dataUrl; } // 앱: 저장 후 공유 시트
   // data: 주소 대신 blob 주소 + 문서에 붙였다 떼기 — 일부 브라우저가 파일 이름을 무시하는 문제 방지
   const blob = await (await fetch(dataUrl)).blob();
   const url = URL.createObjectURL(blob);

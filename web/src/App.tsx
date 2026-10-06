@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { exitApp, initNative } from './platform/native';
 import { useApp } from './store/app';
 import { ToastProvider } from './components/ui';
 import { TabBar } from './components/layout';
@@ -29,9 +30,31 @@ const Admin = lazy(() => import('./admin/Admin')); // 관리자는 따로 불러
 const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev', '/product/', '/login', '/auth'];
 const noTab = (path: string) => NO_TAB.some((p) => path.startsWith(p)) || /^\/talisman\/[^/]+/.test(path);
 
+// 앱 종료 확인(안드로이드 홈에서 뒤로가기)
+function ExitSheet() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => { const on = () => setOpen(true); window.addEventListener('naman:exit', on); return () => window.removeEventListener('naman:exit', on); }, []);
+  if (!open) return null;
+  return (
+    <div className="sheet-bg" role="dialog" aria-modal="true" aria-label="앱 종료" onClick={() => setOpen(false)}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h2 className="h2 center">나만의 운세를 종료할까요?</h2>
+        <p className="muted center">내일 아침에도 오늘의 운세가 기다리고 있어요</p>
+        <div className="mt14" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <button className="btn line" onClick={() => setOpen(false)}>취소</button>
+          <button className="btn gold" onClick={() => exitApp()}>종료</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const { introSeen, fontScale } = useApp();
   const loc = useLocation();
+  const nav = useNavigate();
+  useEffect(() => { void initNative((to) => nav(to)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { document.documentElement.dataset.scale = fontScale; }, [fontScale]);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -43,6 +66,7 @@ export function App() {
   if (!introSeen && loc.pathname === '/') return <Navigate to="/intro" replace />;
   return (
     <ToastProvider>
+      <ExitSheet />
       <div className="app">
         <Routes>
           <Route path="/" element={<Home />} />

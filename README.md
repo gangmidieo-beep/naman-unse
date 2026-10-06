@@ -108,9 +108,19 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 
 ## 10. 앱 빌드 (Android)
 
-- 폴더 경로에 **한글이 없어야** 빌드가 됩니다(예 `C:\projects\naman-unse`).
-- `npm run build -w web` → `npx cap sync android` → Android Studio 로 `android` 폴더 열기 → 서명된 AAB 생성(업로드 키는 대표님 명의로 만들고 안전하게 보관)
-- 앱 아이콘 원본: `docs/assets-source/app-icon/` (Play 스토어 512px·안드로이드 아이콘 크기별)
+| 단계 | 명령·위치 |
+|---|---|
+| 준비 | Android Studio 설치 https://developer.android.com/studio (JDK 21 포함). 폴더 경로에 **한글이 없어야** 함(예 `C:\projects\naman-unse`) |
+| 웹 화면 넣기 | `.env` 에 `MOCK_MODE`·`API_ORIGIN`(정식 서버 주소) 확인 → `npm run app:sync` |
+| 아이콘·스플래시 다시 만들기 | 원본 `docs/assets-source/app_icon.png`·`logo_brand.png` 교체 후 `npm run app:assets` |
+| 시험용 APK | `npm run app:build:debug` → `app/android/app/build/outputs/apk/debug/app-debug.apk` |
+| 스토어용 AAB | 업로드 키(대표님 명의, 분실 금지)를 만든 뒤 환경변수 `NAMAN_KEYSTORE`·`NAMAN_KEYSTORE_PASSWORD`·`NAMAN_KEY_ALIAS`·`NAMAN_KEY_PASSWORD` → `npm run build:release -w app` |
+| 광고 | 환경변수 `ADMOB_APP_ID`(앱 빌드) · `VITE_ADMOB_BANNER_ID`(웹 빌드). 비우면 구글 공식 **테스트 광고** |
+| 푸시 | Firebase 콘솔에서 Android 앱(패키지명 = appId) 추가 → `google-services.json` 을 `app/android/app/` 에 넣기(git 금지) · 서버에 `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64` |
+| 앱 id | `com.namanunse.app`(임시) — **스토어 첫 업로드 뒤에는 바꿀 수 없음**. 바꾸려면 `APP_ID` 환경변수 + android 폴더 namespace·applicationId 수정 |
+
+- 앱 결제는 **Google Play 만** 사용(정책). 앱 안에서는 웹 결제(PayApp) 화면·문구가 나오지 않습니다.
+- 앱 아이콘 원본: `docs/assets-source/app-icon/` (Play 스토어 512px 포함)
 
 ## 11. 점검 명령
 
