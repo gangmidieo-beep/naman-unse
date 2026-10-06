@@ -42,7 +42,7 @@ export default function PayReturn() {
       if (!stop) setState('slow');
     })();
     return () => { stop = true; };
-  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id]);
 
   return (
     <>

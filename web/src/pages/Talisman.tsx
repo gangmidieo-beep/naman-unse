@@ -6,7 +6,7 @@ import { SubHeader, SectionHeader } from '../components/layout';
 import { Button, CategoryTabs, EffectCard, ProductRow, StepList, StickyBuyBar, TalismanPaper, talismanTone, useToast } from '../components/ui';
 import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
-import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, type Talisman } from '../lib/catalog';
+import { BRAND, CHAR, TALISMANS, buyLabel, charOf, productById, isTalisman, type Talisman } from '../lib/catalog';
 import { newId, useApp, useMainProfile, usePremium } from '../store/app';
 import { saveImage } from '../lib/share';
 import { birthLabel } from './ProfileNew';

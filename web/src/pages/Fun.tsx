@@ -1,6 +1,6 @@
 // 재미로 보는 운세 (무료·비회원 이용 가능) — 별자리 · 혈액형 · 꿈 해몽 · MZ 팩폭 사주 · MBTI 사주
 // 띠별·혈액형·MBTI·타로 결과는 보상형 광고 후(하루 제한·프리미엄 제외). 문구는 월하선녀 해요체(팩폭만 가벼운 말투).
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   STAR_SIGNS, starSignOf, starToday, BLOOD_TYPES, bloodToday, DREAM_CATS, DREAM_POPULAR, DREAMS, searchDream,
   factbomb, mbtiResult, MBTI_TYPES, smallSaju, oneLineSaju, type StarId, type Blood, type DreamEntry,
@@ -11,7 +11,6 @@ import { AdSlot, Button, CharacterBubble, PremiumLock, Stars, useToast } from '.
 import { ShareSheet } from '../components/ShareSheet';
 import { ShareCard } from '../components/ShareCard';
 import { useRewarded } from '../components/Rewarded';
-import { optionalImg } from '../assets/images';
 import { isUnlockedToday, useApp, useMainProfile, usePremium, type Profile } from '../store/app';
 import { useSaju } from '../lib/fortune';
 import { koDate } from '../lib/dates';

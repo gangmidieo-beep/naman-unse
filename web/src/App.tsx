@@ -54,7 +54,7 @@ export function App() {
   const { introSeen, fontScale } = useApp();
   const loc = useLocation();
   const nav = useNavigate();
-  useEffect(() => { void initNative((to) => nav(to)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void initNative((to) => nav(to)); }, []);
   useEffect(() => { document.documentElement.dataset.scale = fontScale; }, [fontScale]);
   useEffect(() => {
     window.scrollTo(0, 0);
