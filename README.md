@@ -122,6 +122,7 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 
 - 앱 결제는 **Google Play 만** 사용(정책). 앱 안에서는 웹 결제(PayApp) 화면·문구가 나오지 않습니다.
 - 앱 아이콘 원본: `docs/assets-source/app-icon/` (Play 스토어 512px 포함)
+- Play 스토어 등록(설명문·데이터 보안 답변·인앱 상품 96개·서비스 계정 연결·출시 순서): `docs/스토어등록.md`, 이미지 `docs/store/`
 
 ## 11. 점검 명령
 

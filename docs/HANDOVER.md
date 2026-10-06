@@ -11,7 +11,7 @@
 | 도메인 | 대표님 | `deploy/go-live.ps1` 실행 → 화면에 나온 CNAME·TXT 를 DNS 에 입력(웹 www.도메인, 서버 api.도메인) · 루트 주소는 www 로 포워딩 | ☐ |
 | 웹 결제(PayApp) | 대표님(가입 완료) | `deploy/go-live.ps1` 이 연동정보 3개를 물어서 Railway 변수에 넣음(채팅·파일에 적지 않음) → 1건 결제·환불 테스트 | ☐ |
 | 통신판매업 신고 | 대표님 | 신고증 번호를 사이트 하단 사업자 정보(`brand.config.json` → business)에 | ☐ |
-| Google Play Console | 대표님 | 개발사 초대(관리자) → 앱 등록·상품 등록·서비스 계정 연결 | ☐ |
+| Google Play Console | 대표님 | 개발사 초대(관리자) → 앱 등록·상품 등록·서비스 계정 연결 — 칸별 입력값·이미지·상품 목록은 `docs/스토어등록.md`, `docs/store/` | ☐ |
 | 앱 서명(업로드 키) | 대표님 | 대표님 명의로 생성 → AAB 빌드 후 키 파일·비밀번호를 대표님께 전달, 개발사 사본 삭제. Play 앱 서명(구글 보관)을 켜므로 업로드 키를 잃어도 Play Console 에서 재설정 가능 | ☐ |
 | Firebase(푸시) | 대표님 | 프로젝트 생성 → 개발사 초대 → google-services.json 은 git 에 넣지 않음 | ☐ |
 | AdMob · 애드센스 | 대표님 | 앱/사이트 등록 → 광고 단위 ID 를 관리자 광고 관리·변수에 | ☐ |
