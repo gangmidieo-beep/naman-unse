@@ -77,7 +77,7 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 
 ## 6. 결제 켜기
 
-**웹(PayApp)**: PayApp 연동정보 3개 + `PG_PROVIDER=payapp` + `MOCK_MODE=false`(웹·서버) → 본인 카드로 최소 금액 1건 결제 → 결과 화면 확인 → 관리자 **결제·구독**에서 환불 → PayApp 관리자에서도 취소 확인.
+**웹(PayApp)**: `deploy/go-live.ps1` 한 번 실행(도메인·PayApp 연동정보 3개·AI 키를 물어서 Railway 변수 설정) — 직접 넣을 때는 PayApp 연동정보 3개 + `PG_PROVIDER=payapp` + `MOCK_MODE=false`(웹·서버). AI 풀이가 꺼져 있으면(`READING_AI`) 실결제 모드에서 유료 풀이 주문은 '준비 중'으로 막힙니다 → 본인 카드로 최소 금액 1건 결제 → 결과 화면 확인 → 관리자 **결제·구독**에서 환불 → PayApp 관리자에서도 취소 확인.
 - 웹 프리미엄은 **이용권**(30일·1년)이며 자동 재결제되지 않습니다. 추가 구매 시 남은 기간 뒤에 이어 붙습니다.
 
 **앱(Google Play)**: Play Console → 수익 창출 → 인앱 상품/구독에 **상품 id 를 `brand.config.json` 의 id 그대로** 등록(구독: `premium_monthly`, `premium_yearly`). 서비스 계정 JSON 을 base64 로 `GOOGLE_SERVICE_ACCOUNT_JSON_BASE64` 에, 실시간 알림(RTDN) 주제의 push 주소는 `https://api.도메인/billing/google/rtdn`.
@@ -93,7 +93,7 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 | 결제·구독 | 결제 목록·환불(웹 결제는 PayApp 취소까지 자동) |
 | 푸시 알림 · 광고 관리 · 통계 분석 | 예약 푸시, 광고 위치 ON/OFF, 콘텐츠·공유·전환 통계 |
 
-관리자 비밀번호는 5번 틀리면 10분 잠깁니다. 계정 추가: `npm run admin:create -- 이메일 비밀번호 operator`
+관리자 비밀번호는 5번 틀리면 10분 잠깁니다. 계정 추가·삭제·비밀번호 변경: 관리자 → **관리자 계정** (최고관리자만 추가·삭제). 서버에서 직접: `npm run admin:create -- 이메일 비밀번호 operator`
 
 ## 8. 가격·문구 바꾸기
 

@@ -17,6 +17,7 @@ import { fulfillOrder, revokeOrder } from './services/payments/fulfill.ts';
 import { normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRequest } from './services/payments/payapp.ts';
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
+import { liveAI } from './services/reading/generate.ts';
 import photoSample from '../../packages/content/data/photo-sample.json' with { type: 'json' };
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
@@ -192,6 +193,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       const [o] = await db.insert(S.orders).values(base).returning();
       return fulfillOrder(db, o);
     }
+    // 실결제인데 AI 풀이가 꺼져 있으면 유료 풀이는 팔지 않는다(돈 받고 예시 풀이가 나가는 사고 방지). 부적·구독은 그대로 판매
+    if (kind === 'reading' && !liveAI()) return rep.code(503).send({ error: '풀이 서비스를 준비하고 있어요. 조금만 기다려 주세요.', code: 'reading_off' });
     if (channel === 'google') {
       if (!playConfigured()) return rep.code(503).send({ error: 'Google Play 결제 준비 중이에요' });
       const [o] = await db.insert(S.orders).values(base).returning();

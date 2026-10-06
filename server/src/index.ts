@@ -3,15 +3,15 @@ import { buildApp } from './app.ts';
 import { openDb } from './db/index.ts';
 import { createAdmin } from './services/seed.ts';
 import { schema as S } from './db/index.ts';
-import { eq } from 'drizzle-orm';
 import { startReadingWorker } from './services/reading/generate.ts';
 
-// 첫 배포용: ADMIN_EMAIL + ADMIN_INIT_PASSWORD 가 있고 그 관리자가 아직 없을 때만 한 번 만든다(이후 비밀번호는 관리자 화면·CLI 로 변경)
+// 첫 배포용: ADMIN_EMAIL + ADMIN_INIT_PASSWORD 가 있고 관리자가 한 명도 없을 때만 한 번 만든다.
+// (양도 때 이전 관리자를 지워도 재시작하면서 다시 생기지 않게 — 이후 계정·비밀번호는 관리자 화면 「관리자 계정」에서)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_INIT_PASSWORD) {
   const { db, close } = await openDb();
   const email = process.env.ADMIN_EMAIL.toLowerCase();
-  const [found] = await db.select({ id: S.admins.id }).from(S.admins).where(eq(S.admins.email, email));
-  if (!found && process.env.ADMIN_INIT_PASSWORD.length >= 10) await createAdmin(db, email, process.env.ADMIN_INIT_PASSWORD, 'super');
+  const [any] = await db.select({ id: S.admins.id }).from(S.admins).limit(1);
+  if (!any && process.env.ADMIN_INIT_PASSWORD.length >= 10) await createAdmin(db, email, process.env.ADMIN_INIT_PASSWORD, 'super');
   await close();
 }
 

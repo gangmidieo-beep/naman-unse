@@ -65,7 +65,7 @@ ${people.map((p, i) => sajuLine(`${p.name}(${p.gender === 'M' ? '남' : '여'}, 
 }
 
 /* ---------- 생성 ---------- */
-const liveAI = () => process.env.READING_AI === 'live' && !!process.env.ANTHROPIC_API_KEY && !!process.env.ANTHROPIC_MODEL;
+export const liveAI = () => process.env.READING_AI === 'live' && !!process.env.ANTHROPIC_API_KEY && !!process.env.ANTHROPIC_MODEL;
 const KRW_PER_USD = 1400;
 async function callClaude(system: string, user: string, http: typeof fetch) {
   const r = await http('https://api.anthropic.com/v1/messages', {

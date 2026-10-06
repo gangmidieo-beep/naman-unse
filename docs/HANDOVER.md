@@ -7,17 +7,17 @@
 | 항목 | 현재 소유 | 옮기는 방법 | 완료 |
 |---|---|---|---|
 | 소스 저장소(GitHub) | 개발사 비공개 저장소(임시) | 납품본(`npm run export:delivery`)을 대표님 GitHub 새 비공개 저장소로 올림 → 대표님이 소유 | ☐ |
-| 서버·DB(Railway) | 개발사 Railway(임시 배포) | 대표님 Railway 가입·카드 등록 → 개발사 초대 → 프로젝트 **Transfer** 또는 대표님 계정에 새로 배포 후 DB 옮김 · 지역은 **싱가포르** 권장 | ☐ |
-| 도메인 | 대표님 | DNS 에 Railway CNAME 입력 → `PUBLIC_WEB_ORIGIN`·`API_ORIGIN` 변경 | ☐ |
-| 웹 결제(PayApp) | 대표님(가입 완료) | 연동정보 3개를 Railway 변수에 → 1건 결제·환불 테스트 | ☐ |
+| 서버·DB(Railway) | 개발사 Railway(임시 배포) | 대표님 Railway 가입·카드 등록 → 개발사를 워크스페이스 멤버로 초대 → 프로젝트 Settings → **Transfer Project** 로 대표님 워크스페이스에 옮김(주소·DB 그대로) → `deploy/move-to-singapore.ps1` 로 싱가포르 이동 | ☐ |
+| 도메인 | 대표님 | `deploy/go-live.ps1` 실행 → 화면에 나온 CNAME·TXT 를 DNS 에 입력(웹 www.도메인, 서버 api.도메인) · 루트 주소는 www 로 포워딩 | ☐ |
+| 웹 결제(PayApp) | 대표님(가입 완료) | `deploy/go-live.ps1` 이 연동정보 3개를 물어서 Railway 변수에 넣음(채팅·파일에 적지 않음) → 1건 결제·환불 테스트 | ☐ |
 | 통신판매업 신고 | 대표님 | 신고증 번호를 사이트 하단 사업자 정보(`brand.config.json` → business)에 | ☐ |
 | Google Play Console | 대표님 | 개발사 초대(관리자) → 앱 등록·상품 등록·서비스 계정 연결 | ☐ |
-| 앱 서명(업로드 키) | 대표님 | 대표님 PC 에서 생성·보관(분실 시 업데이트 불가) — 개발사는 보관하지 않음 | ☐ |
+| 앱 서명(업로드 키) | 대표님 | 대표님 명의로 생성 → AAB 빌드 후 키 파일·비밀번호를 대표님께 전달, 개발사 사본 삭제. Play 앱 서명(구글 보관)을 켜므로 업로드 키를 잃어도 Play Console 에서 재설정 가능 | ☐ |
 | Firebase(푸시) | 대표님 | 프로젝트 생성 → 개발사 초대 → google-services.json 은 git 에 넣지 않음 | ☐ |
 | AdMob · 애드센스 | 대표님 | 앱/사이트 등록 → 광고 단위 ID 를 관리자 광고 관리·변수에 | ☐ |
 | 간편 로그인(구글·카카오·네이버) | 대표님 | 각 개발자 콘솔에 앱 등록 → 리다이렉트 주소 `https://api.도메인/auth/<google|kakao|naver>/callback` | ☐ |
-| Anthropic(AI 풀이, 선택) | 대표님 | API 키 발급 → `READING_AI=live` (비용 `docs/비용추정.md`) | ☐ |
-| 관리자 계정 | 개발사가 만든 임시 계정 | 대표님 이메일로 최고관리자 생성 → 임시 계정 삭제·비밀번호 변경 | ☐ |
+| Anthropic(AI 풀이, 선택) | 대표님 | API 키 발급 → `deploy/go-live.ps1` 에서 입력(`READING_AI=live`). 키가 없으면 유료 풀이는 '준비 중'으로 판매가 막히고 부적·구독만 판매 (비용 `docs/비용추정.md`) | ☐ |
+| 관리자 계정 | 개발사가 만든 임시 계정 | 관리자 화면 → **관리자 계정**: 대표님 이메일로 최고관리자 추가 → 대표님이 로그인해 비밀번호 변경 → 개발사 임시 계정 삭제(즉시 접속 차단) | ☐ |
 
 ## 2. 납품물 (계약서 7조)
 

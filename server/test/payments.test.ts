@@ -20,6 +20,7 @@ beforeAll(async () => {
   Object.assign(process.env, {
     PG_PROVIDER: 'payapp', PAYAPP_USERID: ENV.userid, PAYAPP_LINKKEY: ENV.linkkey, PAYAPP_LINKVAL: ENV.linkval,
     PUBLIC_WEB_ORIGIN: 'https://web.example.kr', API_ORIGIN: 'https://api.example.kr',
+    READING_AI: 'live', ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'test-model', // 풀이 판매 허용 조건(테스트에선 워커를 돌리지 않아 실제 호출 없음)
   });
   const o = await openDb({ dir: 'memory' });
   close = o.close;
@@ -27,7 +28,7 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => {
   await app.close(); await close();
-  for (const k of ['PG_PROVIDER', 'PAYAPP_USERID', 'PAYAPP_LINKKEY', 'PAYAPP_LINKVAL', 'PUBLIC_WEB_ORIGIN', 'API_ORIGIN']) delete process.env[k];
+  for (const k of ['PG_PROVIDER', 'PAYAPP_USERID', 'PAYAPP_LINKKEY', 'PAYAPP_LINKVAL', 'PUBLIC_WEB_ORIGIN', 'API_ORIGIN', 'READING_AI', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL']) delete process.env[k];
 });
 
 const auth = (t: string) => ({ authorization: `Bearer ${t}` });
@@ -43,8 +44,18 @@ describe('PayApp 웹 결제', () => {
     expect(normalizePhone('+82 10 1234 5678')).toBe('01012345678');
     expect(normalizePhone('02-123-4567')).toBeNull();
   });
-  it('번호 없으면 결제창을 열지 않음', async () => {
+  it('AI 풀이가 꺼져 있으면 유료 풀이는 팔지 않음(부적은 판매)', async () => {
     token = await guest('pay-1');
+    delete process.env.READING_AI;
+    try {
+      const r = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 'jeongtong', phone: '010-1111-2222' } });
+      expect(r.statusCode).toBe(503);
+      expect(r.json().code).toBe('reading_off');
+      const t = (await app.inject({ url: '/products' })).json().find((p: any) => p.kind === 'talisman');
+      expect((await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: t.id, phone: '010-1111-2222' } })).statusCode).toBe(200);
+    } finally { process.env.READING_AI = 'live'; }
+  });
+  it('번호 없으면 결제창을 열지 않음', async () => {
     const r = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 'jeongtong' } });
     expect(r.statusCode).toBe(400);
     expect(r.json().code).toBe('phone');
