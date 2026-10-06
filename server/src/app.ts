@@ -272,6 +272,17 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (n.type === 12) await revokeOrder(db, o, 'refunded'); // SUBSCRIPTION_REVOKED = 환불
     return { ok: true };
   });
+  // 풀이 결과 — 화면이 3초마다 조회(queued → generating → done)
+  app.get('/readings/:oid', async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
+    if (!o || o.status !== 'paid') return rep.code(404).send({ error: '결제된 풀이가 없어요' });
+    const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
+    if (!r) return rep.code(404).send({ error: '풀이를 찾지 못했어요' });
+    const { tokensIn, tokensOut, costKrw, model, ...pub } = r; void tokensIn; void tokensOut; void costKrw; void model; // 원가는 관리자만
+    return pub;
+  });
   app.get('/me/entitlements', async (req, rep) => {
     const userId = await needUser(req, rep);
     if (!userId) return;

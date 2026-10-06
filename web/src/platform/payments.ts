@@ -67,8 +67,17 @@ export const PENDING = 'naman-pay-pending';
 export type Pending = { orderId: string; productId: string; profileId: string; kind: 'reading' | 'talisman' | 'subscription'; price: number; at: number };
 
 /* ---------- 웹: PayApp ---------- */
+// 풀이를 서버가 쓰려면 사주 정보가 서버에 있어야 함 → 결제 전에 해당 프로필을 올림(이미 있으면 갱신)
+async function syncProfiles(profileId: string) {
+  const { profiles, mainId } = useApp.getState();
+  for (const id of profileId.split('+').filter(Boolean)) {
+    const x = profiles.find((p) => p.id === id);
+    if (x) await apiAuth('/profiles', { method: 'POST', body: JSON.stringify({ ...x, isMain: x.id === mainId }) }).catch(() => {});
+  }
+}
 async function payapp(productId: string, profileId: string, kind: Pending['kind'], opts: PayOpts = {}): Promise<PayResult> {
   try {
+    if (profileId) await syncProfiles(profileId);
     const o = await apiAuth<{ id: string; amount: number; payUrl?: string; status: string }>('/orders', {
       method: 'POST',
       body: JSON.stringify({ productId, profileId, method: opts.method, phone: opts.phone, channel: 'web', inApp: isInAppBrowser() }),

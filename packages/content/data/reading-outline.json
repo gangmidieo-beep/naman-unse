@@ -1,0 +1,18 @@
+{
+  "_설명": "유료 풀이 장 구성 — 상품 id → 묶음(group). {theme} 은 상품 이름으로 바뀜. focus 는 고민 칩에 따라 2배 분량으로 쓰는 장 번호(0부터).",
+  "groups": {
+    "life": ["타고난 그릇", "성격과 강점", "재물 흐름", "직업과 일", "사람 복과 가족", "건강 습관", "대운 10년 흐름", "앞으로 3년", "천궁도사의 당부"],
+    "theme": ["타고난 기운으로 본 {theme}", "지금 흐르는 {theme}의 기운", "좋은 때와 조심할 때", "도움 되는 사람과 피할 일", "생활 속 실천 방법", "천궁도사의 당부"],
+    "year": ["한 해 총평", "1월부터 3월까지", "4월부터 6월까지", "7월부터 9월까지", "10월부터 12월까지", "재물·직장·애정·건강 한눈에", "조심할 달과 좋은 달", "천궁도사의 당부"],
+    "tojeong": ["한 해 총평", "괘의 뜻", "봄 석 달의 흐름", "여름 석 달의 흐름", "가을 석 달의 흐름", "겨울 석 달의 흐름", "조심할 달과 좋은 달", "천궁도사의 당부"],
+    "pair": ["두 사람의 기운", "서로 끌리는 이유", "부딪히는 지점", "마음이 통하는 대화법", "돈과 생활의 궁합", "앞으로의 인연 흐름", "월하선녀의 당부"],
+    "love": ["나의 사랑 기질", "끌리는 사람, 맞는 사람", "지금의 인연 흐름", "인연이 다가오는 때", "조심하면 좋은 점", "월하선녀의 당부"]
+  },
+  "products": {
+    "jeongtong": "life", "pyeongsaeng": "life", "daewoon": "life", "ohaeng": "life",
+    "wealth": "theme", "career": "theme", "business": "theme", "startup": "theme", "exam": "theme", "moving": "theme", "contract": "theme",
+    "newyear": "year", "monthly": "year", "tojeong": "tojeong",
+    "gunghap": "pair", "couple": "pair", "spouse": "pair",
+    "love": "love", "inyeon": "love", "marriage": "love", "lifelove": "love", "reunion": "love", "crush": "love", "solo": "love", "meeting": "love", "loveyear": "love"
+  }
+}

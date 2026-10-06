@@ -19,6 +19,8 @@ import { TarotReading } from './Tarot';
 import { PhotoReading } from './Photo';
 import { optionalImg } from '../assets/images';
 import { birthLabel, hourLabel } from './ProfileNew';
+import { MOCK_MODE } from '../lib/api';
+import { apiAuth } from '../platform/payments';
 
 type Sample = (typeof saju);
 const sampleFor = (productId: string, who: string): Sample =>
@@ -62,8 +64,23 @@ export default function ReadingPage() {
   const nav = useNavigate();
   const toast = useToast();
   const { purchases, profiles } = useApp();
+  // 실결제 모드: 서버가 쓴 풀이를 3초마다 확인(queued → generating → done). 다른 기기에서 열어도 서버 주문으로 찾음
+  const live = !MOCK_MODE && !orderId.startsWith('sample-');
+  const [srv, setSrv] = useState<{ status: string; content?: any; productId?: string; profileId?: string } | null>(null);
+  useEffect(() => {
+    if (!live) return;
+    let stop = false;
+    const poll = async () => {
+      const r = await apiAuth<any>(`/readings/${encodeURIComponent(orderId)}`).catch(() => ({ status: 'missing' }));
+      if (stop) return;
+      setSrv(r);
+      if (r.status === 'queued' || r.status === 'generating') setTimeout(poll, 3000);
+    };
+    poll();
+    return () => { stop = true; };
+  }, [live, orderId]);
   // /reading/sample-<상품id> 는 예시 주소(시안·공유 미리보기용)
-  const order = purchases.find((x) => x.orderId === orderId) ?? (orderId.startsWith('sample-') ? { orderId, productId: orderId.slice(7), profileId: 'sample', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null);
+  const order = purchases.find((x) => x.orderId === orderId) ?? (live && srv?.productId ? { orderId, productId: srv.productId, profileId: srv.profileId ?? '', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null) ?? (orderId.startsWith('sample-') ? { orderId, productId: orderId.slice(7), profileId: 'sample', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null);
   const p = order ? productById(order.productId) : null;
   const pre = order ? productById(order.productId) : null;
   // 타로·사진 풀이는 자체 연출(카드 뒤집기·분석 중)이 있어 대기 화면을 건너뛴다
@@ -72,10 +89,19 @@ export default function ReadingPage() {
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (step >= STEPS.length) return;
+    // 서버 풀이를 기다리는 중이면 마지막 단계에서 멈춰 있다가 done 이 오면 넘어감
+    if (live && step === STEPS.length - 1 && srv?.status !== 'done') return;
     const t = setTimeout(() => setStep((s) => s + 1), 1300);
     return () => clearTimeout(t);
-  }, [step]);
+  }, [step, live, srv?.status]);
 
+  if (live && srv && (srv.status === 'failed' || srv.status === 'missing') && !(pre && (isTarot(pre) || isPhoto(pre))))
+    return (
+      <>
+        <SubHeader title="풀이" />
+        <main className="screen no-tab"><p className="muted center mt24">{srv.status === 'failed' ? '풀이를 쓰는 중 문제가 생겼어요. 잠시 후 다시 열어 주세요. 계속되면 문의해 주세요.' : '풀이를 찾을 수 없어요.'}</p><div className="pad mt14"><Button to="/box">나의 운세함으로</Button></div></main>
+      </>
+    );
   if (!order || !p)
     return (
       <>
@@ -86,7 +112,8 @@ export default function ReadingPage() {
 
   const who = charOf(p);
   const c = CHAR[who];
-  const r = sampleFor(p.id, who);
+  const r: Sample = live && srv?.content?.chapters ? srv.content : sampleFor(p.id, who);
+  const isSampleText = !(live && srv?.content?.generatedBy === 'ai');
   const [pid, partnerId] = order.profileId.split('+');
   const person = profiles.find((x) => x.id === pid) ?? SAMPLE_PROFILE;
   const partner = partnerId ? profiles.find((x) => x.id === partnerId) : undefined;
@@ -128,7 +155,7 @@ export default function ReadingPage() {
             {isTarot(p) ? <TarotReading p={p} orderId={order.orderId} /> : isPhoto(p) ? <PhotoReading p={p} orderId={order.orderId} /> : <>
             <PillarTable p={person} />
             {p.id === 'tojeong' && <Gwae p={person} />}
-            {person.id !== SAMPLE_PROFILE.id && !isTarot(p) && !isPhoto(p) && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
+            {isSampleText && person.id !== SAMPLE_PROFILE.id && !isTarot(p) && !isPhoto(p) && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
             <div className="chap"><CharacterBubble who={who}>{r.intro}</CharacterBubble></div>
             <nav className="toc" aria-label="목차">
               <h2>목차</h2>
