@@ -10,8 +10,10 @@ const FORBIDDEN = Buffer.from(
   'base64',
 ).toString('utf8').split('\n');
 // 검사 제외: 작업 자료·기록 파일·외부 패키지·빌드 결과. 00_시작가이드.md·*.bat 은 초기 작업 패키지 파일(납품 전 14단계에서 삭제).
-const EXCLUDE_DIRS = new Set(['reference', 'docs', '명령어', 'node_modules', '.git', 'dist', 'build', '.claude', 'test-results', 'playwright-report']);
-const EXCLUDE_FILES = new Set(['CLAUDE.md', '진행상황.md', '내할일.md', '결정필요.md', '00_시작가이드.md', '1_자정사주_복사.bat', '2_클로드코드_시작.bat', ['scripts', 'check-independence.mjs'].join(sep)]);
+// 납품본 검사(--all 또는 INDEPENDENCE_ALL=1): 작업 자료 제외 없이 전 파일 대상
+const ALL = process.argv.includes('--all') || process.env.INDEPENDENCE_ALL === '1';
+const EXCLUDE_DIRS = new Set(ALL ? ['node_modules', '.git', 'dist', 'build'] : ['reference', 'docs', '명령어', 'node_modules', '.git', 'dist', 'build', '.claude', 'test-results', 'playwright-report']);
+const EXCLUDE_FILES = new Set(ALL ? [['scripts', 'check-independence.mjs'].join(sep)] : ['CLAUDE.md', '진행상황.md', '내할일.md', '결정필요.md', '00_시작가이드.md', '1_자정사주_복사.bat', '2_클로드코드_시작.bat', ['scripts', 'check-independence.mjs'].join(sep)]);
 const BINARY = /\.(png|jpe?g|webp|gif|ico|woff2?|ttf|otf|pdf|zip|jar|keystore|jks|mp4|mp3)$/i;
 
 const hits = [];

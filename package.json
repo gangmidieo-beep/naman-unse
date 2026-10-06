@@ -20,7 +20,9 @@
     "check:copy": "node scripts/lint-copy.mjs && node scripts/check-copy-overlap.mjs",
     "make:images": "node scripts/make-images.mjs",
     "db:migrate": "npm run db:migrate -w server",
-    "admin:create": "npm run admin:create -w server"
+    "admin:create": "npm run admin:create -w server",
+    "check:secrets": "node scripts/scan-secrets.mjs",
+    "export:delivery": "node scripts/export-delivery.mjs"
   },
   "devDependencies": {
     "@fullstackfamily/manseryeok": "^1.0.8",
@@ -35,5 +37,6 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0",
     "vitest": "^5.0.2"
-  }
+  },
+  "version": "1.0.0"
 }
