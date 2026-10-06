@@ -14,3 +14,4 @@ scripts/tmp
 !.env.example
 명령어
 _internal
+app/android

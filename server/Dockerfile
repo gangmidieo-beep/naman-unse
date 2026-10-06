@@ -6,6 +6,7 @@ COPY packages/engine/package.json packages/engine/
 COPY packages/content/package.json packages/content/
 COPY server/package.json server/
 COPY web/package.json web/
+COPY app/package.json app/
 # 서버는 tsx 로 TypeScript 를 바로 실행 → 루트 devDependencies(tsx·만세력 엔진 의존성) 까지 설치
 RUN npm ci --no-audit --no-fund
 

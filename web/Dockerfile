@@ -13,6 +13,7 @@ COPY packages/engine/package.json packages/engine/
 COPY packages/content/package.json packages/content/
 COPY server/package.json server/
 COPY web/package.json web/
+COPY app/package.json app/
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY . .
 RUN npm run build -w web
