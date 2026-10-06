@@ -345,7 +345,7 @@ export function AdSlot({ premium, kind = '배너', slot = 'content_banner' }: { 
     return () => { void hideBanner(); };
   }, [provider, cfg]);
   if (provider === 'none' || cfg?.enabled === false) return null;
-  if (provider === 'admob' && isNativeApp()) return <div className="ad-native-space" aria-hidden style={{ height: 64 }} />;
+  if (provider === 'admob' && isNativeApp()) return <div className="ad-native-space" role="complementary" aria-label="광고" data-ad-provider="admob" style={{ height: 64 }} />;
   if (provider === 'adsense' && cfg?.config?.adsenseSlot)
     return <ins ref={ins} className="adsbygoogle ad-web" style={{ display: 'block' }} data-ad-client={__ADSENSE_CLIENT_ID__} data-ad-slot={cfg.config.adsenseSlot} data-ad-format="auto" data-full-width-responsive="true" />;
   return <div className="ad" role="complementary" aria-label="광고" data-ad-provider={provider}>광고 영역 ({provider === 'admob' ? 'AdMob' : '웹 광고'} {kind} · 프리미엄 회원은 숨김)</div>;

@@ -136,7 +136,7 @@ export function TalismanMake() {
       <div className="wishbox">“{mine?.wish}”<br /><small style={{ fontSize: 14, color: 'var(--on-ink-2)' }}>{mine?.name} · 발급일 {mine?.issuedAt}</small></div>
       <div className="done">
         <div className="btn-row">
-          <Button kind="gold" onClick={async () => { if (paperRef.current) { await saveImage(paperRef.current, `나만의운세_${t.title}.png`); toast('휴대폰에 저장했어요'); } }}>휴대폰에 저장하기</Button>
+          <Button kind="gold" onClick={async () => { if (paperRef.current) { await saveImage(paperRef.current, `talisman_${t.id}.png`); toast('휴대폰에 저장했어요'); } }}>휴대폰에 저장하기</Button>
           <Button kind="ink" onClick={() => setShare(true)}>공유하기(선물)</Button>
         </div>
         <Link to="/box#talismans" className="textlink" style={{ color: 'var(--gold-light)', display: 'inline-flex', alignItems: 'center', marginTop: 10 }}>나의 부적함에서 보기 ›</Link>

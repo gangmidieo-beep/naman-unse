@@ -20,7 +20,7 @@ export function ShareSheet({ open, onClose, card, title, text, path, contentId, 
       const r = await shareLink({ title, text, url }, c === 'native');
       if (r === 'copied') onDone?.('링크를 복사했어요');
     } else if (c === 'image') {
-      if (card?.current) { await saveImage(card.current, imageName ?? `나만의운세_${contentId}.png`); onDone?.('이미지로 저장했어요'); }
+      if (card?.current) { await saveImage(card.current, imageName ?? `${contentId}.png`); onDone?.('이미지로 저장했어요'); }
     } else {
       window.open(CHANNELS[c].href!(url, text), '_blank', 'noopener,width=600,height=640');
     }

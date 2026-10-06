@@ -85,7 +85,8 @@ export async function saveImage(node: HTMLElement, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  // 한글 파일 이름은 일부 브라우저가 무시하고 "download" 로 저장 → 영문·숫자로만
+  a.download = `naman-unse_${filename.replace(/\.png$/i, '').replace(/[^\w.-]+/g, '').replace(/^_+/, '') || Date.now()}.png`;
   document.body.appendChild(a);
   a.click();
   a.remove();
