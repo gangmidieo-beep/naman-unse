@@ -98,6 +98,14 @@ for (const file of files) {
     const sizes = name === 'loading_cheongung' ? [240, 480] : [128, 256];
     for (const s of sizes) await sharp(src).resize(s, s, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 85 }).toFile(join(d, `${name}_${s}.webp`));
     manifest[name] = { src: `/img/icons/${name}_${sizes[1]}.webp`, w: sizes[0], h: sizes[0] };
+  } else if (name === 'logo_brand') {
+    // 대표님 상단 로고 배너(2048×768, 한지+먹색·금 글씨) — 모바일 최상단 헤더에 가로 꽉 차게
+    const d = out('logo');
+    const meta = await sharp(src).metadata();
+    const h = (w) => Math.round((w * meta.height) / meta.width);
+    for (const w of [780, 1200, 1600]) await sharp(src).resize(w, h(w)).webp({ quality: 84 }).toFile(join(d, `logo_brand_${w}.webp`));
+    await sharp(src).resize(1200, h(1200)).png({ compressionLevel: 9 }).toFile(join(d, 'logo_brand_1200.png'));
+    manifest[name] = { src: '/img/logo/logo_brand_780.webp', srcset: '/img/logo/logo_brand_780.webp 780w, /img/logo/logo_brand_1200.webp 1200w, /img/logo/logo_brand_1600.webp 1600w', w: 780, h: h(780) };
   } else if (name === 'logo_seal') {
     const d = out('logo');
     for (const s of [64, 128]) {
@@ -111,6 +119,10 @@ for (const file of files) {
     mk(d);
     for (const [k, s] of Object.entries(ANDROID_ICON)) await sharp(src).resize(s, s).png().toFile(join(d, `mipmap-${k}.png`));
     await sharp(src).resize(512, 512).png().toFile(join(d, 'playstore-512.png'));
+    await sharp(src).resize(1024, 1024).png().toFile(join(d, 'icon-1024.png'));
+    // 웹 파비콘·홈 화면 아이콘도 같은 아이콘으로
+    const fd = out('icons');
+    for (const s of [32, 180, 192, 512]) await sharp(src).resize(s, s).png().toFile(join(fd, `app_icon_${s}.png`));
   } else if (name === 'feature_graphic') {
     const d = join(root, 'docs/assets-source/store');
     mk(d);

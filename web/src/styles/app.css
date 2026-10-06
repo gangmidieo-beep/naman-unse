@@ -44,6 +44,12 @@ img { display: block; max-width: 100%; }
 .logo { font-family: var(--brush); font-size: 29px; color: var(--ink); display: flex; align-items: center; gap: 6px; white-space: nowrap; letter-spacing: -1px; }
 .logo .seal { width: 24px; height: 24px; background: var(--seal); color: #F8E9C8; font-size: 13px; display: grid; place-items: center; border-radius: 3px; font-family: var(--brush); letter-spacing: 0; }
 .logo img.brandlogo { height: 34px; width: auto; }
+.hdr-banner { position: relative; display: block; padding: 0; }
+.brandbanner { display: block; line-height: 0; }
+.brandbanner img { width: 100%; height: auto; aspect-ratio: 2048 / 768; display: block; -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent); mask-image: linear-gradient(to bottom, #000 82%, transparent); }
+.chip-h.on-banner { position: absolute; top: 10px; min-height: 36px; font-size: 13px; padding: 0 10px; background: rgba(251, 248, 240, .86); backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(60, 40, 10, .12); }
+.chip-h.on-banner.l { left: 12px; }
+.chip-h.on-banner.r { right: 12px; }
 .chip-h { white-space: nowrap; font-size: 14px; font-weight: 700; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 0 12px; min-height: 40px; display: inline-flex; align-items: center; gap: 4px; }
 .sub { display: flex; align-items: center; gap: 8px; padding: 10px 14px 12px; border-bottom: 1px solid var(--line-soft); position: sticky; top: 0; z-index: 20; background-color: rgba(245, 239, 225, .95); backdrop-filter: blur(6px); }
 .sub .bk { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; font-size: 24px; color: var(--ink-2); box-shadow: 0 2px 6px rgba(60, 40, 10, .1); }

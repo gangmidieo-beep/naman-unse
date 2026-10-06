@@ -4,9 +4,9 @@ import { optionalImg } from '../assets/images';
 import { lunarPill } from '../lib/dates';
 import { useApp } from '../store/app';
 
-// 로고 — 대표님 아이콘 글씨 이미지(web/public/img/brand/logo.png, _incoming 의 logo_brand)가 오면 그 이미지, 없으면 임시 Song Myung 글씨
+// 작은 글씨 로고 — 투명 배경 글씨 이미지(_incoming 의 logo_wordmark)가 오면 그 이미지, 없으면 Song Myung 글씨. 홈 최상단은 AppHeader 의 logo_brand 배너
 export function BrandLogo() {
-  const img = optionalImg('logo_brand');
+  const img = optionalImg('logo_wordmark');
   if (img) return <img className="brandlogo" src={img.src} alt="나만의 운세" height={34} />;
   const seal = optionalImg('logo_seal');
   return (
@@ -20,6 +20,19 @@ export function BrandLogo() {
 // 홈 헤더 — 좌: 날짜 알약(날씨는 키 받은 뒤) / 가운데: 로고 / 우: 로그인
 export function AppHeader() {
   const account = useApp((s) => s.account);
+  const banner = optionalImg('logo_brand');
+  // 대표님 상단 로고 배너가 있으면: 배너를 가로 꽉 차게 맨 위에, 날짜·로그인은 배너 위 양쪽 모서리에
+  if (banner) {
+    return (
+      <header className="hdr hdr-banner">
+        <Link to="/" className="brandbanner" aria-label="나만의 운세 홈">
+          <img src={banner.src} srcSet={banner.srcset} sizes="(min-width: 520px) 480px, 100vw" width={banner.w} height={banner.h} alt="나만의 운세" fetchPriority="high" />
+        </Link>
+        <span className="chip-h on-banner l" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
+        <Link to={account ? '/box' : '/login'} className="chip-h on-banner r">{account ? '내 계정' : '로그인'}</Link>
+      </header>
+    );
+  }
   return (
     <header className="hdr">
       <span className="chip-h" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
