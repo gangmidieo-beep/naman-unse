@@ -1,0 +1,18 @@
+# 정적 웹 서버 — 사전 렌더 페이지(/경로/index.html) 우선, 없으면 SPA index.html
+{
+	admin off
+	auto_https off
+}
+:{$PORT:8080} {
+	root * /srv
+	encode zstd gzip
+	@assets path /assets/* /fonts/* /img/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	header /index.html Cache-Control "no-cache"
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	try_files {path} {path}/index.html /index.html
+	file_server
+}

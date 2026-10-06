@@ -72,7 +72,8 @@ export async function createAdmin(db: Db, email: string, password: string, role:
 
 // ---------- 개발용 데모 데이터 ----------
 export async function seedDemo(db: Db, days = 30) {
-  const [{ n }] = (await db.execute(sql`select count(*)::int as n from users`)).rows as { n: number }[];
+  const r0 = (await db.execute(sql`select count(*)::int as n from users`)) as unknown;
+  const [{ n }] = (Array.isArray(r0) ? r0 : (r0 as { rows: unknown[] }).rows) as { n: number }[];
   if (n > 0) return;
   const rnd = mulberry(20260930);
   const DAY = 86400000;

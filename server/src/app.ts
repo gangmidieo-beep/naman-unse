@@ -340,7 +340,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       : target === 'free' ? sql`select count(*)::int as n from users u where not exists(select 1 from subscriptions s where s.user_id = u.id and s.status in ('active','grace') and s.expires_at > now())`
       : target.startsWith('dormant') ? sql`select count(*)::int as n from users where last_seen_at < now() - (${+target.slice(7) || 7} || ' days')::interval`
       : sql`select count(*)::int as n from users where merged_into is null and deleted_at is null`;
-    return ((await db.execute(q)).rows[0] as { n: number }).n;
+    const r = (await db.execute(q)) as unknown;
+    return ((Array.isArray(r) ? r : (r as { rows: unknown[] }).rows)[0] as { n: number }).n;
   };
   app.post(`${A}/push`, { preHandler: guard() }, async (req: Req, rep) => {
     const b = req.body as any;

@@ -3,7 +3,8 @@ import { sql } from 'drizzle-orm';
 import type { Db } from '../db/index.ts';
 
 const KST = sql`'Asia/Seoul'`;
-const rows = async <T>(db: Db, q: ReturnType<typeof sql>) => (await db.execute(q)).rows as T[];
+// PGlite 는 { rows }, postgres-js(운영)는 배열을 돌려준다 — 둘 다 받는다
+const rows = async <T>(db: Db, q: ReturnType<typeof sql>) => { const r = (await db.execute(q)) as unknown; return (Array.isArray(r) ? r : (r as { rows: unknown[] }).rows) as T[]; };
 
 // 기간: today | yesterday | 7d | month | custom(from~to, YYYY-MM-DD)
 export function range(period: string, from?: string, to?: string) {

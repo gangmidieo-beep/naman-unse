@@ -6,7 +6,8 @@ COPY packages/engine/package.json packages/engine/
 COPY packages/content/package.json packages/content/
 COPY server/package.json server/
 COPY web/package.json web/
-RUN npm ci --workspace server --include-workspace-root=false --ignore-scripts=false
+# 서버는 tsx 로 TypeScript 를 바로 실행 → 루트 devDependencies(tsx·만세력 엔진 의존성) 까지 설치
+RUN npm ci --no-audit --no-fund
 
 FROM node:22-slim
 # 공유 카드 이미지(SVG→PNG)에 한글 글꼴이 필요
@@ -14,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 WORKDIR /app
 ENV NODE_ENV=production APP_ENV=production PORT=8791
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
 COPY package.json brand.config.json ./
 COPY packages ./packages
 COPY server ./server
