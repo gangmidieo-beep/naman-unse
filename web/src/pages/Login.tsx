@@ -1,5 +1,6 @@
 // 간편 로그인 — Google · 카카오 · 네이버. 방식은 서버 OAuth 로 통일: 웹은 서버로 리다이렉트, 앱은 브라우저 창 → 딥링크로 토큰.
 // 서버·키가 없으면(MOCK_MODE) 가짜 계정으로 흐름만 완성한다. 게스트로 쓰던 사주·구매는 그대로 이어진다(서버 merge 는 /auth/merge).
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { CharacterBubble } from '../components/ui';
@@ -26,9 +27,16 @@ export function LoginButtons({ after }: { after?: () => void }) {
     // 서버 OAuth 시작 — 끝나면 /auth/callback?token= 으로 돌아온다
     location.href = `${__API_ORIGIN__}/auth/${p}/start?redirect=${encodeURIComponent(location.href)}`;
   };
+  // 실결제 모드에선 서버에 키가 등록된 로그인만 보여줌(대표님 콘솔 등록 전엔 안내 문구)
+  const [ready, setReady] = useState<Provider[] | null>(MOCK_MODE ? (Object.keys(LABEL) as Provider[]) : null);
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    fetch(`${__API_ORIGIN__}/auth/providers`).then((r) => r.json()).then((j) => setReady(j.providers ?? [])).catch(() => setReady([]));
+  }, []);
+  if (ready && !ready.length) return <p className="note center" style={{ margin: '16px 18px 0' }}>간편 로그인을 준비하고 있어요. 지금은 로그인 없이 이 기기에서 그대로 이용하실 수 있어요.</p>;
   return (
     <div className="loginbox">
-      {(Object.keys(LABEL) as Provider[]).map((p) => (
+      {(ready ?? []).map((p) => (
         <button key={p} className={`sso ${p}`} onClick={() => login(p)}><i aria-hidden>{LABEL[p].mark}</i>{LABEL[p].t}</button>
       ))}
     </div>

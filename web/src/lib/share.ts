@@ -78,10 +78,16 @@ export async function kakaoShare(o: { title: string; text: string; url: string; 
 // 결과 카드를 이미지로 저장 — 카드는 540×675(CSS px) 로 그리고 2배로 뽑아 1080×1350.
 export async function saveImage(node: HTMLElement, filename: string) {
   const dataUrl = await toPng(node, { pixelRatio: 1080 / node.offsetWidth, cacheBust: true, backgroundColor: '#F5EFE1' });
+  // data: 주소 대신 blob 주소 + 문서에 붙였다 떼기 — 일부 브라우저가 파일 이름을 무시하는 문제 방지
+  const blob = await (await fetch(dataUrl)).blob();
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = dataUrl;
+  a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
   track('share', { kind: 'image', filename });
   return dataUrl;
 }
