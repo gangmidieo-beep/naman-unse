@@ -48,7 +48,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   const needUser = async (req: FastifyRequest, rep: FastifyReply) => {
     const id = await userOf(req);
     if (!id) { rep.code(401).send({ error: '로그인이 필요해요' }); return null; }
-    await db.update(S.users).set({ lastSeenAt: new Date() }).where(eq(S.users.id, id));
+    const [u] = await db.update(S.users).set({ lastSeenAt: new Date() }).where(and(eq(S.users.id, id), isNull(S.users.deletedAt))).returning({ id: S.users.id });
+    if (!u) { rep.code(401).send({ error: '탈퇴한 계정이에요', code: 'deleted' }); return null; }
     return id;
   };
   const isPremium = async (userId: string) =>
@@ -118,6 +119,23 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!id) return;
     const [u] = await db.select().from(S.users).where(eq(S.users.id, id));
     return { user: u, premium: await isPremium(id) };
+  });
+  // 회원 탈퇴 — 개인정보(사주·부적 각인·풀이 본문·공유 링크·푸시)는 바로 지우고, 결제 기록은 전자상거래법에 따라 5년 보관(개인 식별 정보 없이).
+  // 같은 구글·카카오·네이버 계정으로 다시 들어오면 새 계정으로 시작. Play 구독은 구글 플레이에서 따로 해지해야 함.
+  app.post('/me/delete', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const id = await needUser(req, rep);
+    if (!id) return;
+    const ids = [id, ...(await db.select({ id: S.users.id }).from(S.users).where(eq(S.users.mergedInto, id))).map((x) => x.id)]; // 합쳐진 게스트 기록까지
+    const orderIds = (await db.select({ id: S.orders.id }).from(S.orders).where(inArray(S.orders.userId, ids))).map((x) => x.id);
+    if (orderIds.length) await db.update(S.readings).set({ content: null, profileId: null }).where(inArray(S.readings.orderId, orderIds));
+    await db.update(S.orders).set({ profileId: null }).where(inArray(S.orders.userId, ids));
+    await db.delete(S.profiles).where(inArray(S.profiles.userId, ids));
+    await db.delete(S.talismans).where(inArray(S.talismans.userId, ids));
+    await db.delete(S.shareLinks).where(inArray(S.shareLinks.userId, ids));
+    await db.update(S.events).set({ userId: null }).where(inArray(S.events.userId, ids));
+    await db.update(S.users).set({ deletedAt: new Date(), deviceId: null, provider: null, providerId: null, email: null, name: null, pushToken: null, pushConsent: false })
+      .where(inArray(S.users.id, ids));
+    return { ok: true };
   });
   // 앱 푸시 토큰·동의·받을 시각 저장(앱이 알림 허용 직후 부름)
   app.post('/me/push', async (req, rep) => {

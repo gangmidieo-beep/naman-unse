@@ -5,8 +5,8 @@ import { SubHeader, SectionHeader } from '../components/layout';
 import { BottomSheet, Button, TalismanPaper, useToast } from '../components/ui';
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
 import { BRAND, CHAR, charOf, displayTitle, isTarot, productById, won, type Talisman } from '../lib/catalog';
-import { api } from '../lib/api';
-import { getPayments } from '../platform/payments';
+import { api, MOCK_MODE } from '../lib/api';
+import { apiAuth, getPayments } from '../platform/payments';
 import { birthLabel, hourLabel } from './ProfileNew';
 
 type Notice = { id: number; title: string; date: string; body: string };
@@ -17,6 +17,15 @@ export default function Box() {
   const nav = useNavigate();
   const toast = useToast();
   const s = useApp();
+  // 회원 탈퇴: 서버 개인정보 삭제(결제 기록만 법정 보관) → 이 기기 저장 내용도 지우고 처음 화면으로
+  const withdraw = async () => {
+    try {
+      if (!MOCK_MODE) await apiAuth('/me/delete', { method: 'POST', body: '{}' });
+    } catch (e) { toast((e as Error).message); return; }
+    setSheet(null);
+    try { localStorage.removeItem('naman-unse'); localStorage.removeItem('naman-guest'); } catch { /* */ }
+    location.replace('/'); // 저장소를 비운 뒤 바로 새로 열어 이전 상태가 다시 저장되지 않게
+  };
   const premium = usePremium();
   const { profile, isSample } = useMainProfile();
   const { limit, canAdd } = useProfileLimit();
@@ -162,7 +171,7 @@ export default function Box() {
         <p>탈퇴하면 계정과 연결된 풀이·부적 보관 기록이 삭제되고 되살릴 수 없어요. 구독은 구글 플레이에서 먼저 해지해 주세요.</p>
         <div className="btn-row">
           <Button kind="line" onClick={() => setSheet(null)}>취소</Button>
-          <Button kind="ink" onClick={() => { s.setAccount(null); setSheet(null); toast('탈퇴 요청을 받았어요'); }}>탈퇴하기</Button>
+          <Button kind="ink" onClick={withdraw}>탈퇴하기</Button>
         </div>
       </BottomSheet>
       <BottomSheet open={!!confirmDel} onClose={() => setConfirmDel(null)} title="이 사주 정보를 지울까요?">

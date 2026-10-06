@@ -156,3 +156,18 @@ describe('관리자 API', () => {
     expect((await app.inject({ method: 'DELETE', url: `/admin/api/admins/${staffId}`, headers: auth(owner2) })).statusCode).toBe(200);
   });
 });
+
+describe('회원 탈퇴', () => {
+  it('개인정보 삭제, 결제 기록은 남김, 같은 기기는 새 계정으로', async () => {
+    const g = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: 'bye-1' } })).json();
+    const h = auth(g.token);
+    const pr = (await app.inject({ method: 'POST', url: '/profiles', headers: h, payload: profile('탈퇴할 사람') })).json();
+    const o = (await app.inject({ method: 'POST', url: '/orders', headers: h, payload: { productId: 'wealth', profileId: pr.id } })).json();
+    expect(o.status).toBe('paid');
+    expect((await app.inject({ method: 'POST', url: '/me/delete', headers: h, payload: {} })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/me', headers: h })).statusCode).toBe(401);
+    expect((await app.inject({ url: '/profiles', headers: h })).statusCode).toBe(401);
+    const again = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: 'bye-1' } })).json();
+    expect(again.userId).not.toBe(g.userId);
+  });
+});
