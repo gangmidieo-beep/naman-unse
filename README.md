@@ -114,7 +114,8 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 | 웹 화면 넣기 | `.env` 에 `MOCK_MODE`·`API_ORIGIN`(정식 서버 주소) 확인 → `npm run app:sync` |
 | 아이콘·스플래시 다시 만들기 | 원본 `docs/assets-source/app_icon.png`·`logo_brand.png` 교체 후 `npm run app:assets` |
 | 시험용 APK | `npm run app:build:debug` → `app/android/app/build/outputs/apk/debug/app-debug.apk` |
-| 스토어용 AAB | 업로드 키(대표님 명의, 분실 금지)를 만든 뒤 환경변수 `NAMAN_KEYSTORE`·`NAMAN_KEYSTORE_PASSWORD`·`NAMAN_KEY_ALIAS`·`NAMAN_KEY_PASSWORD` → `npm run build:release -w app` |
+| 업로드 키(처음 한 번) | `npm run app:key -- "대표자 영문 이름" "영문 상호"` → `../naman-upload-key/` 에 키 파일·비밀번호 메모 생성(git 밖, 분실 금지 — Play 앱 서명을 켜면 분실 시 재설정 요청 가능) |
+| 스토어용 AAB | 메모에 적힌 환경변수 `NAMAN_KEYSTORE`·`NAMAN_KEYSTORE_PASSWORD`·`NAMAN_KEY_ALIAS`·`NAMAN_KEY_PASSWORD` + `NAMAN_VERSION_CODE`(올릴 때마다 +1) → `npm run app:bundle` → `app/android/app/build/outputs/bundle/release/app-release.aab` |
 | 광고 | 환경변수 `ADMOB_APP_ID`(앱 빌드) · `VITE_ADMOB_BANNER_ID`(웹 빌드). 비우면 구글 공식 **테스트 광고** |
 | 푸시 | Firebase 콘솔에서 Android 앱(패키지명 = appId) 추가 → `google-services.json` 을 `app/android/app/` 에 넣기(git 금지) · 서버에 `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64` |
 | 앱 id | `com.namanunse.app`(임시) — **스토어 첫 업로드 뒤에는 바꿀 수 없음**. 바꾸려면 `APP_ID` 환경변수 + android 폴더 namespace·applicationId 수정 |

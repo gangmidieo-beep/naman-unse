@@ -7,8 +7,9 @@ android {
         applicationId "com.namanunse.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // 스토어에 새로 올릴 때마다 NAMAN_VERSION_CODE 를 1씩 올림(같은 번호는 업로드 거부)
+        versionCode((System.getenv("NAMAN_VERSION_CODE") ?: "1") as Integer)
+        versionName(System.getenv("NAMAN_VERSION_NAME") ?: "1.0.0")
         // AdMob 앱 ID — 운영 ID 는 환경변수 ADMOB_APP_ID(대표님 AdMob). 없으면 구글 공식 테스트 ID
         manifestPlaceholders = [admobAppId: System.getenv("ADMOB_APP_ID") ?: "ca-app-pub-3940256099942544~3347511713"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
