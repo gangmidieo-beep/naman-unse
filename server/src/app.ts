@@ -273,16 +273,20 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [dup] = await db.select().from(S.orders).where(and(eq(S.orders.providerRef, b.purchaseToken), eq(S.orders.status, 'paid')));
     if (dup) return dup.userId === userId ? dup : rep.code(409).send({ error: '이미 다른 계정에서 사용된 구매예요' });
     const [o] = b.orderId ? await db.select().from(S.orders).where(and(eq(S.orders.id, b.orderId), eq(S.orders.userId, userId))) : [];
-    const [p] = await db.select().from(S.products).where(eq(S.products.id, b.productId));
-    if (!p) return rep.code(404).send({ error: '없는 상품이에요' });
-    const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount: p.price, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
+    // "<id>_m" = 프리미엄 회원가로 따로 등록한 Play 상품(같은 상품, 가격만 회원가)
+    const playId = String(b.productId);
+    const member = playId.endsWith('_m');
+    const [p] = await db.select().from(S.products).where(eq(S.products.id, member ? playId.slice(0, -2) : playId));
+    if (!p || (member && p.kind === 'subscription')) return rep.code(404).send({ error: '없는 상품이에요' });
+    const amount = member ? p.memberPrice ?? Math.round((p.price * 0.9) / 10) * 10 : p.price;
+    const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount, discount: p.price - amount, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
     try {
       if (p.kind === 'subscription') {
         const s = await verifySubscription(b.purchaseToken, http);
         if (!subscriptionUsable(s.status, s.expiresAt)) return rep.code(402).send({ error: '구독이 활성 상태가 아니에요' });
         return fulfillOrder(db, order, { ref: b.purchaseToken, expiresAt: s.expiresAt, subStatus: s.status });
       }
-      const c = await verifyProduct(p.id, b.purchaseToken, http);
+      const c = await verifyProduct(playId, b.purchaseToken, http);
       if (!c.ok) return rep.code(402).send({ error: c.reason });
       return fulfillOrder(db, order, { ref: b.purchaseToken });
     } catch (e: any) {

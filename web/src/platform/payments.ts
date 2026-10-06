@@ -12,6 +12,7 @@ export interface PaymentProvider {
   purchase(productId: string, profileId: string, opts?: PayOpts): Promise<PayResult>;
   subscribe(planId: string, opts?: PayOpts): Promise<PayResult>;
   restore(): Promise<string[]>; // 보유 상품 id 목록
+  memberPriceOk?(productId: string): boolean; // 회원가로 결제할 수 있는지(Google Play: 회원가 상품 "<id>_m" 이 등록돼 있을 때만)
 }
 
 const orderId = () => `O${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;

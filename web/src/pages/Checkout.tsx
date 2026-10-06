@@ -38,7 +38,7 @@ export default function Checkout() {
     fetch(`${__API_ORIGIN__}/auth/providers`).then((r) => r.json()).then((j) => setNeedLogin((j.providers ?? []).length > 0)).catch(() => setNeedLogin(false));
   }, []);
   if (!p) return <Navigate to="/unse" replace />;
-  const price = payPrice(p, premium);
+  const price = payPrice(p, premium && (pay.memberPriceOk?.(p.id) ?? true)); // 앱에서 회원가 상품이 없으면 정가로 안내
   const two = isTwoPerson(p.id);
   const partnerId = partner && partner !== target ? partner : profiles.find((x) => x.id !== target)?.id ?? '';
   const back = encodeURIComponent(loc.pathname);
