@@ -16,6 +16,7 @@ import { Contact, Privacy, Terms } from './pages/Legal';
 import ProductDetail from './pages/ProductDetail';
 import { TalismanDetail, TalismanList, TalismanMake } from './pages/Talisman';
 import Checkout from './pages/Checkout';
+import PayReturn from './pages/PayReturn';
 import ReadingPage from './pages/Reading';
 import Premium from './pages/Premium';
 import Box from './pages/Me';
@@ -60,6 +61,7 @@ export function App() {
           <Route path="/talisman/:id" element={<TalismanDetail />} />
           <Route path="/talisman/:id/make" element={<TalismanMake />} />
           <Route path="/checkout/:product" element={<Checkout />} />
+          <Route path="/pay/return" element={<PayReturn />} />
           <Route path="/reading/:orderId" element={<ReadingPage />} />
           <Route path="/box" element={<Box />} />
           <Route path="/premium" element={<Premium />} />

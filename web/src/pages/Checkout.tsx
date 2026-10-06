@@ -1,4 +1,4 @@
-// 결제 — 주문 요약 → (두 사람 상품은 상대 선택) → 결제수단(앱=Google Play, 웹=PG) → 약관 동의 → 결제. 지금은 mock 결제.
+// 결제 — 주문 요약 → (두 사람 상품은 상대 선택) → 결제수단(앱=Google Play, 웹=PayApp) → 약관 동의 → 결제. MOCK 이면 테스트 결제.
 // 유료 결제 직전에 간편 로그인(Google·카카오·네이버)을 요구한다(화면설계_v2 10장).
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -7,7 +7,8 @@ import { Button, CharacterBubble, ProductThumb, useToast } from '../components/u
 import { LoginButtons } from './Login';
 import { useApp, usePremium } from '../store/app';
 import { CHAR, charOf, displayTitle, isTalisman, isTwoPerson, payPrice, productById, won } from '../lib/catalog';
-import { getPayments, isNativeApp } from '../platform/payments';
+import { getPayments, isNativeApp, phoneOk, savedPhone, savePhone, type PayResult } from '../platform/payments';
+import { MOCK_MODE } from '../lib/api';
 import { track } from '../lib/track';
 import { birthLabel } from './ProfileNew';
 
@@ -28,7 +29,14 @@ export default function Checkout() {
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [phone, setPhone] = useState(savedPhone());
   useEffect(() => { if (p) track('checkout_open', { product: p.id }); }, [p]);
+  // 실결제 모드에서 간편 로그인 키가 하나도 없으면(대표님 등록 전) 로그인 없이 휴대폰 번호로 결제
+  const [needLogin, setNeedLogin] = useState(MOCK_MODE);
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    fetch(`${__API_ORIGIN__}/auth/providers`).then((r) => r.json()).then((j) => setNeedLogin((j.providers ?? []).length > 0)).catch(() => setNeedLogin(false));
+  }, []);
   if (!p) return <Navigate to="/unse" replace />;
   const price = payPrice(p, premium);
   const two = isTwoPerson(p.id);
@@ -40,7 +48,9 @@ export default function Checkout() {
     setErr('');
     setBusy(true);
     track('pay_start', { product: p.id, method, price });
-    const r = await pay.purchase(p.id, target, { method, amount: price });
+    if (pay.needsPhone) savePhone(phone);
+    const r = await pay.purchase(p.id, two ? `${target}+${partnerId}` : target, { method, amount: price, phone }).catch((): PayResult => ({ status: 'failed', orderId: '' }));
+    if (r.status === 'redirect') return; // PayApp 결제창으로 이동 중
     setBusy(false);
     if (r.status === 'paid') {
       track('pay_success', { product: p.id, orderId: r.orderId, price });
@@ -67,7 +77,7 @@ export default function Checkout() {
       </>
     );
 
-  if (!account)
+  if (!account && needLogin)
     return (
       <>
         <SubHeader title="간편 로그인" sub="결제한 풀이를 안전하게 보관해요" />
@@ -127,6 +137,13 @@ export default function Checkout() {
             ))}
           </div>
           {!native && <p className="muted mt8">앱에서는 Google Play 로 결제돼요.</p>}
+          {pay.needsPhone && (
+            <div className="field mt14">
+              <label htmlFor="ph">결제 알림 받을 휴대폰 번호</label>
+              <input id="ph" className="input" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-1234-5678" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <p className="muted">결제 확인 문자가 이 번호로 가요</p>
+            </div>
+          )}
         </section>
 
         <label className="check agree">
@@ -135,10 +152,10 @@ export default function Checkout() {
         </label>
         {err && <p className="err" role="alert">{err}</p>}
         <div className="pad mt14">
-          <Button kind="gold" disabled={!agree || busy || (two && !partnerId)} onClick={submit}>
+          <Button kind="gold" disabled={!agree || busy || (two && !partnerId) || (pay.needsPhone && !phoneOk(phone))} onClick={submit}>
             {busy ? '결제 진행 중…' : `✦ ${won(price)} 결제하고 ${isTalisman(p) ? '부적 받기' : `${who.book} 열어보기`}`}
           </Button>
-          <p className="note">지금은 시안이라 실제 돈이 나가지 않아요 (테스트 결제)</p>
+          {MOCK_MODE && <p className="note">지금은 시안이라 실제 돈이 나가지 않아요 (테스트 결제)</p>}
         </div>
       </main>
       {busy && <div className="modal-bg"><div className="paying" role="status">결제를 확인하고 있어요…</div></div>}

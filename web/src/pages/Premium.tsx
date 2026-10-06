@@ -6,7 +6,7 @@ import { Img } from '../components/Img';
 import { optionalImg } from '../assets/images';
 import { useApp, usePremium, type Plan } from '../store/app';
 import { BRAND, won } from '../lib/catalog';
-import { getPayments, isNativeApp } from '../platform/payments';
+import { getPayments, isNativeApp, phoneOk, savedPhone, savePhone } from '../platform/payments';
 import { track } from '../lib/track';
 
 const ROWS: [string, string, string][] = [
@@ -30,14 +30,19 @@ export default function Premium() {
   const toast = useToast();
   const [pick, setPick] = useState<Exclude<Plan, null>>('yearly');
   const [busy, setBusy] = useState(false);
+  const [phone, setPhone] = useState(savedPhone());
+  const pay = getPayments();
   const sub = BRAND.subscription;
   const cur = pick === 'monthly' ? sub.monthly : sub.yearly;
   const subscribe = async () => {
     setBusy(true);
     track('pay_start', { product: cur.id });
-    const r = await getPayments().subscribe(cur.id);
+    if (pay.needsPhone) savePhone(phone);
+    const r = await pay.subscribe(cur.id, { phone });
+    if (r.status === 'redirect') return; // PayApp 결제창으로 이동 중
     setBusy(false);
     if (r.status === 'paid') { setPlan(pick); track('pay_success', { product: cur.id, price: cur.price }); toast('프리미엄 회원이 되셨어요 ✦'); }
+    else if (r.status === 'failed') { track('pay_fail', { product: cur.id, message: r.message }); toast(r.message ?? '결제에 실패했어요'); }
     else { track('pay_cancel', { product: cur.id }); toast('구독을 취소했어요'); }
   };
   const restore = async () => {
@@ -78,10 +83,18 @@ export default function Premium() {
                 <b>연간</b><div className="p">{won(sub.yearly.price)}<small> /년</small></div>
               </button>
             </div>
-            <div className="pad mt14"><Button kind="gold" disabled={busy} onClick={subscribe}>{busy ? '진행 중…' : `✦ ${pick === 'monthly' ? '월' : '연'} ${won(cur.price)}로 시작하기`}</Button></div>
+            {pay.needsPhone && (
+              <div className="field pad mt14">
+                <label htmlFor="ph">결제 알림 받을 휴대폰 번호</label>
+                <input id="ph" className="input" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-1234-5678" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+            )}
+            <div className="pad mt14"><Button kind="gold" disabled={busy || (pay.needsPhone && !phoneOk(phone))} onClick={subscribe}>{busy ? '진행 중…' : `✦ ${pick === 'monthly' ? '월' : '연'} ${won(cur.price)}로 시작하기`}</Button></div>
           </>
         )}
-        <p className="note pad">언제든 구글 플레이에서 해지할 수 있어요.{!isNativeApp() && ' 웹 결제는 나의 운세함에서 해지해요.'} 해지해도 남은 기간까지는 계속 이용할 수 있어요.</p>
+        {isNativeApp() || pay.id === 'mock'
+          ? <p className="note pad">언제든 구글 플레이에서 해지할 수 있어요. 해지해도 남은 기간까지는 계속 이용할 수 있어요.</p>
+          : <p className="note pad">웹에서는 <b>{pick === 'monthly' ? '30일' : '1년'} 이용권</b>으로 결제돼요. 자동으로 다시 결제되지 않고, 기간이 끝나면 다시 구매하시면 돼요. 남은 기간에 이어서 늘어나요.</p>}
         <div className="center"><button className="textlink" onClick={restore}>구매 복원</button></div>
       </main>
     </>

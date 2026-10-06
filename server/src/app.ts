@@ -13,14 +13,18 @@ import { newId, signAdmin, signUser, verify, type AdminClaims, type UserClaims }
 import { exchange, isConfigured, isProvider, startUrl, takeState } from './services/oauth.ts';
 import { contentStats, dashboard, memberDetail, members, payments, range, subscriptionStats, toCsv } from './services/stats.ts';
 import { shareCard } from './services/card.ts';
+import { fulfillOrder, revokeOrder } from './services/payments/fulfill.ts';
+import { normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRequest } from './services/payments/payapp.ts';
+import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import photoSample from '../../packages/content/data/photo-sample.json' with { type: 'json' };
 
-const MOCK = process.env.MOCK_MODE !== 'false';
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
 const API = () => process.env.API_ORIGIN || `http://localhost:${process.env.PORT || 8791}`;
 const UPLOADS = fileURLToPath(new URL('../.data/uploads', import.meta.url));
 
-export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean } = {}) {
+export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean; mock?: boolean; http?: typeof fetch } = {}) {
+  const MOCK = opts.mock ?? process.env.MOCK_MODE !== 'false';
+  const http = opts.http ?? fetch;
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024 });
   const db = opts.db ?? (await openDb()).db;
   await seedBase(db);
@@ -28,6 +32,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   const origins = [WEB(), 'capacitor://localhost', 'http://localhost', /^http:\/\/localhost:\d+$/];
   await app.register(cors, { origin: origins, credentials: true });
   await app.register(rateLimit, { global: false });
+  // PayApp 결제 통보는 form(x-www-form-urlencoded) 으로 온다
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
+    try { done(null, Object.fromEntries(new URLSearchParams(String(body)))); } catch (e) { done(e as Error, undefined); }
+  });
 
   /* ---------- 인증 도우미 ---------- */
   const bearer = (req: FastifyRequest) => (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
@@ -46,6 +54,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       .where(and(eq(S.subscriptions.userId, userId), inArray(S.subscriptions.status, ['active', 'grace']), gt(S.subscriptions.expiresAt, new Date()))).limit(1))[0];
 
   app.get('/health', async () => ({ ok: true, mock: MOCK }));
+  // 화면이 "어떤 로그인을 보여줄지·결제 전에 로그인을 요구할지" 정할 때 씀(키가 등록된 것만)
+  app.get('/auth/providers', async () => ({ providers: MOCK ? ['google', 'kakao', 'naver'] : (['google', 'kakao', 'naver'] as const).filter((p) => isConfigured(p)) }));
 
   /* ---------- 게스트·로그인 ---------- */
   app.post('/auth/guest', async (req) => {
@@ -153,26 +163,114 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     return photoSample[kind]; // image 변수는 여기서 버려진다(어디에도 쓰지 않음)
   });
 
-  /* ---------- 주문(결제) ---------- */
-  app.post('/orders', async (req, rep) => {
+  /* ---------- 주문(결제) ----------
+     channel: web(PayApp) | google(Play) | mock. 서버가 상품 가격으로 금액을 정한다(화면이 보낸 금액은 믿지 않음).
+     MOCK 이면 바로 결제 완료. 실결제는 pending 주문 → 결제사 확인(통보·검증) → fulfillOrder. */
+  const PG = () => (process.env.PG_PROVIDER ?? 'mock').toLowerCase();
+  app.post('/orders', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req, rep) => {
     const userId = await needUser(req, rep);
     if (!userId) return;
-    const b = req.body as { productId: string; profileId?: string; method?: string };
-    const [p] = await db.select().from(S.products).where(eq(S.products.id, b.productId));
+    const b = (req.body ?? {}) as { productId: string; profileId?: string; method?: string; channel?: string; phone?: string; inApp?: boolean };
+    const [p] = await db.select().from(S.products).where(eq(S.products.id, String(b.productId)));
     if (!p || !p.visible) return rep.code(404).send({ error: '없는 상품이에요' });
     const premium = await isPremium(userId);
     const amount = p.kind !== 'subscription' && premium ? p.memberPrice ?? Math.round((p.price * 0.9) / 10) * 10 : p.price;
-    if (!MOCK) return rep.code(501).send({ error: '실결제는 09 단계(Google Play·PG) 연결 후 열려요' });
-    const [o] = await db.insert(S.orders).values({
-      id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading',
-      amount, discount: p.price - amount, method: b.method ?? 'card', channel: 'mock', status: 'paid', paidAt: new Date(),
-    }).returning();
-    if (p.kind === 'subscription') {
-      const yearly = p.id.includes('yearly');
-      await db.insert(S.subscriptions).values({ id: newId('s_'), userId, plan: yearly ? 'yearly' : 'monthly', status: 'active', channel: 'mock', amount, expiresAt: new Date(Date.now() + (yearly ? 365 : 30) * 86400000) });
+    const kind = p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading';
+    const channel = MOCK ? 'mock' : b.channel === 'google' ? 'google' : 'pg';
+    const base = { id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind, amount, discount: p.price - amount, method: b.method ?? (channel === 'google' ? 'google' : 'card'), channel, status: 'pending' as const };
+
+    if (channel === 'mock') {
+      const [o] = await db.insert(S.orders).values(base).returning();
+      return fulfillOrder(db, o);
     }
-    if (o.kind === 'reading') await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: p.id, status: 'queued' });
-    return o;
+    if (channel === 'google') {
+      if (!playConfigured()) return rep.code(503).send({ error: 'Google Play 결제 준비 중이에요' });
+      const [o] = await db.insert(S.orders).values(base).returning();
+      return o; // 앱이 Google 결제를 마친 뒤 /billing/google/verify 로 확정
+    }
+    // 웹 — PayApp
+    const env = payappEnv();
+    if (PG() !== 'payapp' || !env) return rep.code(503).send({ error: '웹 결제 준비 중이에요. 잠시 후 다시 시도해 주세요.' });
+    const phone = normalizePhone(b.phone ?? '');
+    if (!phone) return rep.code(400).send({ error: '휴대폰 번호를 확인해 주세요 (예: 010-1234-5678)', code: 'phone' });
+    const [o] = await db.insert(S.orders).values(base).returning();
+    try {
+      const r = await payappRequest({
+        orderId: o.id, amount, goodName: `나만의 운세 ${p.title}`, phone,
+        returnUrl: `${WEB()}/pay/return?order=${o.id}`, feedbackUrl: `${API()}/pay/payapp/feedback`,
+        openpaytype: b.inApp ? 'kakaopay' : ['kakaopay', 'naverpay'].includes(b.method ?? '') ? b.method : undefined, // 카카오톡·인스타 안 브라우저는 카드창이 막혀서 카카오페이로
+      }, env, http);
+      await db.update(S.orders).set({ providerRef: r.mulNo }).where(eq(S.orders.id, o.id));
+      return { ...o, providerRef: r.mulNo, payUrl: r.payUrl };
+    } catch (e: any) {
+      await db.update(S.orders).set({ status: 'failed' }).where(eq(S.orders.id, o.id));
+      return rep.code(e.status ?? 502).send({ error: e.message });
+    }
+  });
+  // 결제 후 돌아온 화면이 상태를 묻는다(통보가 늦을 수 있어 몇 초간 반복 조회)
+  app.get('/orders/:oid', async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
+    return o ?? rep.code(404).send({ error: '주문이 없어요' });
+  });
+  // PayApp 결제 통보 — 아이디·연동키·연동값 검증 → 금액 대조 → 확정/취소. 응답은 반드시 SUCCESS(재전송 멈춤)
+  app.post('/pay/payapp/feedback', { logLevel: 'warn' }, async (req, rep) => {
+    const env = payappEnv();
+    const f = env ? parsePayappFeedback((req.body ?? {}) as Record<string, unknown>, env, (m) => req.log.warn(m)) : null;
+    if (!f) return rep.code(400).type('text/plain').send('FAIL');
+    const [o] = await db.select().from(S.orders).where(eq(S.orders.id, f.orderId));
+    if (!o || o.channel !== 'pg') return rep.type('text/plain').send('SUCCESS'); // 모르는 주문은 기록만 하고 재전송은 멈춘다
+    if (f.state === 'paid') {
+      if (f.amount !== o.amount) { // 금액 위변조 — 확정하지 않음
+        req.log.error(`[payapp] 금액 불일치 order=${o.id} 주문=${o.amount} 통보=${f.amount}`);
+        await db.update(S.orders).set({ status: 'failed' }).where(eq(S.orders.id, o.id));
+        return rep.type('text/plain').send('SUCCESS');
+      }
+      await fulfillOrder(db, o, { ref: f.mulNo, method: f.method });
+    } else if (f.state === 'refunded' || f.state === 'cancelled') {
+      await revokeOrder(db, o, o.status === 'paid' ? 'refunded' : 'cancelled');
+    }
+    return rep.type('text/plain').send('SUCCESS');
+  });
+  // Google Play — 앱이 받은 purchaseToken 을 서버에서 Google 에 다시 확인
+  app.post('/billing/google/verify', async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const b = (req.body ?? {}) as { orderId?: string; productId?: string; purchaseToken?: string };
+    if (!b.purchaseToken || !b.productId) return rep.code(400).send({ error: '구매 정보가 없어요' });
+    if (!playConfigured()) return rep.code(503).send({ error: 'Google Play 결제 준비 중이에요' });
+    const [dup] = await db.select().from(S.orders).where(and(eq(S.orders.providerRef, b.purchaseToken), eq(S.orders.status, 'paid')));
+    if (dup) return dup.userId === userId ? dup : rep.code(409).send({ error: '이미 다른 계정에서 사용된 구매예요' });
+    const [o] = b.orderId ? await db.select().from(S.orders).where(and(eq(S.orders.id, b.orderId), eq(S.orders.userId, userId))) : [];
+    const [p] = await db.select().from(S.products).where(eq(S.products.id, b.productId));
+    if (!p) return rep.code(404).send({ error: '없는 상품이에요' });
+    const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount: p.price, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
+    try {
+      if (p.kind === 'subscription') {
+        const s = await verifySubscription(b.purchaseToken, http);
+        if (!subscriptionUsable(s.status, s.expiresAt)) return rep.code(402).send({ error: '구독이 활성 상태가 아니에요' });
+        return fulfillOrder(db, order, { ref: b.purchaseToken, expiresAt: s.expiresAt, subStatus: s.status });
+      }
+      const c = await verifyProduct(p.id, b.purchaseToken, http);
+      if (!c.ok) return rep.code(402).send({ error: c.reason });
+      return fulfillOrder(db, order, { ref: b.purchaseToken });
+    } catch (e: any) {
+      return rep.code(e.status ?? 502).send({ error: e.message });
+    }
+  });
+  // RTDN — 갱신·해지·환불 등 Google 이 알려주면 다시 조회해서 반영
+  app.post('/billing/google/rtdn', async (req, rep) => {
+    if (!(await verifyPubsubToken(req.headers.authorization))) return rep.code(401).send();
+    const n = readRtdn(req.body);
+    if (n.kind !== 'subscription' || !n.purchaseToken || !playConfigured()) return { ok: true };
+    const [o] = await db.select().from(S.orders).where(eq(S.orders.providerRef, n.purchaseToken));
+    if (!o) return { ok: true };
+    const s = await verifySubscription(n.purchaseToken, http);
+    await db.update(S.subscriptions).set({ status: s.status, expiresAt: s.expiresAt, renewedAt: new Date(), canceledAt: s.status === 'canceled' ? new Date() : null })
+      .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, 'google')));
+    if (n.type === 12) await revokeOrder(db, o, 'refunded'); // SUBSCRIPTION_REVOKED = 환불
+    return { ok: true };
   });
   app.get('/me/entitlements', async (req, rep) => {
     const userId = await needUser(req, rep);
@@ -325,9 +423,18 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const q = req.query as any;
     return subscriptionStats(db, range(q.period ?? 'month', q.from, q.to));
   });
-  app.post(`${A}/payments/:id/refund`, { preHandler: guard('super') }, async (req: Req) => {
+  app.post(`${A}/payments/:id/refund`, { preHandler: guard('super') }, async (req: Req, rep) => {
     const id = (req.params as any).id;
-    const [o] = await db.update(S.orders).set({ status: 'refunded', refundStatus: 'done' }).where(eq(S.orders.id, id)).returning();
+    const [cur] = await db.select().from(S.orders).where(eq(S.orders.id, id));
+    if (!cur) return rep.code(404).send({ error: '주문이 없어요' });
+    if (cur.status !== 'paid') return rep.code(409).send({ error: '결제 완료된 주문만 환불할 수 있어요' });
+    if (cur.channel === 'pg') { // PayApp 에서 먼저 취소가 돼야 환불 처리
+      const env = payappEnv();
+      if (!env || !cur.providerRef) return rep.code(503).send({ error: 'PayApp 연결 정보가 없어요' });
+      try { await payappCancel(cur.providerRef, `관리자 환불 ${id}`, env, http); } catch (e: any) { return rep.code(502).send({ error: e.message }); }
+    }
+    // Google Play 주문은 Play Console 에서 환불하면 RTDN·환불 조회로 반영된다. 여기서는 권한만 회수.
+    const o = await revokeOrder(db, cur, 'refunded');
     await audit(req, 'order.refund', id);
     return o;
   });
