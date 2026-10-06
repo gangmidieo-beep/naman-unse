@@ -356,6 +356,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   const guard = (role: 'operator' | 'super' = 'operator') => async (req: Req, rep: FastifyReply) => {
     const c = await verify<AdminClaims>(bearer(req));
     if (c?.kind !== 'admin') return rep.code(401).send({ error: '관리자 로그인이 필요해요' });
+    // 삭제된 계정·바뀐 권한은 토큰이 남아 있어도 바로 막는다(양도 때 이전 관리자 계정 삭제 즉시 효력)
+    const [a] = await db.select({ role: S.admins.role }).from(S.admins).where(eq(S.admins.id, +c.sub));
+    if (!a) return rep.code(401).send({ error: '관리자 로그인이 필요해요' });
+    c.role = a.role as AdminClaims['role'];
     if (role === 'super' && c.role !== 'super') return rep.code(403).send({ error: '최고관리자만 할 수 있어요' });
     req.admin = c;
   };
@@ -375,6 +379,44 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   });
 
   const A = '/admin/api';
+  // 0 관리자 계정 — 내 비밀번호 변경, (최고관리자) 관리자 추가·삭제
+  const pwOk = (p: unknown): p is string => typeof p === 'string' && p.length >= 10 && p.length <= 100;
+  app.post(`${A}/me/password`, { preHandler: guard(), config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req: Req, rep) => {
+    const { current, next } = (req.body ?? {}) as { current?: string; next?: string };
+    if (!pwOk(next)) return rep.code(400).send({ error: '새 비밀번호는 10자 이상으로 정해 주세요' });
+    if (next === current) return rep.code(400).send({ error: '지금과 다른 비밀번호로 정해 주세요' });
+    const [a] = await db.select().from(S.admins).where(eq(S.admins.id, +req.admin!.sub));
+    if (!a || !(await bcrypt.compare(String(current ?? ''), a.passwordHash))) return rep.code(400).send({ error: '지금 비밀번호가 맞지 않아요' });
+    await db.update(S.admins).set({ passwordHash: await bcrypt.hash(next, 10) }).where(eq(S.admins.id, a.id));
+    await audit(req, 'admin.password', a.email);
+    return { ok: true };
+  });
+  app.get(`${A}/admins`, { preHandler: guard('super') }, async () =>
+    db.select({ id: S.admins.id, email: S.admins.email, role: S.admins.role, createdAt: S.admins.createdAt }).from(S.admins).orderBy(asc(S.admins.id)));
+  app.post(`${A}/admins`, { preHandler: guard('super') }, async (req: Req, rep) => {
+    const { email, password, role } = (req.body ?? {}) as { email?: string; password?: string; role?: string };
+    const mail = String(email ?? '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return rep.code(400).send({ error: '이메일 형식을 확인해 주세요' });
+    if (!pwOk(password)) return rep.code(400).send({ error: '처음 비밀번호는 10자 이상으로 정해 주세요' });
+    const [dup] = await db.select({ id: S.admins.id }).from(S.admins).where(eq(S.admins.email, mail));
+    if (dup) return rep.code(409).send({ error: '이미 있는 관리자예요' });
+    const r = role === 'operator' ? 'operator' : 'super';
+    const [a] = await db.insert(S.admins).values({ email: mail, passwordHash: await bcrypt.hash(password, 10), role: r })
+      .returning({ id: S.admins.id, email: S.admins.email, role: S.admins.role, createdAt: S.admins.createdAt });
+    await audit(req, 'admin.create', mail, { role: r });
+    return a;
+  });
+  app.delete(`${A}/admins/:id`, { preHandler: guard('super') }, async (req: Req, rep) => {
+    const id = +(req.params as any).id;
+    if (id === +req.admin!.sub) return rep.code(400).send({ error: '로그인한 내 계정은 지울 수 없어요' });
+    const list = await db.select({ id: S.admins.id, email: S.admins.email, role: S.admins.role }).from(S.admins);
+    const target = list.find((x) => x.id === id);
+    if (!target) return rep.code(404).send({ error: '없는 관리자예요' });
+    if (target.role === 'super' && list.filter((x) => x.role === 'super').length <= 1) return rep.code(400).send({ error: '최고관리자가 한 명은 남아 있어야 해요' });
+    await db.delete(S.admins).where(eq(S.admins.id, id));
+    await audit(req, 'admin.delete', target.email);
+    return { ok: true };
+  });
   // 1 대시보드
   app.get(`${A}/dashboard`, { preHandler: guard() }, async (req, rep) => {
     const q = req.query as any;

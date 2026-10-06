@@ -2,12 +2,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { adminApi, saveSession, session } from './api';
-import { Ads, Banners, Dashboard, Members, Payments, Products, Push, Stats } from './pages';
+import { Account, Ads, Banners, Dashboard, Members, Payments, Products, Push, Stats } from './pages';
 import './admin.css';
 
 const MENU = [
   ['dashboard', '대시보드'], ['members', '회원관리'], ['products', '콘텐츠 상품관리'], ['banners', '배너·팝업'],
-  ['payments', '결제·구독'], ['push', '푸시 알림'], ['ads', '광고 관리'], ['stats', '통계 분석'],
+  ['payments', '결제·구독'], ['push', '푸시 알림'], ['ads', '광고 관리'], ['stats', '통계 분석'], ['account', '관리자 계정'],
 ] as const;
 
 function Login() {
@@ -32,7 +32,7 @@ function Login() {
         <label>비밀번호<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="current-password" required /></label>
         {err && <p className="ad-err">{err}</p>}
         <button className="ad-btn gold">로그인</button>
-        <p className="ad-muted">계정 만들기: 서버 폴더에서 <code>npm run admin:create -- 이메일 비밀번호</code> · 5회 틀리면 10분 잠김</p>
+        <p className="ad-muted">계정 추가·비밀번호 변경은 로그인 후 「관리자 계정」 메뉴 · 5회 틀리면 10분 잠김</p>
       </form>
     </div>
   );
@@ -69,6 +69,7 @@ export default function Admin() {
       <Route path="push" element={<Shell><Push /></Shell>} />
       <Route path="ads" element={<Shell><Ads /></Shell>} />
       <Route path="stats" element={<Shell><Stats /></Shell>} />
+      <Route path="account" element={<Shell><Account /></Shell>} />
       <Route path="*" element={<Navigate to={session() ? '/admin/dashboard' : '/admin/login'} replace />} />
     </Routes>
   );

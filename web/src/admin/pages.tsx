@@ -418,3 +418,73 @@ export function Stats() {
     </>
   );
 }
+
+/* ---------- 9 관리자 계정 — 내 비밀번호 변경 · (최고관리자) 관리자 추가·삭제 ---------- */
+export function Account() {
+  const me = session();
+  const [pw, setPw] = useState({ current: '', next: '', again: '' });
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const sup = isSuper();
+  const { data, err: listErr, reload } = useLoad(() => (sup ? adminApi<any[]>('/admins') : Promise.resolve([])), [sup]);
+  const [add, setAdd] = useState({ email: '', password: '', role: 'super' });
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
+    setMsg(''); setErr('');
+    try { await fn(); setMsg(ok); } catch (e) { setErr((e as Error).message); }
+  };
+  const changePw = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw.next !== pw.again) { setErr('새 비밀번호 두 칸이 서로 달라요'); return; }
+    void run(async () => { await adminApi('/me/password', { method: 'POST', json: { current: pw.current, next: pw.next } }); setPw({ current: '', next: '', again: '' }); }, '비밀번호를 바꿨어요. 다음 로그인부터 새 비밀번호를 쓰세요.');
+  };
+  const create = (e: React.FormEvent) => {
+    e.preventDefault();
+    void run(async () => { await adminApi('/admins', { method: 'POST', json: add }); setAdd({ email: '', password: '', role: 'super' }); reload(); }, '관리자를 추가했어요. 처음 비밀번호를 그분께 따로 전해 주세요.');
+  };
+  const remove = (a: any) => {
+    if (!window.confirm(`${a.email} 관리자를 삭제할까요? 바로 로그인이 막혀요.`)) return;
+    void run(async () => { await adminApi(`/admins/${a.id}`, { method: 'DELETE' }); reload(); }, `${a.email} 관리자를 삭제했어요.`);
+  };
+  return (
+    <>
+      <Head title="관리자 계정" />
+      {err && <p className="ad-err">{err}</p>}
+      {msg && <p className="ad-ok">{msg}</p>}
+      <div className="ad-grid">
+        <section className="ad-box">
+          <h3>내 비밀번호 바꾸기</h3>
+          <p className="ad-muted">{me?.email} · 10자 이상, 다른 곳에서 쓰지 않는 비밀번호로 정해 주세요.</p>
+          <form onSubmit={changePw}>
+            <label>지금 비밀번호<input type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required /></label>
+            <label>새 비밀번호<input type="password" autoComplete="new-password" minLength={10} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required /></label>
+            <label>새 비밀번호 한 번 더<input type="password" autoComplete="new-password" minLength={10} value={pw.again} onChange={(e) => setPw({ ...pw, again: e.target.value })} required /></label>
+            <button className="ad-btn gold">비밀번호 바꾸기</button>
+          </form>
+        </section>
+        {sup && (
+          <section className="ad-box">
+            <h3>관리자 목록</h3>
+            {listErr && <p className="ad-err">{listErr}</p>}
+            <table className="ad-table">
+              <thead><tr><th>이메일</th><th>권한</th><th>만든 날</th><th /></tr></thead>
+              <tbody>{(data ?? []).map((a) => (
+                <tr key={a.id}><td>{a.email}</td><td>{a.role === 'super' ? '최고관리자' : '운영자'}</td><td>{dt(a.createdAt)}</td>
+                  <td>{a.email === me?.email ? <span className="ad-muted">나</span> : <button className="ad-btn line sm" onClick={() => remove(a)}>삭제</button>}</td></tr>
+              ))}</tbody>
+            </table>
+            <h4>관리자 추가</h4>
+            <form onSubmit={create}>
+              <label>이메일<input type="email" value={add.email} onChange={(e) => setAdd({ ...add, email: e.target.value })} required /></label>
+              <label>처음 비밀번호(10자 이상, 첫 로그인 뒤 바꾸게 안내)<input type="text" minLength={10} value={add.password} onChange={(e) => setAdd({ ...add, password: e.target.value })} required /></label>
+              <label>권한<select value={add.role} onChange={(e) => setAdd({ ...add, role: e.target.value })}>
+                <option value="super">최고관리자 — 전부(가격·환불·광고·관리자 계정 포함)</option>
+                <option value="operator">운영자 — 조회, 배너·푸시·상품 문구만</option>
+              </select></label>
+              <button className="ad-btn gold">추가</button>
+            </form>
+          </section>
+        )}
+      </div>
+    </>
+  );
+}

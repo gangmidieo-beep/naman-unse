@@ -133,4 +133,26 @@ describe('관리자 API', () => {
     for (let i = 0; i < 5; i++) await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'staff@test.kr', password: 'wrong' } });
     expect((await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'staff@test.kr', password: 'staff-secret-1' } })).statusCode).toBe(423);
   });
+  it('관리자 계정: 추가 → 비밀번호 변경 → 이전 관리자 삭제(남은 토큰도 즉시 무효)', async () => {
+    const ip = { remoteAddress: '10.9.9.9' }; // 위 잠금 테스트와 분당 로그인 제한을 나눠 쓰지 않게
+    const login = async (email: string, password: string) => (await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email, password }, ...ip })).json().token as string;
+    const boss = await login('boss@test.kr', 'super-secret-1');
+    expect((await app.inject({ method: 'POST', url: '/admin/api/admins', headers: auth(boss), payload: { email: 'Owner@Test.kr', password: 'short' } })).statusCode).toBe(400);
+    const made = (await app.inject({ method: 'POST', url: '/admin/api/admins', headers: auth(boss), payload: { email: 'Owner@Test.kr', password: 'owner-first-1' } })).json();
+    expect(made).toMatchObject({ email: 'owner@test.kr', role: 'super' });
+    expect((await app.inject({ method: 'POST', url: '/admin/api/admins', headers: auth(boss), payload: { email: 'owner@test.kr', password: 'owner-first-1' } })).statusCode).toBe(409);
+    const owner = await login('owner@test.kr', 'owner-first-1');
+    expect((await app.inject({ method: 'POST', url: '/admin/api/me/password', headers: auth(owner), payload: { current: 'wrong-password', next: 'owner-second-2' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/admin/api/me/password', headers: auth(owner), payload: { current: 'owner-first-1', next: 'owner-second-2' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'owner@test.kr', password: 'owner-first-1' }, ...ip })).statusCode).toBe(401);
+    const owner2 = await login('owner@test.kr', 'owner-second-2');
+    const list = (await app.inject({ url: '/admin/api/admins', headers: auth(owner2) })).json() as any[];
+    expect(list.some((a) => 'passwordHash' in a)).toBe(false);
+    const bossId = list.find((a) => a.email === 'boss@test.kr').id;
+    expect((await app.inject({ method: 'DELETE', url: `/admin/api/admins/${made.id}`, headers: auth(owner2) })).statusCode).toBe(400); // 내 계정
+    expect((await app.inject({ method: 'DELETE', url: `/admin/api/admins/${bossId}`, headers: auth(owner2) })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/admin/api/dashboard', headers: auth(boss) })).statusCode).toBe(401);
+    const staffId = list.find((a) => a.email === 'staff@test.kr').id;
+    expect((await app.inject({ method: 'DELETE', url: `/admin/api/admins/${staffId}`, headers: auth(owner2) })).statusCode).toBe(200);
+  });
 });
