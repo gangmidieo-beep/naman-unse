@@ -12,11 +12,13 @@ $WEB = "https://www.$domain"
 $API = "https://api.$domain"
 Write-Host "웹: $WEB   서버: $API" -ForegroundColor Gray
 
-Write-Host "`nPayApp 판매자 관리자(seller.payapp.kr) > 설정 > 연동정보 화면을 열어 두세요." -ForegroundColor Yellow
-$uid = (Read-Host "PayApp 아이디").Trim()
-$lkey = (Plain (Read-Host "연동 KEY (입력해도 화면에 안 보여요)" -AsSecureString)).Trim()
-$lval = (Plain (Read-Host "연동 VALUE (입력해도 화면에 안 보여요)" -AsSecureString)).Trim()
-if (-not $uid -or -not $lkey -or -not $lval) { Write-Host "PayApp 정보 세 가지를 모두 넣어 주세요." -ForegroundColor Red; exit 1 }
+Write-Host "`nPayApp 연동정보 — 이미 넣었으면(scripts\tmp\payapp_keys.ps1 등) 아이디에서 그냥 엔터" -ForegroundColor Yellow
+$uid = (Read-Host "PayApp 아이디 (이미 넣었으면 엔터)").Trim()
+if ($uid) {
+  $lkey = (Plain (Read-Host "연동 KEY (입력해도 화면에 안 보여요)" -AsSecureString)).Trim()
+  $lval = (Plain (Read-Host "연동 VALUE (입력해도 화면에 안 보여요)" -AsSecureString)).Trim()
+  if (-not $lkey -or -not $lval) { Write-Host "연동 KEY·VALUE 를 모두 넣어 주세요." -ForegroundColor Red; exit 1 }
+}
 
 Write-Host "`n유료 풀이용 Anthropic API 키 (console.anthropic.com > API Keys). 비우면 유료 풀이는 '준비 중'으로 막히고 부적·구독만 판매돼요." -ForegroundColor Yellow
 $akey = (Plain (Read-Host "Anthropic API 키 (없으면 엔터)" -AsSecureString)).Trim()
@@ -28,9 +30,8 @@ railway domain "www.$domain" --service www --port 8080; Check "웹 도메인"
 railway domain "api.$domain" --service server --port 8791; Check "서버 도메인"
 
 Write-Host "`n[2/4] 서버 설정 (실결제 모드)" -ForegroundColor Yellow
-$sv = @('--set', 'MOCK_MODE=false', '--set', 'APP_ENV=production', '--set', 'PG_PROVIDER=payapp',
-  '--set', "PAYAPP_USERID=$uid", '--set', "PAYAPP_LINKKEY=$lkey", '--set', "PAYAPP_LINKVAL=$lval",
-  '--set', "PUBLIC_WEB_ORIGIN=$WEB", '--set', "API_ORIGIN=$API")
+$sv = @('--set', 'MOCK_MODE=false', '--set', 'APP_ENV=production', '--set', 'PG_PROVIDER=payapp', '--set', "PUBLIC_WEB_ORIGIN=$WEB", '--set', "API_ORIGIN=$API")
+if ($uid) { $sv += @('--set', "PAYAPP_USERID=$uid", '--set', "PAYAPP_LINKKEY=$lkey", '--set', "PAYAPP_LINKVAL=$lval") }
 if ($akey) { $sv += @('--set', 'READING_AI=live', '--set', "ANTHROPIC_API_KEY=$akey", '--set', "ANTHROPIC_MODEL=$model") }
 railway variables --service server @sv; Check "서버 설정"
 
