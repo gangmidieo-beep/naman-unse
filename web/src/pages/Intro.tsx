@@ -1,11 +1,13 @@
 // 첫 실행 소개 3장 → 사주 정보 입력(화면설계_v2 2장). 건너뛰면 예시 운세 홈.
-import { useRef, useState } from 'react';
+// 1.2초마다 다음 장으로 자동으로 넘어가고 마지막 장(시작 버튼)에서 멈춤. 손으로 넘기거나 누르면 자동 넘김은 멈춤.
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Img } from '../components/Img';
 import { Button } from '../components/ui';
 import { useApp } from '../store/app';
 import type { ImgKey } from '../assets/images';
 
+const AUTO_MS = 1200; // 자동 넘김 간격(1~1.5초 사이 요청)
 const SLIDES: { img: ImgKey | null; who: string; title: string; text: string }[] = [
   { img: 'cheongungBanner', who: '天宮道士 · 천궁도사', title: '오늘의 운세부터\n평생의 흐름까지 읽어드리지요', text: '정통사주·재물·직장·신년운세를 깊이 풀어 드리오.' },
   { img: 'wolhaBanner', who: '月下仙女 · 월하선녀', title: '사랑과 인연의 실을\n따라가 볼게요', text: '연애·결혼·궁합·인연의 흐름을 다정하게 살펴 드려요.' },
@@ -18,15 +20,21 @@ export default function Intro() {
   const [i, setI] = useState(0);
   const track = useRef<HTMLDivElement>(null);
   const target = useRef<number | null>(null); // 버튼으로 넘기는 중엔 스크롤 중간값 무시
+  const [auto, setAuto] = useState(true);
   const go = (n: number) => { target.current = n; setI(n); track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' }); };
   const onScroll = (el: HTMLDivElement) => {
     const n = Math.round(el.scrollLeft / el.clientWidth);
     if (target.current != null) { if (n === target.current) target.current = null; return; }
     setI(n);
   };
+  useEffect(() => {
+    if (!auto || i >= SLIDES.length - 1) return;
+    const t = setTimeout(() => go(i + 1), AUTO_MS);
+    return () => clearTimeout(t);
+  }, [auto, i]);
   const start = (toInput: boolean) => { setIntroSeen(); nav(toInput ? '/profile/new?first=1' : '/', { replace: true }); };
   return (
-    <main className="intro">
+    <main className="intro" onPointerDown={() => setAuto(false)} onKeyDown={() => setAuto(false)}>
       <div className="intro-track" ref={track} onScroll={(e) => onScroll(e.currentTarget)}>
         {SLIDES.map((s, n) => (
           <section className="intro-slide" key={n} aria-label={`${n + 1}번째 소개`}>

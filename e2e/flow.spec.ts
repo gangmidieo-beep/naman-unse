@@ -10,8 +10,8 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
 
   await page.goto('/');
   await expect(page).toHaveURL(/\/intro/);
-  await page.getByRole('button', { name: '다음' }).click();
-  await page.getByRole('button', { name: '다음' }).click();
+  // 소개 3장은 1.2초마다 저절로 넘어가 마지막 장(시작 버튼)에서 멈춤
+  await expect(page.getByRole('button', { name: '내 사주 정보 입력하기' })).toBeVisible({ timeout: 5000 });
   await page.getByRole('button', { name: '내 사주 정보 입력하기' }).click();
 
   // 대화형 입력
