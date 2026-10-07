@@ -4,6 +4,9 @@
 	auto_https off
 }
 :{$PORT:8080} {
+	# 루트 도메인(예: myunse365.com)으로 들어오면 www 로 보냄 — Railway 변수 APEX_HOST 에 루트 도메인을 넣음
+	@apex host {$APEX_HOST:apex.invalid}
+	redir @apex https://www.{host}{uri} 301
 	root * /srv
 	encode zstd gzip
 	@assets path /assets/* /fonts/* /img/*
