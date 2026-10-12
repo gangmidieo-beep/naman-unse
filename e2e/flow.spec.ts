@@ -10,11 +10,12 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
 
   await page.goto('/');
   await expect(page).toHaveURL(/\/intro/);
-  // 소개 3장은 1.2초마다 저절로 넘어가 마지막 장(시작 버튼)에서 멈춤
-  await expect(page.getByRole('button', { name: '내 사주 정보 입력하기' })).toBeVisible({ timeout: 5000 });
-  await page.getByRole('button', { name: '내 사주 정보 입력하기' }).click();
+  // 소개 3장은 1.2초마다 저절로 넘어가고 마지막 장 뒤 바로 홈 — 들어갈 때 사주 입력 없음(대표님 요청 2026-10-12)
+  await expect(page).toHaveURL(/\/$/, { timeout: 8000 });
+  await expect(page.getByText('예시', { exact: true }).first()).toBeVisible();
 
-  // 대화형 입력
+  // "오늘의 운세 자세히 보기"를 처음 누를 때 한 번만 사주 입력(푸시 동의 포함) → 오늘의 운세
+  await page.getByRole('link', { name: '오늘의 운세 자세히 보기' }).click();
   await page.getByLabel('이름 또는 별명').fill('김순자');
   await page.getByRole('button', { name: '다음' }).click();
   await page.getByRole('button', { name: '여성' }).click();
@@ -29,11 +30,9 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await page.getByRole('button', { name: '다음' }).click();
   await expect(page.getByText('음력 1964년 5월 21일')).toBeVisible();
   await page.getByRole('button', { name: '저장하고 운세 보기' }).click();
-
-  // 홈 → 오늘의 운세
-  await expect(page.getByRole('heading', { name: /김순자님, 오늘의 운세예요/ })).toBeVisible();
-  await page.getByRole('link', { name: '오늘의 운세 자세히 보기' }).click();
+  await expect(page).toHaveURL(/\/today/);
   await expect(page.getByLabel('오늘의 총운')).toBeVisible();
+  await expect(page.getByText(/김순자님, 오늘의 운세예요/)).toBeVisible();
   await page.getByRole('button', { name: /상세 풀이 보기/ }).click();
   await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 8000 });
   await expect(page.getByRole('region', { name: '상세 풀이' })).toBeVisible();
