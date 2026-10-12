@@ -6,7 +6,7 @@ import { Img } from './Img';
 import type { ImgKey } from '../assets/images';
 import { usePremium } from '../store/app';
 import { adProvider, adSlots, isNativeApp, loadAdSense } from '../lib/ads';
-import { CHAR, charOf, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
+import { CHAR, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
 
 /* ---------- 버튼·칩·탭 ---------- */
 type BtnKind = 'gold' | 'ink' | 'line';
@@ -150,7 +150,7 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
             <Link key={`${b.id}-${k}`} to={b.link} className="banner" draggable={false} aria-hidden={k !== pos} tabIndex={k === pos ? 0 : -1} aria-label={`${b.title} — ${b.copy}`}>
               {b.img ? <img src={b.img} alt="" draggable={false} loading={k === 1 ? 'eager' : 'lazy'} /> : <Img k={b.character === 'wolha' ? 'wolhaBanner' : 'cheongungBanner'} alt="" eager={k === 1} />}
               <div className="shade" />
-              <div className="txt"><small>{CHAR[b.character as CharId]?.name ?? '나만의 운세'}</small><b>{b.title}</b><span>{b.copy}</span></div>
+              <div className="txt"><b>{b.title}</b><span>{b.copy}</span></div>
             </Link>
           ))}
         </div>
@@ -164,19 +164,20 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
   );
 }
 
-// 공통 상품 카드 — 목록형(list: 도사 컨텐츠 목록) / 그리드형(grid: 썸네일 그리드, scroll: 가로 스크롤)
-export type CardItem = { id: string; title: string; copy: string; link: string; hanja: string; img?: string; by?: string; face?: ImgKey; badge?: string | null; owned?: boolean; price?: { rate: number; strike: number; final: number; label: string } | null; free?: boolean };
+// 공통 상품 카드 v4 — 목록형(list: 넓은 그림 썸네일 + 이름·한 줄·가격 + ›) / 그리드형(grid) / 가로 스크롤(scroll). 캐릭터 반복 표시는 뺐다(대표님 2차 요청)
+export type CardItem = { id: string; title: string; copy: string; link: string; hanja: string; img?: string; by?: string; face?: ImgKey; badge?: string | null; owned?: boolean; price?: { rate: number; strike: number; final: number; label: string } | null; free?: boolean; tag?: string; member?: number };
 export function toCardItem(p: Product, owned = false): CardItem {
   const t = thumbOf(p);
-  const who = CHAR[charOf(p)];
   return {
     id: p.id, title: displayTitle(p), copy: displayCopy(p), link: productPath(p), hanja: t.hanja, img: t.src,
-    by: `${p.group} · ${who.name}`, face: isTalisman(p) ? undefined : who.face, badge: (p as any).badge, owned, price: priceView(p),
+    by: p.group, badge: (p as any).badge, owned, price: priceView(p),
+    ...(isTalisman(p) ? { tag: p.group, member: memberPrice(p) } : {}),
   };
 }
-const badgeCls = (b: string) => `badge${b === 'BEST' ? ' best' : b === 'NEW' ? ' new' : ''}`;
+const badgeCls = (b: string) => `badge${b === 'BEST' ? ' best' : b === 'NEW' ? ' new' : b === '인기' ? ' pop' : ''}`;
 function PriceLine({ c }: { c: CardItem }) {
   if (c.free || !c.price) return <div className="pc-price"><span className="free-tag">무료</span></div>;
+  if (c.member) return <div className="pc-price bjp"><b>{won(c.price.strike || c.price.final)}</b><small>회원가 {won(c.member)}</small></div>;
   const p = c.price;
   return (
     <div className="pc-price">
@@ -186,30 +187,29 @@ function PriceLine({ c }: { c: CardItem }) {
     </div>
   );
 }
+// 부적 썸네일 — 촛불 탁자 배경 위에 부적별 글자를 새긴 노란 부적
+export function TalismanThumb({ t, size = 0.62 }: { t: Talisman; size?: number }) {
+  return <div className="bjimg"><TalismanPaper t={t} size={size} /></div>;
+}
 export function ProductCard({ c, mode = 'list', talisman }: { c: CardItem; mode?: 'list' | 'grid' | 'scroll'; talisman?: Talisman }) {
-  const thumb = talisman ? (
-    <div className={`bjth ${talismanTone(talisman)}`}><TalismanPaper t={talisman} /></div>
-  ) : (
-    <div className={`th${c.free ? ' light' : ''}`}><div className={`in${c.hanja.length > 1 ? ' two' : ''}`}>{c.img ? <img src={c.img} alt="" width={224} height={224} loading="lazy" /> : <span aria-hidden>{c.hanja}</span>}</div></div>
-  );
+  const pic = talisman ? <TalismanThumb t={talisman} size={mode === 'list' ? 0.62 : 0.9} />
+    : c.img ? <img src={c.img} alt="" width={360} height={240} loading="lazy" /> : <span className="hz" aria-hidden><i>{c.hanja}</i></span>;
+  const badge = (c.badge || c.owned) && <span className={c.owned ? 'badge owned' : badgeCls(c.badge!)}>{c.owned ? '보유중' : c.badge}</span>;
   if (mode === 'list')
     return (
-      <Link to={c.link} className="row">
-        {thumb}
+      <Link to={c.link} className="row4">
+        <div className="th4">{pic}{badge}</div>
         <div className="meta">
-          <div className="by">{c.face && <Img k={c.face} alt="" />}{c.by}{c.badge && <span className={badgeCls(c.badge)}>{c.badge}</span>}{c.owned && <span className="badge owned">보유중</span>}</div>
-          <b className="nm">{c.title}</b>
+          <b className="nm">{c.title}{c.tag && <span className="gtag">{c.tag}</span>}</b>
           <p>{c.copy}</p>
           <PriceLine c={c} />
         </div>
+        <span className="chev" aria-hidden>›</span>
       </Link>
     );
   return (
     <Link to={c.link} className={`pcard${mode === 'scroll' ? ' scroll' : ''}${c.free ? ' free-card' : ''}`}>
-      <div className="pc-img">
-        {talisman ? <div className={`pc-bj ${talismanTone(talisman)}`}><TalismanPaper t={talisman} size={1.2} /></div> : c.img ? <img src={c.img} alt="" width={224} height={224} loading="lazy" /> : <span className={`hz${c.hanja.length > 1 ? ' two' : ''}`} aria-hidden><i>{c.hanja}</i></span>}
-        {(c.badge || c.owned) && <span className={c.owned ? 'badge owned' : badgeCls(c.badge!)}>{c.owned ? '보유중' : c.badge}</span>}
-      </div>
+      <div className="pc-img">{pic}{badge}</div>
       <div className="pc-tx"><b>{c.title}</b><span>{c.copy}</span><PriceLine c={c} /></div>
     </Link>
   );

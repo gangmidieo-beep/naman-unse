@@ -3,6 +3,13 @@
 import { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CORE_FIELDS, FIELDS, FIELD_LABEL } from '@naman/content';
+import { Icon } from '../components/Icon';
+
+// 분야 앞 단색 아이콘(대표님 2차 요청) — 일·금전·연애·건강·학업·시험
+const FIELD_ICON: Record<string, string> = { work: 'briefcase', wealth: 'coins', love: 'heart', health: 'leaf', study: 'pencil', exam: 'file-text' };
+function FieldName({ k }: { k: string }) {
+  return <span className="fname"><Icon name={FIELD_ICON[k]} size={18} stroke={2} />{FIELD_LABEL[k as keyof typeof FIELD_LABEL]}</span>;
+}
 import { SubHeader, SectionHeader } from '../components/layout';
 import { AdSlot, Button, PremiumLock, SegTabs, Stars, useCountUp, useToast } from '../components/ui';
 import { Img } from '../components/Img';
@@ -53,7 +60,7 @@ export default function Today() {
                 <div className="sc" aria-label={`${f.total}점`}><b aria-hidden>{shown}</b><span aria-hidden>점</span><Stars n={f.stars} /></div>
                 <p className="q"><b>한 줄 요약 · {f.headline}</b>{f.brief}</p>
                 <div className="grid6">
-                  {FIELDS.map((k) => <div key={k}>{FIELD_LABEL[k]}<Stars n={f.fields[k].stars} /></div>)}
+                  {FIELDS.map((k) => <div key={k}><FieldName k={k} /><Stars n={f.fields[k].stars} /></div>)}
                 </div>
               </div>
             </section>
@@ -111,7 +118,7 @@ export default function Today() {
         <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 22 }}>{profile.name}님 · {f.total}점 <Stars n={f.stars} /></p>
         <p style={{ fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1.7, margin: '10px 0 14px' }}>“{f.oneLine}”</p>
         <div className="grid6">
-          {FIELDS.map((k) => <div key={k} style={{ background: 'var(--ink)', color: 'var(--on-ink)' }}>{FIELD_LABEL[k]}<Stars n={f.fields[k].stars} /></div>)}
+          {FIELDS.map((k) => <div key={k} style={{ background: 'var(--ink)', color: 'var(--on-ink)' }}><FieldName k={k} /><Stars n={f.fields[k].stars} /></div>)}
         </div>
         <p style={{ marginTop: 14, fontSize: 17 }}>행운의 색 {f.lucky.color} · 숫자 {f.lucky.number} · 방향 {f.lucky.direction}</p>
       </ShareCard>
@@ -147,7 +154,7 @@ function MonthPanel({ m }: { m: ReturnType<typeof useMonthFortune> }) {
         <div className="top"><small>이번 달</small><span>{m.pillar.text}월({m.pillar.hanja}月)</span></div>
         <div className="sc"><b>{m.total}</b><span>점</span><Stars n={m.stars} /></div>
         <p className="q">{m.line}</p>
-        <div className="grid6">{FIELDS.map((k) => <div key={k}>{FIELD_LABEL[k]}<Stars n={m.fields[k]} /></div>)}</div>
+        <div className="grid6">{FIELDS.map((k) => <div key={k}><FieldName k={k} /><Stars n={m.fields[k]} /></div>)}</div>
       </div>
     </section>
   );

@@ -27,3 +27,7 @@ export const IMG: Record<ImgKey, Entry> = Object.fromEntries(
 
 // 선택 이미지(없으면 undefined → 화면이 CSS 대체). 예) logo_brand, logo_seal, hero_duo, banner_premium, loading_cheongung, banner_{상품id}
 export const optionalImg = (name: string) => INCOMING[name];
+
+// 2차 시안에서 잘라 만든 이미지(scripts/crop-mockups.py) — 대표님 원본이 오면 _incoming 의 같은 이름이 우선
+export const v4 = (name: string) => INCOMING[name]?.src ?? `/img/v4/${name}.webp`;
+export const v4png = (name: string) => `/img/v4/${name}.png`;

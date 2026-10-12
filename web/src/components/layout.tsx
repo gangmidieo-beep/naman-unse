@@ -66,19 +66,21 @@ export function SectionHeader({ en, title, desc, center, style, more }: { en: st
   );
 }
 
+// 하단 탭 아이콘 — 대표님 시안(정자·나침반·타로·부적·함) 그림을 윤곽만 남겨 색을 입힌다(활성 = 먹색 칸 + 금색)
 const TABS = [
-  { to: '/', label: '홈', i: '家', end: true },
-  { to: '/unse', label: '운세', i: '命' },
-  { to: '/tarot', label: '타로', i: '牌' },
-  { to: '/talisman', label: '부적', i: '符' },
-  { to: '/box', label: '운세함', i: '函' },
+  { to: '/', label: '홈', i: 'tab_home', end: true },
+  { to: '/unse', label: '운세', i: 'tab_unse' },
+  { to: '/tarot', label: '타로', i: 'tab_tarot' },
+  { to: '/talisman', label: '부적', i: 'tab_talisman' },
+  { to: '/box', label: '운세함', i: 'tab_box' },
 ];
 export function TabBar() {
   return (
     <nav className="tabs" aria-label="주 메뉴">
+      <Link to="/" className="tabs-logo" aria-label="나만의 운세 홈"><BrandLogo /></Link>
       {TABS.map((t) => (
         <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
-          <span className="i" aria-hidden>{t.i}</span>
+          <span className="i" aria-hidden><span className="ic" style={{ WebkitMaskImage: `url(/img/v4/${t.i}.png)`, maskImage: `url(/img/v4/${t.i}.png)` }} /></span>
           {t.label}
         </NavLink>
       ))}

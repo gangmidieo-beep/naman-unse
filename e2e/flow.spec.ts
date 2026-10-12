@@ -38,14 +38,14 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 8000 });
   await expect(page.getByRole('region', { name: '상세 풀이' })).toBeVisible();
 
-  // 운세 탭 → 천궁도사 → 재물과 성공 → 재물운 상세 → 결제
+  // 운세 탭 → 운명·사주 → 재물운 상세(공통 템플릿) → 결제
   await page.getByRole('navigation', { name: '주 메뉴' }).getByRole('link', { name: /운세$/ }).first().click();
-  await page.getByRole('tab', { name: '천궁도사' }).click();
-  await page.getByRole('tab', { name: '재물과 성공' }).click();
-  await page.getByRole('link', { name: /재물운/ }).first().click();
+  await page.getByRole('tab', { name: /운명·사주/ }).click();
+  await page.getByRole('link', { name: /재물운 나는 언제 돈이/ }).first().click();
+  await expect(page.getByRole('heading', { name: '재물운란?' })).toBeVisible();
   await expect(page.getByText('운명서에 담기는 내용')).toBeVisible();
   await expect(page.getByText('이런 분께 필요해요')).toBeVisible();
-  await page.getByRole('button', { name: '천궁도사의 상세풀이 받기' }).click();
+  await page.getByRole('button', { name: /내 재물운 상세풀이 보기/ }).click();
   await page.getByRole('button', { name: 'Google로 시작하기' }).click();
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: /결제하고 운명서 열어보기/ }).click();
@@ -53,12 +53,12 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await expect(page.getByRole('heading', { name: '천궁도사가 풀어드린 나의 운명서' }).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('table', { name: /원국/ })).toBeVisible();
   // 결과 맨 아래 추천 부적(재물운 → 재물·사업번창)
-  await expect(page.getByRole('region', { name: '추천 부적' }).getByRole('link', { name: /재물운 부적/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: '추천 부적' }).getByRole('link', { name: /금전재물부적/ })).toBeVisible();
 
   // 부적
   await page.goto('/talisman/t_wealth');
   await expect(page.getByText('부적 설명서')).toBeVisible();
-  await page.getByRole('button', { name: /나만의 재물부적 받기/ }).click();
+  await page.getByRole('button', { name: /나만의 금전재물부적 받기/ }).click();
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: /결제하고 부적 받기/ }).click();
   await page.getByLabel('나의 소원').fill('올해 안에 내 집 마련하기');
@@ -71,8 +71,9 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
 
   // 나의 운세함 보관
   await page.goto('/box');
-  await expect(page.getByRole('link', { name: /재물운.*다시 열어보기/ })).toBeVisible();
-  await expect(page.getByText('재물운 부적').first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /^재물운/ })).toBeVisible();
+  await expect(page.getByText('금전재물부적').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /나의 타로함/ })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -87,10 +88,13 @@ test('재미로 보는 운세 7종 + 타로 탭이 열린다', async ({ page }) 
   await page.goto('/fun/dream');
   await page.getByLabel('꿈 검색').fill('이빨 빠지는 꿈');
   await page.getByRole('button', { name: '풀이' }).click();
+  await page.getByRole('button', { name: /상세 꿈 해몽 열기/ }).click(); // 프리미엄 상세 해몽은 하루 1회
   await expect(page.getByText(/상황별 상세 해몽/)).toBeVisible();
   await page.goto('/tarot');
-  await page.getByRole('button', { name: '카드 섞고 펼치기' }).click();
-  await page.getByRole('button', { name: '2번째 카드 고르기' }).click();
-  await expect(page.getByText('연애', { exact: true })).toBeVisible(); // 프리미엄은 광고 없이 바로 풀이
+  await page.getByRole('button', { name: /카드 섞고 펼치기/ }).click();
+  await page.getByRole('button', { name: '2번째 카드 고르기', exact: true }).dispatchEvent('click');
+  await page.getByRole('button', { name: '1번째 카드 뒤집기' }).click();
+  await page.getByRole('button', { name: /카드의 이야기 듣기/ }).click();
+  await expect(page.getByText('연애', { exact: true })).toBeVisible(); // 프리미엄은 광고 없이 상세 해석
   expect(errors).toEqual([]);
 });

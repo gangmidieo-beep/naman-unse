@@ -93,7 +93,7 @@
       "thumbHanja": "命",
       "badge": "BEST",
       "visible": true,
-      "sort": 0,
+      "sort": 2,
       "googleProductId": ""
     },
     {
@@ -108,7 +108,7 @@
       "thumbHanja": "生",
       "badge": null,
       "visible": true,
-      "sort": 1,
+      "sort": 3,
       "googleProductId": ""
     },
     {
@@ -123,7 +123,7 @@
       "thumbHanja": "運",
       "badge": "HOT",
       "visible": true,
-      "sort": 2,
+      "sort": 4,
       "googleProductId": ""
     },
     {
@@ -138,7 +138,7 @@
       "thumbHanja": "五",
       "badge": null,
       "visible": true,
-      "sort": 3,
+      "sort": 5,
       "googleProductId": ""
     },
     {
@@ -153,7 +153,7 @@
       "thumbHanja": "財",
       "badge": "인기",
       "visible": true,
-      "sort": 10,
+      "sort": 6,
       "googleProductId": ""
     },
     {
@@ -168,7 +168,7 @@
       "thumbHanja": "職",
       "badge": null,
       "visible": true,
-      "sort": 11,
+      "sort": 7,
       "googleProductId": ""
     },
     {
@@ -183,7 +183,7 @@
       "thumbHanja": "業",
       "badge": null,
       "visible": true,
-      "sort": 12,
+      "sort": 8,
       "googleProductId": ""
     },
     {
@@ -198,7 +198,7 @@
       "thumbHanja": "創",
       "badge": null,
       "visible": true,
-      "sort": 13,
+      "sort": 9,
       "googleProductId": ""
     },
     {
@@ -213,7 +213,7 @@
       "thumbHanja": "試",
       "badge": null,
       "visible": true,
-      "sort": 20,
+      "sort": 10,
       "googleProductId": ""
     },
     {
@@ -228,7 +228,7 @@
       "thumbHanja": "移",
       "badge": null,
       "visible": true,
-      "sort": 21,
+      "sort": 11,
       "googleProductId": ""
     },
     {
@@ -243,7 +243,7 @@
       "thumbHanja": "契",
       "badge": null,
       "visible": true,
-      "sort": 22,
+      "sort": 12,
       "googleProductId": ""
     },
     {
@@ -258,7 +258,7 @@
       "thumbHanja": "丁未",
       "badge": "NEW",
       "visible": true,
-      "sort": 30,
+      "sort": 0,
       "googleProductId": ""
     },
     {
@@ -273,7 +273,7 @@
       "thumbHanja": "卜",
       "badge": null,
       "visible": true,
-      "sort": 31,
+      "sort": 1,
       "googleProductId": ""
     },
     {
@@ -288,7 +288,7 @@
       "thumbHanja": "月",
       "badge": null,
       "visible": true,
-      "sort": 32,
+      "sort": 13,
       "googleProductId": ""
     }
   ],
@@ -303,7 +303,7 @@
       "price": 14900,
       "memberPrice": 13410,
       "thumbHanja": "愛",
-      "badge": null,
+      "badge": "BEST",
       "visible": true,
       "sort": 0,
       "googleProductId": ""
@@ -363,9 +363,9 @@
       "price": 29000,
       "memberPrice": 26100,
       "thumbHanja": "合",
-      "badge": "BEST",
+      "badge": "HOT",
       "visible": true,
-      "sort": 10,
+      "sort": 4,
       "googleProductId": ""
     },
     {
@@ -380,7 +380,7 @@
       "thumbHanja": "戀",
       "badge": null,
       "visible": true,
-      "sort": 11,
+      "sort": 5,
       "googleProductId": ""
     },
     {
@@ -395,7 +395,7 @@
       "thumbHanja": "夫",
       "badge": null,
       "visible": true,
-      "sort": 12,
+      "sort": 6,
       "googleProductId": ""
     },
     {
@@ -410,7 +410,7 @@
       "thumbHanja": "再",
       "badge": "HOT",
       "visible": true,
-      "sort": 20,
+      "sort": 7,
       "googleProductId": ""
     },
     {
@@ -425,7 +425,7 @@
       "thumbHanja": "片",
       "badge": null,
       "visible": true,
-      "sort": 21,
+      "sort": 8,
       "googleProductId": ""
     },
     {
@@ -440,7 +440,7 @@
       "thumbHanja": "春",
       "badge": null,
       "visible": true,
-      "sort": 30,
+      "sort": 9,
       "googleProductId": ""
     },
     {
@@ -455,7 +455,7 @@
       "thumbHanja": "逢",
       "badge": null,
       "visible": true,
-      "sort": 31,
+      "sort": 10,
       "googleProductId": ""
     },
     {
@@ -470,7 +470,7 @@
       "thumbHanja": "年",
       "badge": null,
       "visible": true,
-      "sort": 40,
+      "sort": 11,
       "googleProductId": ""
     }
   ],
@@ -480,15 +480,31 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "재물·성공",
-      "title": "재물운 부적",
-      "cardCopy": "재물의 좋은 기운과 풍요를 기원합니다",
+      "title": "금전재물부적",
+      "cardCopy": "풍요로운 재물운을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": "BEST",
       "visible": true,
       "sort": 0,
-      "detail": "재물의 좋은 흐름과 풍요를 기원하는 부적입니다. 금전적인 안정과 새로운 기회를 바라는 마음을 담아, 이름과 생년월일 그리고 간절한 소원을 새긴 나만의 재물운 부적을 완성해보세요.",
+      "detail": "재물이 모이고 경제적으로 안정되기를 바라는 마음을 담은 부적입니다. 풍요로운 일상과 좋은 재물의 흐름이 함께하기를 기원합니다.",
       "hanjaPhrase": "招財進寶",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_jaesu",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "재물·성공",
+      "title": "재수부적",
+      "cardCopy": "좋은 기회와 재물운을 기원합니다",
+      "price": 9900,
+      "memberPrice": 8910,
+      "badge": null,
+      "visible": true,
+      "sort": 1,
+      "detail": "일상에서 좋은 기회를 만나고 하는 일이 순조롭게 풀리기를 바라는 부적입니다. 재물과 행운이 함께하는 풍요로운 생활을 기원합니다.",
+      "hanjaPhrase": "財數大通",
       "googleProductId": ""
     },
     {
@@ -496,15 +512,31 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "재물·성공",
-      "title": "사업번창 부적",
-      "cardCopy": "사업의 번창과 좋은 기회를 기원합니다",
+      "title": "사업재수부적",
+      "cardCopy": "사업의 번창과 성장을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 1,
-      "detail": "사업의 번창과 좋은 기회를 기원하는 부적입니다. 하는 일이 순조롭게 이어지고 새로운 기회와 좋은 인연이 함께하기를 바라는 마음을 담아 특별한 사업번창 부적을 완성해보세요.",
-      "hanjaPhrase": "興旺發達",
+      "sort": 2,
+      "detail": "사업과 장사가 안정적으로 성장하고 좋은 기회를 만나기를 바라는 부적입니다. 새로운 거래와 사업의 발전을 기원합니다.",
+      "hanjaPhrase": "事業繁昌",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_trade",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "재물·성공",
+      "title": "매매부적",
+      "cardCopy": "계약과 매매의 성사를 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 3,
+      "detail": "부동산이나 물건의 매매가 원만하게 이루어지기를 바라는 부적입니다. 좋은 조건과 인연을 만나 만족스러운 거래가 성사되기를 기원합니다.",
+      "hanjaPhrase": "賣買成事",
       "googleProductId": ""
     },
     {
@@ -512,47 +544,63 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "재물·성공",
-      "title": "직장성공 부적",
-      "cardCopy": "직장에서의 좋은 기회와 성취를 기원합니다",
-      "price": 9900,
-      "memberPrice": 8910,
+      "title": "취직부적",
+      "cardCopy": "원하는 직장과 취업 성공을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 2,
-      "detail": "직장에서의 성장과 좋은 기회를 기원하는 부적입니다. 승진과 인정, 새로운 도전과 좋은 변화가 함께하기를 바라는 소원을 담아 나만의 직장성공 부적을 간직해보세요.",
-      "hanjaPhrase": "步步高昇",
+      "sort": 4,
+      "detail": "취업을 준비하는 분들이 원하는 직장과 좋은 인연을 만나기를 바라는 부적입니다. 노력의 결실을 맺고 새로운 출발을 이루기를 기원합니다.",
+      "hanjaPhrase": "就業成功",
       "googleProductId": ""
     },
     {
-      "id": "t_pass",
+      "id": "t_promo",
       "kind": "talisman",
       "character": "cheongung",
       "group": "재물·성공",
-      "title": "취업·합격 부적",
-      "cardCopy": "원하는 결과와 좋은 소식을 기원합니다",
-      "price": 9900,
-      "memberPrice": 8910,
-      "badge": "HOT",
+      "title": "승진부적",
+      "cardCopy": "직장에서의 인정과 승진을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
       "visible": true,
-      "sort": 3,
-      "detail": "바라는 결과와 좋은 소식을 기원하는 부적입니다. 취업과 시험, 자격증 등 중요한 도전을 앞두고 있다면 노력의 결실을 바라는 간절한 마음을 부적에 담아보세요.",
-      "hanjaPhrase": "金榜題名",
+      "sort": 5,
+      "detail": "직장생활에서 쌓아온 노력과 능력을 인정받기를 바라는 부적입니다. 좋은 평가와 새로운 기회를 통해 한 단계 성장하기를 기원합니다.",
+      "hanjaPhrase": "官運昇進",
       "googleProductId": ""
     },
     {
-      "id": "t_love",
+      "id": "t_loss",
       "kind": "talisman",
-      "character": "wolha",
-      "group": "사랑·인연",
-      "title": "애정운 부적",
-      "cardCopy": "사랑의 좋은 기운이 함께하기를 기원합니다",
+      "character": "cheongung",
+      "group": "재물·성공",
+      "title": "손재방지부적",
+      "cardCopy": "재산의 안정과 보호를 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 6,
+      "detail": "예상하지 못한 금전적 손실과 어려움을 피하기를 바라는 부적입니다. 소중하게 모은 재산을 지키고 안정적인 경제생활을 이어가기를 기원합니다.",
+      "hanjaPhrase": "財物守護",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_fail",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "재물·성공",
+      "title": "실패방지부적",
+      "cardCopy": "하는 일의 안정과 성공을 기원합니다",
       "price": 9900,
       "memberPrice": 8910,
       "badge": null,
       "visible": true,
-      "sort": 10,
-      "detail": "사랑의 좋은 흐름과 행복한 관계를 기원하는 부적입니다. 마음속 사랑이 아름답게 이어지고 서로를 아끼는 따뜻한 인연이 함께하기를 바라는 소원을 담아보세요.",
-      "hanjaPhrase": "情深意長",
+      "sort": 7,
+      "detail": "사업이나 새로운 도전을 앞두고 어려움을 잘 극복하기를 바라는 부적입니다. 신중한 선택과 꾸준한 노력으로 좋은 결실을 맺기를 기원합니다.",
+      "hanjaPhrase": "成功無敗",
       "googleProductId": ""
     },
     {
@@ -560,31 +608,31 @@
       "kind": "talisman",
       "character": "wolha",
       "group": "사랑·인연",
-      "title": "인연 부적",
-      "cardCopy": "소중한 인연과 좋은 만남을 기원합니다",
+      "title": "인연부적",
+      "cardCopy": "소중하고 좋은 인연을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
-      "badge": null,
+      "badge": "인기",
       "visible": true,
-      "sort": 11,
-      "detail": "좋은 사람과 소중한 인연이 찾아오기를 기원하는 부적입니다. 새로운 만남과 따뜻한 인연을 기다리는 마음을 담아 오직 나를 위한 인연 부적을 완성해보세요.",
-      "hanjaPhrase": "天定良緣",
+      "sort": 8,
+      "detail": "새로운 만남과 소중한 인연이 찾아오기를 바라는 부적입니다. 서로를 아끼고 이해할 수 있는 좋은 사람과 행복한 관계를 맺기를 기원합니다.",
+      "hanjaPhrase": "良緣成就",
       "googleProductId": ""
     },
     {
-      "id": "t_romance",
+      "id": "t_love",
       "kind": "talisman",
       "character": "wolha",
       "group": "사랑·인연",
-      "title": "연애성취 부적",
-      "cardCopy": "바라는 사랑과 인연의 성취를 기원합니다",
+      "title": "사랑부적",
+      "cardCopy": "아름다운 사랑과 애정을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 12,
-      "detail": "소중한 사랑과 인연의 성취를 기원하는 부적입니다. 마음속에 품고 있는 사랑이 좋은 방향으로 이어지기를 바라는 진심을 담아 나만의 연애성취 부적을 만들어보세요.",
-      "hanjaPhrase": "心想事成",
+      "sort": 9,
+      "detail": "사랑하는 사람과의 애정이 더욱 깊어지기를 바라는 부적입니다. 서로의 마음을 이해하고 따뜻한 사랑을 오래도록 이어가기를 기원합니다.",
+      "hanjaPhrase": "愛情圓滿",
       "googleProductId": ""
     },
     {
@@ -592,15 +640,63 @@
       "kind": "talisman",
       "character": "wolha",
       "group": "사랑·인연",
-      "title": "부부화합 부적",
-      "cardCopy": "두 사람의 화합과 행복을 기원합니다",
+      "title": "부부화합부적",
+      "cardCopy": "부부의 화목과 행복을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 10,
+      "detail": "부부가 서로를 존중하고 이해하며 화목하게 지내기를 바라는 부적입니다. 작은 갈등을 지혜롭게 풀고 따뜻한 가정을 이루기를 기원합니다.",
+      "hanjaPhrase": "夫婦和合",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_faith",
+      "kind": "talisman",
+      "character": "wolha",
+      "group": "사랑·인연",
+      "title": "바람방지부적",
+      "cardCopy": "사랑하는 사람과의 믿음을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 11,
+      "detail": "연인이나 부부 사이에 믿음과 신뢰가 깊어지기를 바라는 부적입니다. 서로에게 충실하고 안정적인 관계를 이어가기를 기원합니다.",
+      "hanjaPhrase": "一心同體",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_wonjin",
+      "kind": "talisman",
+      "character": "wolha",
+      "group": "사랑·인연",
+      "title": "원진살제거부적",
+      "cardCopy": "사람 사이의 갈등과 불화를 해소하고 좋은 인연을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 12,
+      "detail": "원진살로 인한 갈등과 불화를 멀리하고 관계의 화합을 기원하는 전통 부적입니다. 서로의 오해가 풀리고 미움과 다툼 대신 이해와 평온이 함께하기를 기원합니다.",
+      "hanjaPhrase": "和合解怨",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_cut",
+      "kind": "talisman",
+      "character": "wolha",
+      "group": "사랑·인연",
+      "title": "인연단절부적",
+      "cardCopy": "원치 않는 인연을 정리하고 새로운 시작을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
       "sort": 13,
-      "detail": "두 사람의 화합과 평안한 인연을 기원하는 부적입니다. 서로를 이해하고 아끼는 마음이 오래 이어지고 가정에 따뜻함이 함께하기를 바라는 소원을 담아보세요.",
-      "hanjaPhrase": "百年好合",
+      "detail": "인연단절부적은 원치 않는 인연과 악연을 정리하고 마음의 평안을 되찾기를 바라는 부적입니다. 불편한 관계에서 벗어나 새로운 시작을 맞이하기를 기원합니다.",
+      "hanjaPhrase": "斷絶惡緣",
       "googleProductId": ""
     },
     {
@@ -608,15 +704,63 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "소원·성취",
-      "title": "소원성취 부적",
-      "cardCopy": "마음속 간절한 소원이 이루어지기를 기원합니다",
+      "title": "소원성취부적",
+      "cardCopy": "간절한 소원의 성취를 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 20,
-      "detail": "마음속 가장 간절한 한 가지 소원을 기원하는 부적입니다. 오래도록 품어온 바람이 있다면 그 마음을 직접 적어 세상에 하나뿐인 나만의 소원성취 부적으로 간직해보세요.",
+      "sort": 14,
+      "detail": "마음속에 품어온 소중한 소원이 이루어지기를 바라는 부적입니다. 희망을 잃지 않고 목표를 향해 나아가 좋은 결실을 맺기를 기원합니다.",
       "hanjaPhrase": "所願成就",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_study",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "소원·성취",
+      "title": "공부부적",
+      "cardCopy": "학업의 발전과 집중력을 기원합니다",
+      "price": 9900,
+      "memberPrice": 8910,
+      "badge": null,
+      "visible": true,
+      "sort": 15,
+      "detail": "공부하는 과정에서 마음을 다잡고 꾸준히 노력하기를 바라는 부적입니다. 배움의 즐거움과 학업의 발전을 기원합니다.",
+      "hanjaPhrase": "學業成就",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_pass",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "소원·성취",
+      "title": "합격부적",
+      "cardCopy": "시험과 자격증 합격을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": "HOT",
+      "visible": true,
+      "sort": 16,
+      "detail": "중요한 시험을 앞두고 그동안 준비한 실력을 충분히 발휘하기를 바라는 부적입니다. 노력한 만큼 좋은 결과를 얻기를 기원합니다.",
+      "hanjaPhrase": "合格成就",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_calm",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "소원·성취",
+      "title": "마음안정부적",
+      "cardCopy": "마음의 평온과 안정을 기원합니다",
+      "price": 9900,
+      "memberPrice": 8910,
+      "badge": null,
+      "visible": true,
+      "sort": 17,
+      "detail": "걱정과 불안으로 지친 마음에 평온이 찾아오기를 바라는 부적입니다. 일상에서 여유를 되찾고 차분한 마음으로 하루를 보내기를 기원합니다.",
+      "hanjaPhrase": "心身安定",
       "googleProductId": ""
     },
     {
@@ -624,47 +768,47 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "소원·성취",
-      "title": "만사형통 부적",
-      "cardCopy": "하는 일마다 좋은 흐름이 함께하기를 기원합니다",
+      "title": "만사대길부적",
+      "cardCopy": "하는 일마다 좋은 흐름을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 21,
-      "detail": "하는 일마다 좋은 흐름과 평안을 기원하는 부적입니다. 새로운 시작과 중요한 일을 앞두고 모든 일이 순조롭게 이어지기를 바라는 마음을 부적에 담아보세요.",
-      "hanjaPhrase": "萬事亨通",
+      "sort": 18,
+      "detail": "일상과 사업, 가정의 여러 일이 순조롭게 풀리기를 바라는 부적입니다. 새로운 기회와 좋은 인연이 함께하는 행복한 생활을 기원합니다.",
+      "hanjaPhrase": "萬事大吉",
       "googleProductId": ""
     },
     {
-      "id": "t_luck",
+      "id": "t_agree",
       "kind": "talisman",
       "character": "cheongung",
       "group": "소원·성취",
-      "title": "행운 부적",
-      "cardCopy": "일상에 좋은 기회와 행운이 함께하기를 기원합니다",
+      "title": "합의부적",
+      "cardCopy": "갈등의 원만한 해결과 화합을 기원합니다.",
       "price": 9900,
       "memberPrice": 8910,
       "badge": null,
       "visible": true,
-      "sort": 22,
-      "detail": "일상 속 좋은 기회와 행운을 기원하는 부적입니다. 크고 작은 순간마다 좋은 흐름이 함께하기를 바라는 마음을 담아 언제든 가까이 간직할 수 있는 나만의 행운 부적을 만들어보세요.",
-      "hanjaPhrase": "吉祥如意",
+      "sort": 19,
+      "detail": "의견 차이와 갈등이 원만하게 해결되기를 바라는 부적입니다. 서로의 입장을 이해하고 평화로운 합의와 좋은 결실을 이루기를 기원합니다.",
+      "hanjaPhrase": "和解合意",
       "googleProductId": ""
     },
     {
-      "id": "t_guard",
+      "id": "t_guardian",
       "kind": "talisman",
       "character": "cheongung",
-      "group": "평안·보호",
-      "title": "액막이 부적",
-      "cardCopy": "좋지 않은 기운을 멀리하고 평안을 기원합니다",
-      "price": 14900,
-      "memberPrice": 13410,
+      "group": "소원·성취",
+      "title": "선신수호부적",
+      "cardCopy": "좋은 기운과 소원의 성취를 기원합니다",
+      "price": 9900,
+      "memberPrice": 8910,
       "badge": null,
       "visible": true,
-      "sort": 30,
-      "detail": "좋지 않은 기운을 멀리하고 평안한 일상을 기원하는 부적입니다. 걱정과 근심은 덜어내고 앞으로의 날들이 무탈하고 평온하기를 바라는 마음을 담아보세요.",
-      "hanjaPhrase": "除厄消災",
+      "sort": 20,
+      "detail": "전통적으로 선한 존재의 보호와 도움을 바라는 의미를 담은 부적입니다. 마음속 소망을 이루기 위한 노력에 좋은 기운이 함께하기를 기원합니다.",
+      "hanjaPhrase": "善神守護",
       "googleProductId": ""
     },
     {
@@ -672,15 +816,47 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "평안·보호",
-      "title": "가정평안 부적",
-      "cardCopy": "가족의 평안과 행복을 기원합니다",
+      "title": "안택부적",
+      "cardCopy": "가정의 화목과 평안을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 31,
-      "detail": "가족의 행복과 평안한 일상을 기원하는 부적입니다. 사랑하는 가족이 서로 화목하고 집안에 좋은 일과 웃음이 오래 함께하기를 바라는 마음을 담아보세요.",
-      "hanjaPhrase": "家和萬事",
+      "sort": 21,
+      "detail": "집안에 평온하고 따뜻한 기운이 머물기를 바라는 전통 부적입니다. 가족 모두가 서로를 아끼며 행복하고 안정적인 생활을 이어가기를 기원합니다.",
+      "hanjaPhrase": "家內安宅",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_samjae",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "삼재부적",
+      "cardCopy": "삼재의 액운 해소와 평안을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 22,
+      "detail": "전통적으로 삼재 시기에 어려움 없이 지내기를 바라는 부적입니다. 변화가 많은 시기에도 마음의 안정을 유지하고 평온한 일상을 보내기를 기원합니다.",
+      "hanjaPhrase": "三災消滅",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_safe",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "사고방지부적",
+      "cardCopy": "일상생활의 안전과 평안을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 23,
+      "detail": "일상에서 예기치 못한 사고와 위험을 피하기를 바라는 부적입니다. 자신과 가족이 언제나 안전하고 평안하게 생활하기를 기원합니다.",
+      "hanjaPhrase": "無事平安",
       "googleProductId": ""
     },
     {
@@ -688,15 +864,95 @@
       "kind": "talisman",
       "character": "cheongung",
       "group": "평안·보호",
-      "title": "안전운전 부적",
-      "cardCopy": "언제나 안전하고 평안한 길을 기원합니다",
+      "title": "차사고방지부적",
+      "cardCopy": "안전한 운전과 평안한 길을 기원합니다",
       "price": 14900,
       "memberPrice": 13410,
       "badge": null,
       "visible": true,
-      "sort": 32,
-      "detail": "모든 길에서 안전과 평안을 기원하는 부적입니다. 출퇴근과 여행, 매일 오가는 길이 언제나 무탈하기를 바라는 마음을 담아 가까이 간직해보세요.",
-      "hanjaPhrase": "出入平安",
+      "sort": 24,
+      "detail": "자동차를 이용하는 모든 길에서 안전을 기원하는 부적입니다. 운전자와 동승자 모두가 조심하고 배려하며 무사히 목적지에 도착하기를 기원합니다.",
+      "hanjaPhrase": "車路平安",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_health",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "질병부적",
+      "cardCopy": "건강하고 활기찬 일상을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 25,
+      "detail": "자신과 가족의 건강을 소중히 여기며 평안한 생활을 바라던 전통적 의미를 담은 부적입니다. 몸과 마음을 잘 돌보며 활기찬 일상을 이어가기를 기원합니다.",
+      "hanjaPhrase": "無病長壽",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_guard",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "액막이부적",
+      "cardCopy": "나쁜 기운과 액운을 멀리하고 평안을 기원합니다.",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 26,
+      "detail": "액막이부적은 일상에 찾아올 수 있는 액운과 불길한 기운을 멀리하기를 바라는 전통 부적입니다. 걱정과 어려움 없이 자신과 가족이 평온하고 안정된 생활을 이어가기를 기원합니다.",
+      "hanjaPhrase": "消厄平安",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_move",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "이사대길부적",
+      "cardCopy": "새로운 보금자리의 평안을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 27,
+      "detail": "새로운 집으로 이사하거나 새로운 출발을 준비하는 분들을 위한 부적입니다. 새로운 공간에서 좋은 인연과 행복한 일상이 시작되기를 기원합니다.",
+      "hanjaPhrase": "移徙大吉",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_fire",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "화재예방부적",
+      "cardCopy": "가정과 사업장의 안전을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 28,
+      "detail": "소중한 집과 사업장이 안전하고 평안하기를 바라는 부적입니다. 화재에 대한 경각심을 갖고 안전한 생활환경을 유지하기를 기원합니다.",
+      "hanjaPhrase": "防火平安",
+      "googleProductId": ""
+    },
+    {
+      "id": "t_ghost",
+      "kind": "talisman",
+      "character": "cheongung",
+      "group": "평안·보호",
+      "title": "잡귀소멸부적",
+      "cardCopy": "나쁜 기운의 해소와 평안을 기원합니다",
+      "price": 14900,
+      "memberPrice": 13410,
+      "badge": null,
+      "visible": true,
+      "sort": 29,
+      "detail": "전통적으로 잡귀와 불길한 기운을 멀리하기를 바라며 사용하던 부적입니다. 걱정과 불안을 덜고 평온한 마음으로 일상을 보내기를 기원합니다.",
+      "hanjaPhrase": "辟邪淸淨",
       "googleProductId": ""
     }
   ],
@@ -708,14 +964,15 @@
   "subscription": {
     "monthly": {
       "id": "premium_monthly",
-      "price": 9900,
+      "price": 6900,
       "googleBasePlanId": "monthly"
     },
     "yearly": {
       "id": "premium_yearly",
-      "price": 79000,
+      "price": 59000,
       "googleBasePlanId": "yearly",
-      "note": "33.5% 할인"
+      "note": "약 29% 할인",
+      "listPrice": 82800
     },
     "googleProductId": "",
     "memberDiscountRate": 0.1
@@ -740,74 +997,84 @@
   },
   "banners": [
     {
-      "id": "b_jeongtong",
-      "title": "정통운세",
-      "copy": "사주로 풀어보는 나의 타고난 운명과 현재 흐름",
-      "link": "/product/jeongtong",
-      "character": "cheongung"
-    },
-    {
-      "id": "b_newyear",
-      "title": "신년운세",
-      "copy": "2027년 나의 운은 어떻게 흘러갈까?",
-      "link": "/product/newyear",
-      "character": "cheongung"
-    },
-    {
-      "id": "b_pyeongsaeng",
-      "title": "평생운세",
-      "copy": "내가 타고난 운명과 인생의 흐름",
-      "link": "/product/pyeongsaeng",
-      "character": "cheongung"
-    },
-    {
-      "id": "b_wealth",
-      "title": "재물운",
-      "copy": "내 재물운이 좋아지는 시기는 언제일까?",
-      "link": "/product/wealth",
-      "character": "cheongung"
-    },
-    {
       "id": "b_love",
       "title": "애정운",
       "copy": "나에게 찾아올 사랑과 인연은?",
       "link": "/product/love",
-      "character": "wolha"
+      "character": "wolha",
+      "image": "banner_love"
     },
     {
-      "id": "b_career",
-      "title": "직장운",
-      "copy": "승진·이직, 나에게 기회가 오는 시기는?",
-      "link": "/product/career",
-      "character": "cheongung"
+      "id": "b_wealth",
+      "title": "재물운",
+      "copy": "돈복과 재물의 흐름은?",
+      "link": "/product/wealth",
+      "character": "cheongung",
+      "image": "banner_wealth"
     },
     {
-      "id": "b_business",
-      "title": "사업운",
-      "copy": "내 사업은 어떻게 흘러갈까?",
-      "link": "/product/business",
-      "character": "cheongung"
+      "id": "b_daewoon",
+      "title": "대운",
+      "copy": "인생의 큰 흐름과 전환점은?",
+      "link": "/product/daewoon",
+      "character": "cheongung",
+      "image": "banner_daewoon"
     },
     {
-      "id": "b_tojeong",
-      "title": "토정비결",
-      "copy": "올해의 운세를 전통 방식으로 풀어보세요.",
-      "link": "/product/tojeong",
-      "character": "cheongung"
+      "id": "b_jeongtong",
+      "title": "정통운세",
+      "copy": "내 사주의 전체적인 흐름은?",
+      "link": "/product/jeongtong",
+      "character": "cheongung",
+      "image": "banner_jeongtong"
+    },
+    {
+      "id": "b_newyear",
+      "title": "신년운세",
+      "copy": "다가올 한 해, 나의 운세는?",
+      "link": "/product/newyear",
+      "character": "cheongung",
+      "image": "banner_newyear"
     },
     {
       "id": "b_gunghap",
       "title": "정통궁합",
-      "copy": "우리 두 사람은 얼마나 잘 맞을까?",
+      "copy": "우리의 인연과 궁합은?",
       "link": "/product/gunghap",
-      "character": "wolha"
+      "character": "wolha",
+      "image": "banner_gunghap"
+    },
+    {
+      "id": "b_tojeong",
+      "title": "토정비결",
+      "copy": "한 해의 길흉과 조언은?",
+      "link": "/product/tojeong",
+      "character": "cheongung",
+      "image": "banner_tojeong"
     },
     {
       "id": "b_talisman",
       "title": "소원부적",
-      "copy": "나의 소원을 담은 맞춤 부적",
-      "link": "/talisman",
-      "character": "cheongung"
+      "copy": "간절한 소원을 이루는 부적",
+      "link": "/talisman/t_wish",
+      "character": "cheongung",
+      "image": "banner_talisman"
+    },
+    {
+      "id": "b_pyeongsaeng",
+      "title": "평생운세",
+      "copy": "내 인생의 전체 흐름은?",
+      "link": "/product/pyeongsaeng",
+      "character": "cheongung",
+      "image": "banner_pyeongsaeng"
+    },
+    {
+      "id": "b_tarot",
+      "title": "오늘의 타로",
+      "copy": "오늘, 나에게 전하는 메시지",
+      "link": "/tarot",
+      "character": "wolha",
+      "image": "banner_tarot"
     }
   ],
   "fun": [
@@ -821,28 +1088,28 @@
     {
       "id": "star",
       "title": "별자리 운세",
-      "copy": "별자리가 알려주는 오늘의 운",
+      "copy": "별자리가 알려주는 오늘의 운세는?",
       "hanja": "星",
       "link": "/fun/zodiac-star"
     },
     {
       "id": "blood",
       "title": "혈액형 운세",
-      "copy": "혈액형으로 보는 오늘의 운",
+      "copy": "혈액형으로 보는 오늘의 운세는?",
       "hanja": "血",
       "link": "/fun/blood"
     },
     {
       "id": "mbti",
       "title": "MBTI 사주",
-      "copy": "MBTI와 사주로 알아보는 진짜 나의 성격",
+      "copy": "MBTI와 사주로 알아보는 진짜 나의 성격은?",
       "hanja": "性",
       "link": "/fun/mbti"
     },
     {
       "id": "factbomb",
       "title": "MZ 팩폭 사주",
-      "copy": "뼈 때리는 나의 찐 성격",
+      "copy": "MZ 감성으로 보는 솔직한 나의 사주는?",
       "hanja": "骨",
       "link": "/fun/factbomb"
     },
@@ -856,14 +1123,14 @@
     {
       "id": "small",
       "title": "스몰사주",
-      "copy": "한 장으로 보는 나의 사주 요약",
+      "copy": "간단하게 보는 나의 사주!",
       "hanja": "小",
       "link": "/fun/small"
     },
     {
       "id": "oneline",
       "title": "한줄사주",
-      "copy": "오늘 나에게 건네는 한 줄",
+      "copy": "오늘의 한 줄 조언은?",
       "hanja": "一",
       "link": "/fun/oneline"
     }
@@ -905,10 +1172,10 @@
       "group": "주제별 타로",
       "title": "연애 타로",
       "cardCopy": "그 사람의 마음, 카드 세 장으로 들여다봐요",
-      "price": 9900,
-      "memberPrice": 8910,
+      "price": 3000,
+      "memberPrice": 2700,
       "thumbHanja": "戀",
-      "badge": "인기",
+      "badge": null,
       "visible": true,
       "sort": 0,
       "cards": 3,
@@ -925,8 +1192,8 @@
       "group": "주제별 타로",
       "title": "재물 타로",
       "cardCopy": "돈의 흐름과 들어올 때를 카드로 봐요",
-      "price": 9900,
-      "memberPrice": 8910,
+      "price": 3000,
+      "memberPrice": 2700,
       "thumbHanja": "財",
       "badge": null,
       "visible": true,
@@ -945,8 +1212,8 @@
       "group": "주제별 타로",
       "title": "일·직장 타로",
       "cardCopy": "이직·승진·새 일, 지금 선택의 방향은?",
-      "price": 9900,
-      "memberPrice": 8910,
+      "price": 3000,
+      "memberPrice": 2700,
       "thumbHanja": "職",
       "badge": null,
       "visible": true,
@@ -965,10 +1232,10 @@
       "group": "주제별 타로",
       "title": "재회 타로",
       "cardCopy": "다시 이어질 수 있을까, 카드가 답해요",
-      "price": 9900,
-      "memberPrice": 8910,
+      "price": 3000,
+      "memberPrice": 2700,
       "thumbHanja": "再",
-      "badge": "HOT",
+      "badge": null,
       "visible": true,
       "sort": 3,
       "cards": 3,
@@ -985,8 +1252,8 @@
       "group": "스프레드",
       "title": "과거·현재·미래",
       "cardCopy": "세 장으로 보는 내 이야기의 흐름",
-      "price": 9900,
-      "memberPrice": 8910,
+      "price": 3000,
+      "memberPrice": 2700,
       "thumbHanja": "三",
       "badge": null,
       "visible": true,
@@ -1005,10 +1272,10 @@
       "group": "스프레드",
       "title": "켈틱 크로스",
       "cardCopy": "열 장으로 깊이 읽는 한 가지 고민",
-      "price": 19000,
-      "memberPrice": 17100,
+      "price": 4900,
+      "memberPrice": 4410,
       "thumbHanja": "十",
-      "badge": "NEW",
+      "badge": null,
       "visible": true,
       "sort": 11,
       "cards": 10,
@@ -1031,7 +1298,7 @@
       "id": "palm",
       "kind": "photo",
       "character": "cheongung",
-      "group": "사진으로 보는",
+      "group": "사진운세",
       "title": "손금 풀이",
       "cardCopy": "손바닥 사진 한 장으로 보는 나의 손금",
       "price": 9900,
@@ -1045,7 +1312,7 @@
       "id": "face",
       "kind": "photo",
       "character": "cheongung",
-      "group": "사진으로 보는",
+      "group": "사진운세",
       "title": "관상 풀이",
       "cardCopy": "얼굴 사진 한 장으로 보는 나의 관상",
       "price": 9900,
@@ -1054,29 +1321,47 @@
       "badge": "NEW",
       "visible": true,
       "sort": 1
+    },
+    {
+      "id": "baby",
+      "kind": "photo",
+      "character": "wolha",
+      "group": "사진운세",
+      "title": "2세 얼굴보기",
+      "cardCopy": "우리 아이는 어떤 모습일까요? 두 사람의 인연으로 보는 2세의 얼굴을 확인해보세요.",
+      "price": 4900,
+      "memberPrice": 4410,
+      "thumbHanja": "子",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 2,
+      "googleProductId": "",
+      "resultTitle": "월하선녀가 그려 드린 우리 아이 얼굴"
     }
   ],
   "categories": [
     {
       "id": "all",
-      "label": "전체"
+      "label": "전체",
+      "icon": "cat_all"
     },
     {
       "id": "fate",
-      "label": "천궁도사",
-      "sub": "나만의 운명",
+      "label": "운명·사주",
+      "sub": "사주로 풀어보는 나의 타고난 운명과 인생의 흐름",
       "character": "cheongung",
       "groups": [
         "나의 운명",
         "재물과 성공",
         "중요한 선택",
         "올해의 운세"
-      ]
+      ],
+      "icon": "cat_fate"
     },
     {
       "id": "love",
-      "label": "월하선녀",
-      "sub": "나만의 인연",
+      "label": "연애·궁합",
+      "sub": "나의 사랑과 인연, 두 사람의 특별한 이야기를 풀어드립니다.",
       "character": "wolha",
       "groups": [
         "나의 사랑",
@@ -1084,21 +1369,45 @@
         "다시 이어지는 인연",
         "새로운 만남",
         "올해의 애정운"
-      ]
-    },
-    {
-      "id": "fun",
-      "label": "재미로 보는",
-      "sub": "무료"
+      ],
+      "icon": "cat_love"
     },
     {
       "id": "photo",
-      "label": "사진으로 보는",
-      "sub": "손금·관상"
+      "label": "사진운세",
+      "sub": "사진 한 장으로 나의 숨은 운명을 풀어드립니다.",
+      "icon": "cat_photo"
     }
   ],
   "discountDisplay": {
     "mode": "member",
     "note": "listPrice(정가)가 있으면 정가 대비 판매가 할인율, 없으면 회원가 할인율을 표시"
-  }
+  },
+  "popular": [
+    {
+      "id": "newyear",
+      "badge": "HOT"
+    },
+    {
+      "id": "jeongtong",
+      "badge": "BEST"
+    },
+    {
+      "id": "wealth",
+      "badge": "인기"
+    },
+    {
+      "id": "gunghap",
+      "badge": "인기"
+    },
+    {
+      "id": "daewoon",
+      "badge": "인기"
+    },
+    {
+      "id": "pyeongsaeng",
+      "badge": "인기"
+    }
+  ],
+  "catalogVersion": 2
 }

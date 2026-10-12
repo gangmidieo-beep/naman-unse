@@ -7,6 +7,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 import './styles/pages.css';
 import './styles/v3.css';
+import './styles/v4.css';
 import { App } from './App';
 import { loadServerCatalog } from './lib/catalog';
 import { useApp } from './store/app';

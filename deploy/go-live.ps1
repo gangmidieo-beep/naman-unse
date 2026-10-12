@@ -25,6 +25,9 @@ $akey = (Plain (Read-Host "Anthropic API 키 (없으면 엔터)" -AsSecureString
 $model = "claude-sonnet-5-5"
 if ($akey) { $m = (Read-Host "사용할 모델 (엔터 = $model)").Trim(); if ($m) { $model = $m } }
 
+Write-Host "`n2세 얼굴보기용 Google Gemini API 키 (aistudio.google.com > Get API key). 비우면 2세 얼굴보기는 '준비 중'으로 막혀요." -ForegroundColor Yellow
+$gkey = (Plain (Read-Host "Gemini API 키 (없으면 엔터)" -AsSecureString)).Trim()
+
 Write-Host "`n[1/4] 도메인 연결 — 아래에 나오는 CNAME·TXT 값을 도메인 구입처 DNS 설정에 그대로 넣어 주세요" -ForegroundColor Yellow
 railway domain "www.$domain" --service www --port 8080; Check "웹 도메인"
 railway domain "api.$domain" --service server --port 8791; Check "서버 도메인"
@@ -32,7 +35,8 @@ railway domain "api.$domain" --service server --port 8791; Check "서버 도메�
 Write-Host "`n[2/4] 서버 설정 (실결제 모드)" -ForegroundColor Yellow
 $sv = @('--set', 'MOCK_MODE=false', '--set', 'APP_ENV=production', '--set', 'PG_PROVIDER=payapp', '--set', "PUBLIC_WEB_ORIGIN=$WEB", '--set', "API_ORIGIN=$API")
 if ($uid) { $sv += @('--set', "PAYAPP_USERID=$uid", '--set', "PAYAPP_LINKKEY=$lkey", '--set', "PAYAPP_LINKVAL=$lval") }
-if ($akey) { $sv += @('--set', 'READING_AI=live', '--set', "ANTHROPIC_API_KEY=$akey", '--set', "ANTHROPIC_MODEL=$model") }
+if ($akey) { $sv += @('--set', 'READING_AI=live', '--set', "ANTHROPIC_API_KEY=$akey", '--set', "ANTHROPIC_MODEL=$model", '--set', 'PHOTO_AI_MODEL=claude-sonnet-5-5') }
+if ($gkey) { $sv += @('--set', "GEMINI_API_KEY=$gkey") }
 railway variables --service server @sv; Check "서버 설정"
 
 Write-Host "`n[3/4] 웹 설정 (실결제 화면으로 다시 빌드)" -ForegroundColor Yellow

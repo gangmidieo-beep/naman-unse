@@ -1,21 +1,27 @@
-// 타로 탭 /tarot — 이 탭만 깊은 밤하늘(먹색→남보라) + 별가루 + 금 선. 오늘의 타로(무료) / 주제별 타로·스프레드(유료) / 내 타로 기록.
-// 안내 캐릭터 = 월하선녀(결정필요 D13). 보라 의상 이미지가 오면 _incoming/wolha_tarot.png 로 넣으면 자동 교체.
-import { useMemo, useState } from 'react';
+// 타로 탭 /tarot v4 (대표님 2차 수정) — 깊은 밤하늘 + 금 선. 머리 그림 → 오늘의 타로(무료, 실전 타로 테이블) → 주제별 타로·스프레드(그림 썸네일, 3,000원 / 켈틱 4,900원) → 나의 타로 기록
+// 실전 타로 테이블(TarotTable): 카드 섞기(효과음) → 테이블 위에 부채꼴로 펼침 → 직접 고르기 → 한 장씩 뒤집으며 해석 → 마지막 종합 메시지. 음소거 버튼.
+// 뽑히는 카드는 주문 번호(유료)·날짜+사주(오늘의 타로)로 미리 정해져 있어 다시 열어도 같다 — 사용자가 고른 순서대로 그 카드가 드러난다.
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { tarotDraw, tarotSpread, tarotSide, type TarotCard } from '@naman/content';
-import { AdSlot, Button, ProductCard, toCardItem } from '../components/ui';
+import { AdSlot, ProductCard, toCardItem } from '../components/ui';
 import { Img } from '../components/Img';
+import { Icon } from '../components/Icon';
 import { useRewarded } from '../components/Rewarded';
-import { optionalImg } from '../assets/images';
-import { BRAND, TAROTS, displayTitle, productById, type TarotProduct } from '../lib/catalog';
+import { optionalImg, v4 } from '../assets/images';
+import { TAROTS, BRAND, displayTitle, productById, type TarotProduct } from '../lib/catalog';
 import { isUnlockedToday, useApp, useMainProfile, usePremium } from '../store/app';
 import { koDate } from '../lib/dates';
 import { track } from '../lib/track';
+import { sfx, setSoundOff, soundOff } from '../lib/sound';
 import { ShareBlock, useShare } from './Fun';
 
-type Drawn = { card: TarotCard; reversed: boolean };
+export type Drawn = { card: TarotCard; reversed: boolean };
+const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI'];
+const SUIT = { wands: { icon: 'flame', ko: '완드', theme: '열정과 행동' }, cups: { icon: 'wine', ko: '컵', theme: '감정과 관계' }, swords: { icon: 'sword', ko: '소드', theme: '생각과 결단' }, pentacles: { icon: 'pentagon', ko: '펜타클', theme: '재물과 현실' } } as const;
+const MAJOR_ICON: Record<string, string> = { 'major-17': 'star', 'major-18': 'moon', 'major-19': 'sun', 'major-10': 'refresh-cw', 'major-06': 'heart', 'major-01': 'wand-sparkles' };
 
-function Guide({ children }: { children: string }) {
+function Guide({ children }: { children: ReactNode }) {
   const img = optionalImg('wolha_tarot');
   return (
     <div className="tguide">
@@ -25,10 +31,151 @@ function Guide({ children }: { children: string }) {
   );
 }
 
-// 카드 앞면 — 이미지(_incoming/tarot_<id>)가 있으면 이미지, 없으면 금 한자 + 영문명
+// 카드 뒷면 — 남색 바탕 금색 달·별 문양
+export function CardBack() {
+  return (
+    <svg viewBox="0 0 100 160" className="tback" aria-hidden>
+      <rect x="4" y="4" width="92" height="152" rx="7" fill="none" stroke="#D9B45A" strokeWidth="1.6" />
+      <rect x="9" y="9" width="82" height="142" rx="5" fill="none" stroke="#D9B45A" strokeWidth=".6" opacity=".7" />
+      <circle cx="50" cy="80" r="27" fill="none" stroke="#D9B45A" strokeWidth="1" />
+      <circle cx="50" cy="80" r="33" fill="none" stroke="#D9B45A" strokeWidth=".5" strokeDasharray="2 3" />
+      <path d="M58 66a16 16 0 1 0 0 28a13 13 0 1 1 0-28z" fill="#E6C877" />
+      <path d="M50 22l2.4 7 7 2.4-7 2.4L50 41l-2.4-7-7-2.4 7-2.4z M50 119l2.4 7 7 2.4-7 2.4-2.4 7-2.4-7-7-2.4 7-2.4z" fill="#E6C877" />
+      {[[20, 20], [80, 20], [20, 140], [80, 140]].map(([x, y]) => <circle key={`${x}${y}`} cx={x} cy={y} r="1.6" fill="#E6C877" />)}
+      <path d="M14 80h6M80 80h6" stroke="#D9B45A" strokeWidth=".8" />
+    </svg>
+  );
+}
+// 카드 앞면 — 이미지(_incoming/tarot_<id>)가 있으면 이미지, 없으면 금테 + 번호 + 상징 아이콘 + 이름(한자 없음)
 export function TarotFace({ d }: { d: Drawn }) {
   const img = optionalImg(`tarot_${d.card.id}`);
-  return img ? <img src={img.src} alt="" className="tface" /> : <><span className={d.reversed ? 'rev' : ''}>{d.card.symbol}</span><small>{d.card.nameEn}</small></>;
+  if (img) return <img src={img.src} alt="" className={`tface${d.reversed ? ' rev' : ''}`} />;
+  const c = d.card as TarotCard & { arcana: string; suit: keyof typeof SUIT | null };
+  const icon = c.suit ? SUIT[c.suit].icon : MAJOR_ICON[c.id] ?? 'sparkles';
+  const num = c.suit ? c.nameKo.replace(/^\S+\s/, '') : ROMAN[+c.id.slice(-2)] ?? '';
+  return (
+    <div className={`tfront${d.reversed ? ' rev' : ''}`}>
+      <span className="num">{num}</span>
+      <span className="sym"><Icon name={icon} size={34} stroke={1.3} /></span>
+      <b>{c.nameKo}</b>
+      <small>{c.nameEn}</small>
+    </div>
+  );
+}
+
+function SoundToggle() {
+  const [off, setOff] = useState(soundOff());
+  return (
+    <button className="tsound" onClick={() => { setSoundOff(!off); setOff(!off); }} aria-label={off ? '효과음 켜기' : '효과음 끄기'} aria-pressed={!off}>
+      <Icon name={off ? 'volume-x' : 'volume-2'} size={20} />
+    </button>
+  );
+}
+
+// 실전 타로 테이블 — need 장을 직접 고른다. 다 고르면 자리마다 한 장씩 뒤집는다.
+const FAN = 22;
+export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: Drawn[]; need: number; positions?: string[]; onFlip?: (i: number) => void; onDone: () => void }) {
+  const [phase, setPhase] = useState<'ready' | 'shuffle' | 'spread' | 'reveal'>('ready');
+  const [picked, setPicked] = useState<number[]>([]); // 부채꼴 안의 위치
+  const [open, setOpen] = useState(0);
+  const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const shuffle = () => {
+    setPhase('shuffle');
+    sfx.shuffle();
+    setTimeout(() => setPhase('spread'), reduce ? 50 : 1500);
+  };
+  const pickedRef = useRef<number[]>([]); // 빠르게 여러 번 눌러도 최신 값으로 센다
+  const pick = (i: number) => {
+    const cur = pickedRef.current;
+    if (cur.includes(i) || cur.length >= need) return;
+    sfx.pick();
+    const next = [...cur, i];
+    pickedRef.current = next;
+    setPicked(next);
+    if (next.length === need) setTimeout(() => { sfx.place(); setPhase('reveal'); }, reduce ? 50 : 650);
+  };
+  const openRef = useRef(0);
+  const flip = (k: number) => {
+    if (k !== openRef.current) return;
+    openRef.current = k + 1;
+    sfx.flip();
+    onFlip?.(k);
+    const n = k + 1;
+    setOpen(n);
+    if (n === need) setTimeout(() => { sfx.finale(); onDone(); }, 900);
+  };
+  const flipAll = () => {
+    for (let k = openRef.current; k < need; k++) onFlip?.(k);
+    openRef.current = need;
+    sfx.flip();
+    setOpen(need);
+    setTimeout(() => { sfx.finale(); onDone(); }, 700);
+  };
+  return (
+    <div className={`ttable ph-${phase}`}>
+      <SoundToggle />
+      {phase === 'ready' || phase === 'shuffle' ? (
+        <div className="tdeck4">
+          <div className={`stack${phase === 'shuffle' ? ' go' : ''}`} aria-hidden>
+            {[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ ['--k' as string]: i }}><CardBack /></i>)}
+          </div>
+          <button className="tgold" onClick={shuffle} disabled={phase === 'shuffle'}>{phase === 'shuffle' ? '카드를 섞는 중…' : '카드 섞고 펼치기 ›'}</button>
+        </div>
+      ) : phase === 'spread' ? (
+        <>
+          <p className="tlead">마음속 질문을 떠올리며 <b>{need}장</b>을 골라 주세요 <em>{picked.length} / {need}</em></p>
+          <div className="tfan4" role="group" aria-label="펼쳐진 타로 카드">
+            {Array.from({ length: FAN }, (_, i) => {
+              const r = -32 + (64 / (FAN - 1)) * i;
+              const sel = picked.indexOf(i);
+              return (
+                <button key={i} className={`fc${sel >= 0 ? ' sel' : ''}`} style={{ ['--r' as string]: `${r}deg`, ['--d' as string]: `${i * 28}ms` }}
+                  onClick={() => pick(i)} disabled={sel >= 0} aria-label={sel >= 0 ? `${sel + 1}번째로 고른 카드` : `${i + 1}번째 카드 고르기`}>
+                  <CardBack />
+                  {sel >= 0 && <span className="no">{sel + 1}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="tlead">{open < need ? <>카드를 <b>순서대로 눌러</b> 뒤집어 보세요</> : '모든 카드가 펼쳐졌어요'}</p>
+          <div className={`tslots n${need}`}>
+            {cards.slice(0, need).map((d, k) => (
+              <button key={k} className={`slot${k < open ? ' open' : ''}${k === open ? ' next' : ''}`} onClick={() => flip(k)} disabled={k !== open}
+                aria-label={k < open ? `${positions?.[k] ?? ''} ${d.card.nameKo}${d.reversed ? ' 역방향' : ''}` : `${positions?.[k] ?? `${k + 1}번째`} 카드 뒤집기`}>
+                <div className="flipper"><div className="back"><CardBack /></div><div className="front">{k < open && <TarotFace d={d} />}</div></div>
+                {positions?.[k] && <em>{positions[k]}</em>}
+              </button>
+            ))}
+          </div>
+          {open < need && need > 1 && <div className="center"><button className="textlink tall" onClick={flipAll}>한 번에 모두 뒤집기</button></div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+// 마지막 종합 메시지 — 나온 카드 구성(메이저 수·수트·역방향)과 마지막 자리 카드로 만든다(무료 제공, 결정 2026-10-08)
+export function summaryOf(cards: Drawn[], topic?: 'love' | 'money' | 'work') {
+  const majors = cards.filter((d) => (d.card as any).arcana === 'major').length;
+  const rev = cards.filter((d) => d.reversed).length;
+  const suits: Record<string, number> = {};
+  for (const d of cards) { const s = (d.card as any).suit; if (s) suits[s] = (suits[s] ?? 0) + 1; }
+  const top = Object.entries(suits).sort((a, b) => b[1] - a[1])[0];
+  const last = cards[cards.length - 1];
+  const ls = tarotSide(last);
+  const lines: string[] = [];
+  if (cards.length > 1) {
+    if (majors >= Math.ceil(cards.length / 2)) lines.push(`메이저 카드가 ${majors}장이나 나왔어요. 지금은 작은 일보다 삶의 큰 흐름이 움직이는 때예요.`);
+    else if (majors > 0) lines.push(`메이저 카드 ${majors}장이 중심을 잡아 주고 있어요. 흐름의 방향은 이미 정해지고 있어요.`);
+    if (top && top[1] >= 2) lines.push(`${SUIT[top[0] as keyof typeof SUIT].ko} 카드가 많아요 — 이번 고민의 열쇠는 '${SUIT[top[0] as keyof typeof SUIT].theme}'에 있어요.`);
+    lines.push(rev === 0 ? '역방향 카드가 없어 기운이 막힘없이 흐르고 있어요.' : rev * 2 > cards.length ? '역방향 카드가 많아요. 서두르기보다 잠시 멈추어 마음을 정리할 때예요.' : '몇 장의 역방향 카드는 조심할 부분을 알려 주는 신호예요.');
+  }
+  lines.push(`마지막 카드 「${last.card.nameKo}」가 전하는 말 — ${ls.title}.`);
+  if (topic) lines.push(ls[topic]);
+  return { title: ls.title, lines, keywords: ls.keywords };
 }
 
 function TodayTarot() {
@@ -38,50 +185,25 @@ function TodayTarot() {
   const { run, modal } = useRewarded();
   const draw = useMemo(() => tarotDraw(new Date(), profile.id), [profile.id]);
   const dayKey = `tarot:${profile.id}`;
-  const saved = [0, 1, 2].find((i) => isUnlockedToday(unlocked, `${dayKey}:${i}`));
-  const [pickI, setPickI] = useState<number | null>(saved ?? null);
-  const [shuffled, setShuffled] = useState(saved != null);
-  const read = premium || isUnlockedToday(unlocked, `${dayKey}:read`);
+  const done = [0, 1, 2].some((i) => isUnlockedToday(unlocked, `${dayKey}:${i}`));
+  const read = isUnlockedToday(unlocked, `${dayKey}:read`);
   const share = useShare();
-  const choose = (i: number) => {
-    if (pickI != null) return;
-    setPickI(i);
-    unlock(`${dayKey}:${i}`);
-    track('content_view', { content: 'tarot' });
-  };
-  const c = pickI != null ? draw[pickI] : null;
+  const c = done ? draw[0] : null;
   const side = c ? tarotSide(c) : null;
   return (
     <section className="tsec" aria-label="오늘의 타로">
       <h2 className="thead"><small>TODAY'S CARD</small>오늘의 타로<em>무료</em></h2>
       <Guide>{c ? `${c.card.nameKo} 카드가 나왔어요. 오늘 당신에게 건네는 이야기를 들어 봐요.` : '마음을 가라앉히고, 끌리는 카드 한 장을 골라 봐요.'}</Guide>
-      {!shuffled ? (
-        <div className="tdeck">
-          <div className="stack" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ transform: `translate(${i * 2}px, ${-i * 2}px)` }} />)}</div>
-          <Button kind="gold" onClick={() => setShuffled(true)}>카드 섞고 펼치기</Button>
-        </div>
+      {!done ? (
+        <TarotTable cards={draw} need={1} onDone={() => { unlock(`${dayKey}:0`); track('page_view', { content: 'tarot' }); }} />
       ) : (
-        <div className={`tfan${c ? ' chosen' : ''}`}>
-          {draw.map((d, i) => {
-            const picked = pickI === i;
-            return (
-              <button key={i} className={`tcard f${i}${picked ? ' pick' : ''}`} onClick={() => choose(i)} disabled={pickI != null && !picked}
-                aria-label={picked ? `${d.card.nameKo}${d.reversed ? ' 역방향' : ''}` : `${i + 1}번째 카드 고르기`}>
-                <div className="flipper">
-                  <div className="back"><span>{['月', '星', '日'][i]}</span></div>
-                  <div className="front">{picked && <TarotFace d={d} />}</div>
-                </div>
-                {picked && <i className="ray" aria-hidden />}
-              </button>
-            );
-          })}
-        </div>
+        <div className="tslots n1 done"><div className="slot open"><div className="flipper"><div className="front"><TarotFace d={c!} /></div></div></div></div>
       )}
       {c && side && <p className="tname">{c.card.nameKo}<small>{c.card.nameEn} · {c.reversed ? '역방향' : '정방향'}</small></p>}
       {c && side && !read && (
         <div className="pad mt14">
-          <Button kind="gold" onClick={() => run(() => unlock(`${dayKey}:read`), 'tarot')}>✦ 카드의 이야기 듣기</Button>
-          <div className="adnote">짧은 광고 후 풀이가 열려요 · 프리미엄 회원은 광고 없음</div>
+          <button className="tgold" onClick={() => run(() => unlock(`${dayKey}:read`), 'tarot')}>✦ 카드의 이야기 듣기</button>
+          <div className="adnote">{premium ? '프리미엄 회원은 광고 없이 상세 해석까지 바로 열려요' : '짧은 광고 후 카드의 이야기가 열려요'}</div>
           {modal}
         </div>
       )}
@@ -90,12 +212,20 @@ function TodayTarot() {
           <div className="tread">
             <small>{side.keywords.join(' · ')}</small>
             <b>{side.title}</b>
-            {side.message.map((m) => <p key={m}>{m}</p>)}
-            <dl>
-              <dt>연애</dt><dd>{side.love}</dd>
-              <dt>금전</dt><dd>{side.money}</dd>
-              <dt>일</dt><dd>{side.work}</dd>
-            </dl>
+            <p>{side.message[0]}</p>
+            {premium ? (
+              <>
+                {side.message.slice(1).map((m) => <p key={m}>{m}</p>)}
+                <dl>
+                  <dt>연애</dt><dd>{side.love}</dd>
+                  <dt>금전</dt><dd>{side.money}</dd>
+                  <dt>일</dt><dd>{side.work}</dd>
+                </dl>
+                <p className="tprem">✦ 프리미엄 상세 해석 (하루 1회)</p>
+              </>
+            ) : (
+              <Link to="/premium" className="tlock"><b>✦ 연애·금전·일 상세 해석</b><span>프리미엄 회원은 매일 오늘의 카드 상세 해석을 받아요 ›</span></Link>
+            )}
           </div>
           <ShareBlock s={share} title="오늘의 타로" text={`오늘의 카드는 ${c.card.nameKo} — ${side.title}`} path="/tarot" id="tarot">
             <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 24, lineHeight: 1.4 }}>{c.card.nameKo} · {side.title}</p>
@@ -111,8 +241,8 @@ function Records() {
   const purchases = useApp((s) => s.purchases);
   const mine = purchases.filter((p) => p.productId.startsWith('tarot_') && p.status === 'paid');
   return (
-    <section className="tsec">
-      <h2 className="thead"><small>MY TAROT</small>내 타로 기록</h2>
+    <section className="tsec" id="records">
+      <h2 className="thead"><small>MY TAROT</small>나의 타로 기록</h2>
       {mine.length ? (
         <ul className="trec">
           {mine.map((p) => (
@@ -129,14 +259,14 @@ export default function TarotTab() {
   const owned = useApp((s) => s.purchases);
   const byGroup = (g: string) => TAROTS.filter((t) => t.group === g && t.visible !== false).sort((a, b) => a.sort - b.sort);
   return (
-    <main className="screen tarot-tab">
+    <main className="screen tarot-tab t4">
       <div className="stars" aria-hidden />
-      <header className="ttop"><small>月下仙女 · TAROT</small><h1>타로</h1><p>별빛 아래, 카드가 전하는 이야기</p></header>
+      <header className="thero"><img src={v4('tarot_header')} alt="" /><h1 className="sr-only">타로 — 별빛 아래, 카드가 전하는 이야기</h1></header>
       <TodayTarot />
       {BRAND.groups.tarot.map((g) => (
         <section className="tsec" key={g}>
           <h2 className="thead"><small>{g === '스프레드' ? 'SPREAD' : 'TOPIC'}</small>{g}</h2>
-          {byGroup(g).map((t) => <ProductCard key={t.id} c={toCardItem(t, owned.some((o) => o.productId === t.id))} mode="list" />)}
+          <div className="plist tlist">{byGroup(g).map((t) => <ProductCard key={t.id} c={toCardItem(t, owned.some((o) => o.productId === t.id))} mode="list" />)}</div>
         </section>
       ))}
       <Records />
@@ -145,26 +275,30 @@ export default function TarotTab() {
   );
 }
 
-// 유료 타로 결과 — 주문 번호 시드로 뽑은 카드 + 자리별 풀이. 주제별 타로는 주제 문장(연애·재물·일), 스프레드는 카드 메시지.
+// 유료 타로 결과 — 처음 열면 실전 타로 테이블에서 직접 고르고 뒤집기, 다 끝나면(또는 다시 열면) 자리별 풀이 + 종합 메시지
 const TOPIC: Record<string, 'love' | 'money' | 'work'> = { tarot_love: 'love', tarot_reunion: 'love', tarot_money: 'money', tarot_work: 'work' };
+const doneKey = (o: string) => `naman-tarot-done:${o}`;
+const wasDone = (o: string) => { try { return localStorage.getItem(doneKey(o)) === '1'; } catch { return false; } };
 export function TarotReading({ p, orderId }: { p: TarotProduct; orderId: string }) {
   const cards = useMemo(() => tarotSpread(`${orderId}:${p.id}`, p.cards), [orderId, p]);
-  const [open, setOpen] = useState(0);
+  const [done, setDone] = useState(() => wasDone(orderId));
+  const [shown, setShown] = useState(done ? cards.length : 0);
   const topic = TOPIC[p.id];
+  useEffect(() => { if (done) try { localStorage.setItem(doneKey(orderId), '1'); } catch { /* 저장 불가 */ } }, [done, orderId]);
+  const sum = done ? summaryOf(cards, topic) : null;
   return (
-    <div className="tarot-tab treading">
+    <div className="tarot-tab t4 treading">
       <div className="stars" aria-hidden />
-      <p className="tlead">카드를 한 장씩 눌러 뒤집어 보세요</p>
-      <div className={`tgrid n${p.cards}`}>
-        {cards.map((d, i) => (
-          <button key={i} className={`tcard sm${i < open ? ' pick' : ''}`} onClick={() => setOpen((n) => Math.max(n, i + 1))} aria-label={`${p.positions[i]} 카드`}>
-            <div className="flipper"><div className="back"><span>{i + 1}</span></div><div className="front">{i < open && <TarotFace d={d} />}</div></div>
-            <em>{p.positions[i]}</em>
-          </button>
-        ))}
-      </div>
-      {open < cards.length && <div className="pad"><Button kind="gold" onClick={() => setOpen(cards.length)}>모두 뒤집기</Button></div>}
-      {cards.slice(0, open).map((d, i) => {
+      {!done ? (
+        <TarotTable cards={cards} need={p.cards} positions={p.positions} onFlip={(k) => setShown((n) => Math.max(n, k + 1))} onDone={() => setDone(true)} />
+      ) : (
+        <div className={`tslots n${cards.length} done`}>
+          {cards.map((d, k) => (
+            <div key={k} className="slot open"><div className="flipper"><div className="front"><TarotFace d={d} /></div></div><em>{p.positions[k]}</em></div>
+          ))}
+        </div>
+      )}
+      {cards.slice(0, shown).map((d, i) => {
         const s = tarotSide(d);
         return (
           <section className="tread" key={i}>
@@ -175,6 +309,14 @@ export function TarotReading({ p, orderId }: { p: TarotProduct; orderId: string 
           </section>
         );
       })}
+      {sum && (
+        <section className="tsum">
+          <small>✦ 월하선녀의 종합 메시지 ✦</small>
+          <b>{sum.title}</b>
+          {sum.lines.map((l) => <p key={l}>{l}</p>)}
+          <p className="kw">{sum.keywords.map((k) => <span key={k}>#{k}</span>)}</p>
+        </section>
+      )}
     </div>
   );
 }

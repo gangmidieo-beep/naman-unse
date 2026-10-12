@@ -2,37 +2,61 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import effectsDb from '@naman/content/data/talisman-effects.json';
-import { SubHeader, SectionHeader } from '../components/layout';
-import { Button, CategoryTabs, EffectCard, ProductRow, StepList, StickyBuyBar, TalismanPaper, talismanTone, useToast } from '../components/ui';
+import { SubHeader } from '../components/layout';
+import { Icon } from '../components/Icon';
+import { v4 } from '../assets/images';
+import { Button, ProductRow, TalismanPaper, useToast } from '../components/ui';
 import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
-import { BRAND, CHAR, TALISMANS, buyLabel, charOf, productById, isTalisman, type Talisman } from '../lib/catalog';
+import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, won, type Talisman } from '../lib/catalog';
 import { newId, useApp, useMainProfile, usePremium } from '../store/app';
 import { saveImage } from '../lib/share';
 import { birthLabel } from './ProfileNew';
 
-type Eff = { effects: { icon: string; title: string; desc: string }[]; wishExamples: string[] };
+type Eff = { effects: { icon: string; title: string; desc: string }[]; targets?: string[]; wishExamples: string[] };
 const EFF = effectsDb as Record<string, Eff>;
+const GROUP_ICON: Record<string, string> = { 전체: 'layout-grid', '재물·성공': 'coins', '사랑·인연': 'heart', '소원·성취': 'flower-2', '평안·보호': 'shield' };
+type Sort = 'rec' | 'low' | 'high';
 
+// 부적 목록 v4 — 머리 그림 → 분류 탭 5개(전체·재물·성공·사랑·인연·소원·성취·평안·보호, 아이콘) → 정렬 → 부적 30종(실제 부적 그림 썸네일)
 export function TalismanList() {
   const [sp, setSp] = useSearchParams();
-  const groups = BRAND.groups.talisman;
-  const g = sp.get('g') && groups.includes(sp.get('g')!) ? sp.get('g')! : groups[0];
+  const groups = ['전체', ...BRAND.groups.talisman];
+  const g = sp.get('g') && groups.includes(sp.get('g')!) ? sp.get('g')! : '전체';
+  const [sort, setSort] = useState<Sort>('rec');
   const mine = useApp((s) => s.talismans);
+  const list = TALISMANS.filter((t) => t.visible !== false && (g === '전체' || t.group === g))
+    .sort((a, b) => (sort === 'low' ? a.price - b.price : sort === 'high' ? b.price - a.price : 0) || a.sort - b.sort);
   return (
     <>
       <SubHeader title="나만의 부적" sub="간절한 소망을 담은 나만의 부적" back={false} />
-      <main className="screen">
-        <CategoryTabs tabs={groups} value={g} onChange={(v) => setSp({ g: v }, { replace: true })} />
-        <p className="listhead">간절한 소망을 마음에 담아, 나를 위한 특별한 부적을 만들어 보세요.</p>
-        {TALISMANS.filter((t) => t.group === g).sort((a, b) => a.sort - b.sort).map((t) => (
-          <ProductRow key={t.id} p={t} owned={mine.some((m) => m.talismanId === t.id)} />
-        ))}
+      <main className="screen bj4">
+        <div className="bjhead">
+          <img src={v4('home_talisman')} alt="" />
+          <div className="tx"><small>WISH TALISMAN</small><h2>나만의 <b>부적</b></h2><p>좋은 기운이 함께하는<br />행복한 하루가 되시길 바랍니다.</p></div>
+        </div>
+        <div className="bjtabs" role="tablist" aria-label="부적 분류">
+          {groups.map((x) => (
+            <button key={x} role="tab" aria-selected={x === g} className={x === g ? 'on' : ''} onClick={() => setSp(x === '전체' ? {} : { g: x }, { replace: true })}>
+              <Icon name={GROUP_ICON[x]} size={24} /><span>{x}</span>
+            </button>
+          ))}
+        </div>
+        <div className="bjlisthead">
+          <h3>{g === '전체' ? '전체 부적' : g}<small>{list.length}종 · 좋은 기운이 늘 함께하길 바랍니다.</small></h3>
+          <select aria-label="정렬" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+            <option value="rec">추천순</option><option value="low">낮은 가격순</option><option value="high">높은 가격순</option>
+          </select>
+        </div>
+        <div className="plist">
+          {list.map((t) => <ProductRow key={t.id} p={t} owned={mine.some((m) => m.talismanId === t.id)} />)}
+        </div>
       </main>
     </>
   );
 }
 
+// 부적 상세 v4 — 금전재물부 시안 기준, 30종 같은 틀: 촛불 부적 공방 그림 → 부적 설명서 → 부적에 담긴 기원 3(아이콘 카드) → 이런 분께 추천합니다 → 사용 방법 3단계 → 하단 고정(정가·회원가·구매)
 export function TalismanDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
@@ -41,22 +65,43 @@ export function TalismanDetail() {
   if (!t || !isTalisman(t)) return <Navigate to="/talisman" replace />;
   const who = CHAR[charOf(t)];
   const eff = EFF[t.id];
+  const m = memberPrice(t);
+  const lead = (t.detail ?? '').split('. ')[0].replace(/\.$/, '') + '.';
   return (
     <>
-      <SubHeader title={t.title} sub="소원을 새기는 나만의 부적" />
-      <main className="screen no-tab sticky-pad">
-        <div className={`bjstage ${talismanTone(t)}`}><TalismanPaper t={t} size={2.35} /></div>
-        <div className="frame"><span className="lbl">부적 설명서</span><p className="body">{t.detail}</p></div>
-        <SectionHeader en="EFFECT" title={<>부적의 <em>효험</em></>} center />
-        {eff?.effects.map((e) => <EffectCard key={e.title} {...e} />)}
-        <StepList label="사용 방법" steps={[
-          { title: '소원 적기', desc: '이름·생년월일과 간절한 소원을 적어요' },
-          { title: '부적 완성', desc: `${who.name}가 소원을 담아 부적을 씁니다` },
-          { title: '부적함 보관 · 저장 · 선물', desc: '휴대폰에 저장하고 소중한 사람에게 선물해요' },
-        ]} />
-        <p className="note" style={{ margin: '18px 18px 0' }}>당신의 마음을 담아 완성하는 하나뿐인 부적 — 이름과 생년월일, 마음속 소원을 담아 나만의 부적을 완성합니다.</p>
+      <SubHeader title={t.title} sub={t.cardCopy} />
+      <main className="screen no-tab sticky-pad bjd4">
+        <div className="bjd-hero">
+          <img src={v4('talisman_hero')} alt="" />
+          <div className="papers" aria-hidden><TalismanPaper t={t} size={1.75} /></div>
+          <div className="tx"><h1>{t.title}</h1><p className="cp">{t.cardCopy}</p><p>{lead}</p></div>
+        </div>
+        <section className="frame bjd-desc"><span className="lbl">부적 설명서</span><p className="body">{t.detail}</p></section>
+        <h2 className="bjd-h">부적에 담긴 기원</h2>
+        <div className="bjd-effects">
+          {eff?.effects.map((e) => <div key={e.title}><span className="ic"><Icon name={e.icon} size={26} /></span><b>{e.title}</b><p>{e.desc}</p></div>)}
+        </div>
+        {eff?.targets && (
+          <>
+            <h2 className="bjd-h">이런 분께 추천합니다</h2>
+            <ul className="bjd-targets">{eff.targets.map((x) => <li key={x}><span aria-hidden>✓</span>{x}</li>)}</ul>
+          </>
+        )}
+        <h2 className="bjd-h">사용 방법</h2>
+        <ol className="pd-steps bjd-steps">
+          <li><span className="n">1</span><span className="ic"><Icon name="flame" size={26} /></span><b>소원 적기</b><span className="ds">이름과 생년월일, 간절한 소망을 한지에 적어 마음으로 빕니다.</span></li>
+          <li><span className="n">2</span><span className="ic"><Icon name="hand-helping" size={26} /></span><b>부적 완성</b><span className="ds">{who.name}가 정성으로 기운을 담아 부적을 완성합니다.</span></li>
+          <li><span className="n">3</span><span className="ic"><Icon name="landmark" size={26} /></span><b>보관·지참·봉안</b><span className="ds">지갑·서랍·사무실 등 소중한 곳에 보관하거나 휴대폰에 저장하세요.</span></li>
+        </ol>
+        <p className="bjd-note"><Icon name="sparkles" size={18} />당신의 마음을 담아 완성하는 하나뿐인 부적입니다. 좋은 기운이 늘 함께하길 바랍니다.</p>
       </main>
-      <StickyBuyBar p={t} premium={premium} label={buyLabel(t)} onBuy={() => nav(`/checkout/${t.id}`)} />
+      <div className="buy4 bjbuy">
+        <div className="pp">
+          {premium ? <><s>{won(t.price)}</s><b>{won(m)}</b><em>프리미엄 회원가</em></>
+            : <><span className="lbl">정가</span><b className="list">{won(t.price)}</b><span className="mem">회원가 <strong>{won(m)}</strong> · 10% 할인</span></>}
+        </div>
+        <button className="go" onClick={() => nav(`/checkout/${t.id}`)}>{buyLabel(t).replace(/\s*[–-]\s*[\d,]+원$/, '')} ›</button>
+      </div>
     </>
   );
 }

@@ -34,7 +34,10 @@ export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; m
   }
   if (o.kind === 'reading') {
     const [r] = await db.select({ id: S.readings.id }).from(S.readings).where(eq(S.readings.orderId, o.id));
-    if (!r) await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: o.productId, status: 'queued' });
+    // 사주 풀이만 AI 대기열로. 타로는 화면에서 카드로 풀고(done), 사진 상품은 사진을 올릴 때 만든다(waiting) — 엉뚱하게 사주 풀이 AI 비용이 나가지 않게
+    const [p] = await db.select({ kind: S.products.kind }).from(S.products).where(eq(S.products.id, o.productId));
+    const status = p?.kind === 'tarot' ? 'done' : p?.kind === 'photo' ? 'waiting' : 'queued';
+    if (!r) await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: o.productId, status, ...(status === 'done' ? { content: { local: 'tarot' } as any, doneAt: new Date() } : {}) });
   }
   return o;
 }

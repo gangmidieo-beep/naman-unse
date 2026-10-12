@@ -11,6 +11,7 @@ import { AdSlot, Button, CharacterBubble, PremiumLock, Stars, useToast } from '.
 import { ShareSheet } from '../components/ShareSheet';
 import { ShareCard } from '../components/ShareCard';
 import { useRewarded } from '../components/Rewarded';
+import { Icon } from '../components/Icon';
 import { isUnlockedToday, useApp, useMainProfile, usePremium, type Profile } from '../store/app';
 import { useSaju } from '../lib/fortune';
 import { koDate } from '../lib/dates';
@@ -142,6 +143,7 @@ export function BloodPage() {
 }
 
 /* ---------------- 꿈 해몽 ---------------- */
+const DREAM_ICON: Record<string, string> = { animal: 'bird', person: 'users', money: 'coins', nature: 'waves', body: 'heart-pulse', place: 'home', event: 'sparkles', object: 'gift' };
 export function DreamPage() {
   const premium = usePremium();
   const [q, setQ] = useState('');
@@ -158,6 +160,11 @@ export function DreamPage() {
     track('dream_search', { q: text, hits: r.hits.length });
   };
   const list = cat ? DREAMS.filter((d) => d.category === cat) : res?.hits ?? [];
+  // 프리미엄 상세 해몽은 하루 1회(대표님 표 2026-10-12) — 오늘 연 꿈은 다시 봐도 됨
+  const { unlocked, unlock } = useApp();
+  const openedToday = Object.keys(unlocked).filter((k) => k.startsWith('dream-detail:') && isUnlockedToday(unlocked, k));
+  const detailOpen = !!sel && openedToday.includes(`dream-detail:${sel.id}`);
+  const detailUsed = openedToday.length ? DREAMS.find((d) => `dream-detail:${d.id}` === openedToday[0])?.word ?? '다른 꿈' : null;
   const TONE = { good: '길몽', bad: '조심', neutral: '보통' } as Record<string, string>;
   return (
     <>
@@ -170,7 +177,7 @@ export function DreamPage() {
         </form>
         <div className="kw">{DREAM_POPULAR.map((k) => <button key={k} onClick={() => doSearch(k)}>{k}</button>)}</div>
         <div className="dcat">
-          {DREAM_CATS.map((c) => <button key={c.id} className={cat === c.id ? 'on' : ''} aria-pressed={cat === c.id} onClick={() => { setCat(cat === c.id ? null : c.id); setSel(null); setRes(null); }}><i aria-hidden>{c.hanja}</i>{c.label}</button>)}
+          {DREAM_CATS.map((c) => <button key={c.id} className={cat === c.id ? 'on' : ''} aria-pressed={cat === c.id} onClick={() => { setCat(cat === c.id ? null : c.id); setSel(null); setRes(null); }}><i aria-hidden><Icon name={DREAM_ICON[c.id] ?? 'sparkles'} size={20} /></i>{c.label}</button>)}
         </div>
         {sel ? (
           <>
@@ -182,7 +189,12 @@ export function DreamPage() {
                 {!premium && <div className="lock">✦ 프리미엄 — 꿈의 상황별 상세 해몽 · 오늘의 행동 조언</div>}
               </div>
             </section>
-            {premium ? (
+            {premium && !detailOpen ? (
+              <div className="freeresult center">
+                {detailUsed ? <p className="muted">상세 꿈 해몽은 <b>하루 1회</b>예요. 오늘은 「{detailUsed}」를 보셨어요. 내일 다시 열려요.</p>
+                  : <Button kind="gold" onClick={() => unlock(`dream-detail:${sel.id}`)}>✦ 상세 꿈 해몽 열기 (오늘 1회)</Button>}
+              </div>
+            ) : premium ? (
               <div className="freeresult">
                 <h2>상황별 상세 해몽</h2>
                 <div className="kv">{sel.details.map((d) => <div key={d.situation}><b>{d.situation}</b><span>{d.meaning}</span></div>)}<div><b>오늘의 조언</b><span>{sel.advice}</span></div></div>

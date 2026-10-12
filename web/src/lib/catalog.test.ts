@@ -13,8 +13,8 @@ describe('관리자 값 반영(서버 products 덮어쓰기)', () => {
     expect(priceView(p).rate).toBe(0);
   });
   it('기본 추천 부적 매핑 · 타로 버튼', () => {
-    expect(recommendFor('gunghap').map((t) => t.id)).toEqual(['t_couple']);
-    expect(recommendFor('jeongtong').map((t) => t.id)).toEqual(['t_wish', 't_luck']);
+    expect(recommendFor('gunghap').map((t) => t.id)).toEqual(['t_couple', 't_faith']);
+    expect(recommendFor('jeongtong').map((t) => t.id)).toEqual(['t_wish', 't_all']);
     expect(buyLabel(TAROTS[0])).toBe('타로 리딩 받기');
   });
 });

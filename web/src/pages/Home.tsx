@@ -1,17 +1,20 @@
-// 홈 v3 (도사 앱 레이아웃) — 헤더 → 오늘의 운세 카드 → 롤링 배너 → 재미로 보는 운세 2열 → 인기 상품(그리드형 가로 스크롤) → 타로 진입 → 부적 진입 → 알림 받기 → 광고
+// 홈 v4 (대표님 2차 수정) — 헤더 → 오늘의 운세 카드 → 프리미엄 안내 → 지금 많이 찾는 풀이(배너 10, 상품별 그림) → 재미로 보는 "운세"(그림 카드 8)
+// → 인기 풀이(6, 가로 스크롤) → 오늘의 타로(남보라 + 금색 카드 3장) → 나만의 부적 → 알림 받기 → 광고
 import { enablePush } from '../platform/native';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppHeader, SectionHeader } from '../components/layout';
-import { AdSlot, FreeCard, ProductCard, RollingBanner, TalismanPaper, TodayCard, toCardItem, useToast, type BannerItem } from '../components/ui';
+import { AdSlot, ProductCard, RollingBanner, TodayCard, toCardItem, useToast, type BannerItem } from '../components/ui';
+import { PremiumButton } from '../components/PremiumPopup';
 import { usePremium, useApp, useMainProfile } from '../store/app';
 import { useTodayFortune } from '../lib/fortune';
-import { ALL, BRAND, TALISMANS } from '../lib/catalog';
-import { optionalImg } from '../assets/images';
+import { BRAND, productById, type Product } from '../lib/catalog';
+import { THUMBS } from '../assets/thumbs';
+import { optionalImg, v4 } from '../assets/images';
 import { kstMonthDay } from '../lib/dates';
 import { api, MOCK_MODE } from '../lib/api';
 
-const LOCAL_BANNERS: BannerItem[] = BRAND.banners.map((b) => ({ ...b, img: optionalImg(`banner_${b.link.split('/').pop()}`)?.src }));
+const LOCAL_BANNERS: BannerItem[] = BRAND.banners.map((b) => ({ ...b, img: optionalImg(`banner_${b.link.split('/').pop()}`)?.src ?? v4(b.image) }));
 // 배너: 서버 연결 시 관리자에서 편집한 banners(slot=home), 아니면 brand.config 기본 10종
 function useBanners() {
   const [items, setItems] = useState(LOCAL_BANNERS);
@@ -23,8 +26,8 @@ function useBanners() {
   }, []);
   return items;
 }
-// 인기 상품: 배지(BEST·인기·HOT) 붙은 풀이·타로·사진 상품
-const POPULAR = ALL.filter((p) => p.kind !== 'talisman' && ['BEST', '인기', 'HOT'].includes((p as any).badge)).slice(0, 8);
+// 인기 풀이 6 (대표님 지정 순서·배지) — 그림은 인물 없는 상품 그림
+const POPULAR = BRAND.popular.map((x) => ({ p: productById(x.id) as Product, badge: x.badge })).filter((x) => x.p && x.p.visible !== false);
 
 export default function Home() {
   const { profile, isSample } = useMainProfile();
@@ -36,30 +39,48 @@ export default function Home() {
   return (
     <>
       <AppHeader />
-      <main className="screen">
-        <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine} />
+      <main className="screen home4">
+        {/* 처음이면 "자세히 보기" → 사주 정보 1회 입력(푸시 동의 포함) → 오늘의 운세 */}
+        <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine}
+          to={isSample ? '/profile/new?back=/today&first=1' : '/today'} />
+
+        {!premium && <PremiumButton />}
 
         <SectionHeader en="SPECIAL" title={<>지금 많이 찾는 <em>풀이</em></>} />
         <RollingBanner items={banners} />
 
-        <SectionHeader en="FOR FUN" title="재미로 보는 운세" desc="가볍게 즐기고, 새롭게 발견하는 나의 이야기" more={{ to: '/unse?cat=fun', label: '전체 보기' }} />
-        <div className="g2">
-          {BRAND.fun.map((x) => <FreeCard key={x.id} to={x.link} hanja={x.hanja} title={x.title} desc={x.copy} />)}
+        <SectionHeader en="FOR FUN" title={<>재미로 보는 <em>운세</em></>} desc="가볍게 즐기고, 새롭게 발견하는 나의 이야기" more={{ to: '/fun', label: '전체 보기' }} />
+        <div className="funcards">
+          {BRAND.fun.map((x) => (
+            <Link key={x.id} to={x.link} className="funcard">
+              <div className="im">{THUMBS[`fun_${x.id}`] && <img src={THUMBS[`fun_${x.id}`]} alt="" loading="lazy" width={480} height={240} />}</div>
+              <div className="tx"><b>{x.title}</b><span className="fb">무료</span><p>{x.copy}</p></div>
+            </Link>
+          ))}
         </div>
 
         <SectionHeader en="BEST" title={<>인기 <em>풀이</em></>} more={{ to: '/unse', label: '전체 보기' }} />
-        <div className="hs">{POPULAR.map((p) => <ProductCard key={p.id} c={toCardItem(p, purchases.some((o) => o.productId === p.id))} mode="scroll" />)}</div>
+        <div className="hs pop6">
+          {POPULAR.map(({ p, badge }) => <ProductCard key={p.id} c={{ ...toCardItem(p, purchases.some((o) => o.productId === p.id)), badge, img: v4(`pop_${p.id}`) }} mode="scroll" />)}
+        </div>
 
-        <Link to="/tarot" className="tarot-entry">
-          <div className="stars" aria-hidden />
-          <div className="tx"><small>TAROT</small><b>오늘의 타로</b><span>별빛 아래 카드 한 장, 오늘의 이야기를 들어 봐요</span></div>
-          <div className="cards" aria-hidden><i>月</i><i>星</i><i>日</i></div>
+        <Link to="/tarot" className="tarot-w" aria-label="오늘의 타로 — 오늘의 카드 뽑기">
+          <img src={v4("home_tarot")} alt="" />
+          <div className="tx">
+            <small>TAROT <i aria-hidden>✦</i></small>
+            <b>오늘의 타로</b>
+            <span>카드 한 장이 전하는<br />오늘의 메시지를 만나보세요</span>
+            <em>오늘의 카드 뽑기 ›</em>
+          </div>
         </Link>
 
-        <Link to="/talisman" className="bjentry">
-          <div className="in">
-            <TalismanPaper t={TALISMANS[8]} />
-            <div><small>WISH TALISMAN</small><b>나만의 부적</b><span>간절한 소망을 마음에 담아, 나를 위한 특별한 부적을 만들어 보세요.</span></div>
+        <Link to="/talisman" className="bj-w" aria-label="나만의 부적 만들기">
+          <img src={v4("home_talisman")} alt="" />
+          <div className="tx">
+            <small>WISH TALISMAN</small>
+            <b>나만의 부적</b>
+            <span>간절한 소원을 담아<br />나만의 부적을 만들어보세요.</span>
+            <em>나만의 부적 만들기 ›</em>
           </div>
         </Link>
 

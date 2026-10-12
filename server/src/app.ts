@@ -17,8 +17,9 @@ import { fulfillOrder, revokeOrder } from './services/payments/fulfill.ts';
 import { normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRequest } from './services/payments/payapp.ts';
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
+import { runDailyPush } from './services/push/daily.ts';
 import { liveAI } from './services/reading/generate.ts';
-import photoSample from '../../packages/content/data/photo-sample.json' with { type: 'json' };
+import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
 const API = () => process.env.API_ORIGIN || `http://localhost:${process.env.PORT || 8791}`;
@@ -142,7 +143,12 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const id = await needUser(req, rep);
     if (!id) return;
     const b = (req.body ?? {}) as { token?: string; consent?: boolean; time?: string };
-    await db.update(S.users).set({ pushToken: b.token ? String(b.token).slice(0, 400) : null, pushConsent: !!b.consent, pushTime: /^\d{2}:\d{2}$/.test(b.time ?? '') ? b.time : '07:00', platform: 'android' }).where(eq(S.users.id, id));
+    // 보낸 값만 바꾼다(운세함에서 알림 시간·켜고 끄기만 바꿀 때 토큰을 지우지 않게)
+    const set: Partial<typeof S.users.$inferInsert> = { platform: 'android' };
+    if (b.token !== undefined) set.pushToken = b.token ? String(b.token).slice(0, 400) : null;
+    if (b.consent !== undefined) set.pushConsent = !!b.consent;
+    if (b.time !== undefined) set.pushTime = /^\d{2}:\d{2}$/.test(b.time) ? b.time : '07:00';
+    await db.update(S.users).set(set).where(eq(S.users.id, id));
     return { ok: true };
   });
   app.get('/profiles', async (req, rep) => {
@@ -184,11 +190,49 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   });
   app.get('/ads', async () => db.select().from(S.adSettings));
   app.get('/categories', async () => db.select().from(S.categories).where(eq(S.categories.visible, true)).orderBy(asc(S.categories.tab), asc(S.categories.sort)));
-  // 손금·관상 사진 — 메모리에서만 처리하고 저장·로그하지 않는다. 지금은 예시 결과(mock). AI 비전 호출은 비용 보고 후 연결(11 단계 파이프라인).
+  // 사진운세 — 사진은 메모리에서만 처리하고 저장·로그하지 않는다(logLevel silent). 결과 글·2세 그림만 그 주문의 readings 에 보관.
+  // 결제한 주문(orderId)이 있고 AI 키가 있으면 실제 분석, 아니면 예시 결과. 같은 주문은 한 번 만든 결과를 다시 돌려준다(비용 보호).
+  const photoOrder = async (req: FastifyRequest, rep: FastifyReply, orderId: string, productId: string) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return null;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, orderId), eq(S.orders.userId, userId)));
+    if (!o || o.status !== 'paid' || o.productId !== productId) { rep.code(404).send({ error: '결제된 주문을 찾지 못했어요' }); return null; }
+    const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
+    return { o, r };
+  };
+  const saveResult = async (o: { id: string; profileId: string | null; productId: string }, r: { id: string } | undefined, content: unknown, model: string | null) => {
+    if (r) await db.update(S.readings).set({ status: 'done', content: content as any, model, doneAt: new Date() }).where(eq(S.readings.id, r.id));
+    else await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: o.productId, status: 'done', content: content as any, model, doneAt: new Date() });
+  };
+  const IMG = /^data:image\/(png|jpe?g|webp|heic|svg\+xml);base64,/;
   app.post('/photo/analyze', { bodyLimit: 8 * 1024 * 1024, logLevel: 'silent', config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
-    const { kind, image } = (req.body ?? {}) as { kind?: string; image?: string };
-    if ((kind !== 'palm' && kind !== 'face') || typeof image !== 'string' || !/^data:image\/(png|jpe?g|webp|heic|svg\+xml);base64,/.test(image)) return rep.code(400).send({ error: '사진 형식을 확인해 주세요' });
-    return photoSample[kind]; // image 변수는 여기서 버려진다(어디에도 쓰지 않음)
+    const { kind, image, orderId } = (req.body ?? {}) as { kind?: string; image?: string; orderId?: string };
+    if ((kind !== 'palm' && kind !== 'face') || typeof image !== 'string' || !IMG.test(image)) return rep.code(400).send({ error: '사진 형식을 확인해 주세요' });
+    if (!orderId) return samplePhoto(kind); // 예전 화면·시안: 예시 결과
+    const found = await photoOrder(req, rep, orderId, kind);
+    if (!found) return;
+    if ((found.r?.content as any)?.photo) return (found.r!.content as any).photo;
+    if (!photoLive()) { const res = samplePhoto(kind); await saveResult(found.o, found.r, { photo: res }, 'sample'); return res; }
+    try {
+      const res = await analyzePhoto(kind, image, http); // image 는 이 요청이 끝나면 버려진다
+      if ('error' in res) return rep.code(422).send({ error: kind === 'palm' ? '손바닥이 잘 보이게 밝은 곳에서 다시 찍어 주세요' : '얼굴 정면이 잘 보이게 다시 찍어 주세요', code: 'unclear' });
+      await saveResult(found.o, found.r, { photo: res }, process.env.PHOTO_AI_MODEL || 'claude-sonnet-5-5');
+      return res;
+    } catch { return rep.code(502).send({ error: '풀이가 잠시 지연되고 있어요. 조금 뒤 다시 시도해 주세요.' }); }
+  });
+  app.post('/photo/baby', { bodyLimit: 16 * 1024 * 1024, logLevel: 'silent', config: { rateLimit: { max: 6, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const { a, b, orderId } = (req.body ?? {}) as { a?: string; b?: string; orderId?: string };
+    if (typeof a !== 'string' || typeof b !== 'string' || !IMG.test(a) || !IMG.test(b)) return rep.code(400).send({ error: '두 사람의 사진을 확인해 주세요' });
+    if (!orderId) return sampleBaby();
+    const found = await photoOrder(req, rep, orderId, 'baby');
+    if (!found) return;
+    if ((found.r?.content as any)?.baby) return (found.r!.content as any).baby;
+    if (!babyLive()) return sampleBaby(); // 키 없음: 예시 그림(보관하지 않음 — 키가 들어오면 다시 만들 수 있게)
+    try {
+      const res = await generateBaby(a, b, http);
+      await saveResult(found.o, found.r, { baby: res }, process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image');
+      return res;
+    } catch { return rep.code(502).send({ error: '아이 얼굴을 그리는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.' }); }
   });
 
   /* ---------- 주문(결제) ----------
@@ -212,7 +256,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       return fulfillOrder(db, o);
     }
     // 실결제인데 AI 풀이가 꺼져 있으면 유료 풀이는 팔지 않는다(돈 받고 예시 풀이가 나가는 사고 방지). 부적·구독은 그대로 판매
-    if (kind === 'reading' && !liveAI()) return rep.code(503).send({ error: '풀이 서비스를 준비하고 있어요. 조금만 기다려 주세요.', code: 'reading_off' });
+    // 사주 풀이는 Claude, 손금·관상은 Claude(사진), 2세는 Gemini 키가 있어야 판매. 타로는 카드 풀이라 언제나 판매
+    const aiReady = p.kind === 'reading' ? liveAI() : p.kind === 'photo' ? (p.id === 'baby' ? babyLive() : photoLive()) : true;
+    if (kind === 'reading' && !aiReady) return rep.code(503).send({ error: '풀이 서비스를 준비하고 있어요. 조금만 기다려 주세요.', code: 'reading_off' });
     if (channel === 'google') {
       if (!playConfigured()) return rep.code(503).send({ error: 'Google Play 결제 준비 중이에요' });
       const [o] = await db.insert(S.orders).values(base).returning();
@@ -577,8 +623,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   });
   app.get(`${A}/audit`, { preHandler: guard('super') }, async () => db.select().from(S.auditLogs).orderBy(desc(S.auditLogs.createdAt)).limit(200));
 
-  // 예약 푸시 — 1분마다 도래한 캠페인을 발송 처리(FCM 연결 전 MOCK)
+  // 예약 푸시 — 1분마다 도래한 캠페인을 발송 처리(FCM 연결 전 MOCK) + 매일 아침 자동 푸시(사용자 알림 시간)
   const timer = setInterval(async () => {
+    await runDailyPush(db, http).catch((e) => app.log.warn(`[daily push] ${(e as Error).message}`));
     const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
     for (const c of due) {
       await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시

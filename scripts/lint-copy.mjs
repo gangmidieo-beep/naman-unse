@@ -71,7 +71,7 @@ for (const it of [...cat.fate, ...cat.love]) {
   each(d.contents, (t, p) => check(t, p, { sentence: false, maxLen: 34 }), `product-detail.${it.id}.contents`);
 }
 const te = load(D + 'talisman-effects.json');
-for (const it of cat.talisman) {
+for (const it of load('brand.config.json').talisman) {
   if (!te[it.id]) { errs.push(`talisman-effects: ${it.id} 없음`); continue; }
   te[it.id].effects.forEach((e, i) => check(e.desc, `talisman.${it.id}.${i}`, { voice: 'hamnida' }));
 }
@@ -104,7 +104,7 @@ for (const it of [...cat.fate, ...cat.love, ...brandCfg.tarot, ...brandCfg.photo
   if (!Array.isArray(d.target) || d.target.length !== 3) errs.push(`product-detail.${it.id}.target 3줄 아님`);
   each(d.target ?? [], (t, p) => check(t, p, { sentence: false, maxLen: 22 }), `product-detail.${it.id}.target`);
   check(d.why ?? '', `product-detail.${it.id}.why`, { voice: 'wolha', maxSentence: 45 });
-  if (!it.id.startsWith('tarot') && it.kind === 'photo') check(d.say, `product-detail.${it.id}.say`, { voice: 'cheongung' });
+  if (!it.id.startsWith('tarot') && it.kind === 'photo') check(d.say, `product-detail.${it.id}.say`, { voice: it.character });
   if (it.id.startsWith('tarot')) check(d.say, `product-detail.${it.id}.say`, { voice: 'wolha' });
 }
 const small = load(D + 'smallsaju.json');

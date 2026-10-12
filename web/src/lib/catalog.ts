@@ -70,12 +70,12 @@ export const buyLabel = (p: Product) => {
   return charOf(p) === 'cheongung' ? brand.buttons.cheongung[0] : brand.buttons.wolha[0];
 };
 export const resultTitle = (p: Product) =>
-  (p as any).resultTitle as string || isTarot(p) ? brand.resultTitles.tarot : isPhoto(p) ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : brand.resultTitles[charOf(p)];
+  ((p as any).resultTitle as string) || (isTarot(p) ? brand.resultTitles.tarot : isPhoto(p) ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : brand.resultTitles[charOf(p)]);
 // 결과 화면 아래 추천 부적(1~2개) — packages/content/data/talisman-map.json (서버 연결 시 관리자 값 우선)
 export function recommendFor(productId: string): Talisman[] {
   const own = (productById(productId) as any)?.recommend as string[] | undefined; // 관리자 값
   const rule = talismanMap.rules.find((r) => r.products.includes(productId));
-  return (own?.length ? own : rule?.talismans ?? ['t_luck']).slice(0, 2).map((id) => TALISMANS.find((t) => t.id === id)!).filter(Boolean);
+  return (own?.length ? own : rule?.talismans ?? ['t_all']).slice(0, 2).map((id) => TALISMANS.find((t) => t.id === id)!).filter(Boolean);
 }
 
 // 서버 연결 시: 관리자에서 고친 상품 값(이름·문구·가격·배지·노출·순서·이미지·버튼·결과 제목·추천 부적·상세 문구)을 앱 시작 때 덮어쓴다.

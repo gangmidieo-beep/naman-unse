@@ -1,17 +1,46 @@
 // 나의 운세함 — "개인 서재": 인사말 + 내 사주정보(일반 2개 / 프리미엄 무제한) · 나의 운명서 · 나의 인연서 · 나의 부적함 · 결제 내역 · 알림 설정 · 설정
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SubHeader, SectionHeader } from '../components/layout';
-import { BottomSheet, Button, TalismanPaper, useToast } from '../components/ui';
+import { SubHeader } from '../components/layout';
+import { Icon } from '../components/Icon';
+import { CardBack } from './Tarot';
+import { v4 } from '../assets/images';
+import type { ReactNode } from 'react';
+import { BottomSheet, Button, ProductThumb, TalismanPaper, useToast } from '../components/ui';
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
-import { BRAND, CHAR, charOf, displayTitle, isTarot, productById, won, type Talisman } from '../lib/catalog';
+import { BRAND, CHAR, charOf, displayTitle, isPhoto, isTarot, productById, thumbOf, won, type Product, type Talisman } from '../lib/catalog';
 import { api, MOCK_MODE } from '../lib/api';
 import { apiAuth, getPayments } from '../platform/payments';
+import { enablePush, syncPushPrefs } from '../platform/native';
 import { birthLabel, hourLabel } from './ProfileNew';
 
 type Notice = { id: number; title: string; date: string; body: string };
 const VERSION = '0.3.0 (구조 v3)';
 const dot = (s: string) => s.slice(0, 10).replace(/-/g, '.');
+
+// 운세함 v4 (대표님 2차 시안) — 섹션 머리(영문 + 제목 + 산 그림 선), 항목 = 썸네일·이름·구매일 → 결과로 이동, 빈 칸 = 작은 아이콘 + 안내
+function LibSec({ en, title, id, children }: { en: string; title: ReactNode; id?: string; children?: ReactNode }) {
+  return (
+    <section className="libsec" id={id}>
+      <div className="lh"><small>{en}</small><h2>{title}</h2></div>
+      {children && <div className="lb">{children}</div>}
+    </section>
+  );
+}
+function Empty({ icon, text, to }: { icon: string; text: ReactNode; to?: string }) {
+  const body = <><span className="ic"><Icon name={icon} size={30} /></span><p>{text}</p>{to && <span className="chev">›</span>}</>;
+  return to ? <Link to={to} className="lib-empty">{body}</Link> : <div className="lib-empty">{body}</div>;
+}
+function BookRow({ o, p }: { o: { orderId: string; createdAt: string }; p: Product }) {
+  const t = thumbOf(p);
+  return (
+    <Link to={`/reading/${o.orderId}`} className="lib-book">
+      {t.src ? <img src={t.src} alt="" /> : <span className="hz">{t.hanja}</span>}
+      <div><b>{displayTitle(p)}</b><span className="d">{dot(o.createdAt)}</span><p>{p.cardCopy}</p></div>
+      <span className="chev">›</span>
+    </Link>
+  );
+}
 
 export default function Box() {
   const nav = useNavigate();
@@ -34,9 +63,9 @@ export default function Box() {
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   useEffect(() => { api<Notice[]>('/notices').then(setNotices).catch(() => setNotices([])); }, []);
   const books = s.purchases.filter((o) => o.kind === 'reading').map((o) => ({ o, p: productById(o.productId) })).filter((x) => x.p);
-  const fate = books.filter((x) => charOf(x.p!) === 'cheongung');
+  const fate = books.filter((x) => (charOf(x.p!) === 'cheongung' || isPhoto(x.p!)) && !isTarot(x.p!));
   const tarot = books.filter((x) => isTarot(x.p!));
-  const love = books.filter((x) => charOf(x.p!) === 'wolha' && !isTarot(x.p!));
+  const love = books.filter((x) => charOf(x.p!) === 'wolha' && !isTarot(x.p!) && !isPhoto(x.p!));
   const restore = async () => {
     const owned = await getPayments().restore();
     toast(owned.length ? '구매 내역을 되살렸어요' : '되살릴 구매 내역이 없어요');
@@ -46,65 +75,73 @@ export default function Box() {
   return (
     <>
       <SubHeader title="나의 운세함" sub="내 운세를 보관하는 개인 서재" back={false} right={premium ? <span className="badge new" title="프리미엄">✦</span> : null} />
-      <main className="screen">
-        <section className="boxhead mt14">
-          <small>MY LIBRARY</small>
-          <b>{isSample ? '반가워요' : `${profile.name}님`}, 오늘도 좋은 운이<br />함께 하기를 바랍니다.</b>
-          <div className="pf">
+      <main className="screen lib4">
+        <section className="lib-head">
+          <img src={v4('library_bg')} alt="" />
+          <div className="tx">
+            <small>MY LIBRARY</small>
+            <b>{isSample ? '반가워요' : `${profile.name}님`},<br />오늘도 좋은 운이<br />함께 하기를 바랍니다.</b>
+            <Link to={canAdd ? '/profile/new?back=/box' : '/premium'} className="add">+ 사주 추가하기{limit != null ? ` (${s.profiles.length}/${limit})` : ''}</Link>
+          </div>
+        </section>
+        {s.profiles.length > 0 && (
+          <div className="lib-pf">
             {s.profiles.map((p) => (
               <button key={p.id} className={p.id === s.mainId ? 'main' : ''} onClick={() => setSheet('profiles')}>{p.relation ?? (p.id === s.mainId ? '나' : p.name)} · {p.year}.{String(p.month).padStart(2, '0')}.{String(p.day).padStart(2, '0')}</button>
             ))}
-            <Link to={canAdd ? '/profile/new?back=/box' : '/premium'}>+ 사주 추가{limit != null ? ` (${s.profiles.length}/${limit})` : ''}</Link>
           </div>
-        </section>
+        )}
 
-        <SectionHeader en="DESTINY" title={<>나의 <em>운명서</em></>} style={{ marginTop: 26 }} />
-        {fate.length ? (
-          <div className="shelf">
-            {fate.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book f"><small>천궁도사</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
-          </div>
-        ) : <div className="shelf-empty">아직 운명서가 없어요. <Link to="/unse?cat=fate" className="u">나만의 운명 보기</Link></div>}
+        <LibSec en="DESTINY" title={<>나의 <em>운명서</em></>}>
+          {fate.length ? fate.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)
+            : <Empty icon="scroll-text" to="/unse?cat=fate" text={<>아직 운명서가 없어요.<br />나만의 운명서를 받아보세요.</>} />}
+        </LibSec>
+        <LibSec en="FATE" title={<>나의 <em>인연서</em></>}>
+          {love.length ? love.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)
+            : <Empty icon="heart-handshake" to="/unse?cat=love" text={<>아직 인연서가 없어요.<br />나만의 인연서를 받아보세요.</>} />}
+        </LibSec>
+        <LibSec en="TAROT" title={<>나의 <em>타로함</em></>}>
+          {tarot.length ? (
+            <div className="lib-tarot">
+              {tarot.map(({ o, p }) => (
+                <Link key={o.orderId} to={`/reading/${o.orderId}`}><div className="cd"><CardBack /></div><b>{p!.title}</b><span>{dot(o.createdAt)}</span></Link>
+              ))}
+            </div>
+          ) : <Empty icon="layers" to="/tarot" text={<>아직 타로 기록이 없어요.<br />나만의 타로를 받아보세요.</>} />}
+        </LibSec>
+        <LibSec en="TALISMAN" title={<>나의 <em>부적함</em></>} id="talismans">
+          {s.talismans.length ? (
+            <div className="lib-bj">
+              {s.talismans.map((t) => {
+                const tt = productById(t.talismanId) as Talisman | undefined;
+                if (!tt) return null;
+                return <Link key={t.id} to={`/talisman/${t.talismanId}/make?order=${t.orderId}`}><TalismanPaper t={tt} size={0.78} /><b>{tt.title}</b><span>{dot(t.issuedAt)}</span></Link>;
+              })}
+            </div>
+          ) : <Empty icon="gift" to="/talisman" text={<>아직 부적이 없어요.<br />나만의 부적을 받아보세요.</>} />}
+        </LibSec>
+        <LibSec en="PAYMENT" title="결제 내역">
+          {s.purchases.length ? (
+            <ul className="lib-pay">
+              {s.purchases.map((o) => {
+                const p = productById(o.productId);
+                return (
+                  <li key={o.orderId}>
+                    {p && <ProductThumb p={p} size={52} />}
+                    <div className="t"><b>{p ? displayTitle(p) : o.productId}</b><span>{dot(o.createdAt)} · {o.orderId}</span></div>
+                    <div className="r"><b>{won(o.price)}</b><span>{o.status === 'paid' ? '결제 완료' : '환불'}</span></div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : <Empty icon="file-text" text={<>결제 내역이 없어요.</>} />}
+        </LibSec>
 
-        <SectionHeader en="FATE" title={<>나의 <em>인연서</em></>} style={{ marginTop: 22 }} />
-        {love.length ? (
-          <div className="shelf">
-            {love.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book l"><small>월하선녀</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
-          </div>
-        ) : <div className="shelf-empty">아직 인연서가 없어요. <Link to="/unse?cat=love" className="u">나만의 인연 보기</Link></div>}
-
-        {tarot.length > 0 && <>
-          <SectionHeader en="TAROT" title={<>나의 <em>타로 기록</em></>} style={{ marginTop: 22 }} />
-          <div className="shelf">
-            {tarot.map(({ o, p }) => <Link key={o.orderId} to={`/reading/${o.orderId}`} className="book t"><small>타로</small><b>{displayTitle(p!)}</b><span>{dot(o.createdAt)}</span><em>다시 열어보기 ›</em></Link>)}
-          </div>
-        </>}
-
-        <SectionHeader en="TALISMAN" title={<>나의 <em>부적함</em></>} style={{ marginTop: 22 }} />
-        <div id="talismans" />
-        {s.talismans.length ? (
-          <div className="bjbox">
-            {s.talismans.map((t) => {
-              const tt = productById(t.talismanId) as Talisman;
-              return <Link key={t.id} to={`/talisman/${t.talismanId}/make?order=${t.orderId}`}><TalismanPaper t={tt} size={0.9} /><span>{tt.title}<br />{dot(t.issuedAt)}</span></Link>;
-            })}
-          </div>
-        ) : <div className="shelf-empty">아직 부적이 없어요. <Link to="/talisman" className="u">나만의 부적 보기</Link></div>}
-
-        <SectionHeader en="PAYMENT" title="결제 내역" style={{ marginTop: 22 }} />
-        {s.purchases.length ? (
-          <ul className="paylist">
-            {s.purchases.map((o) => {
-              const p = productById(o.productId);
-              return <li key={o.orderId}><div><b>{p ? displayTitle(p) : o.productId}</b><span>{dot(o.createdAt)} · 주문번호 {o.orderId}</span></div><div className="center"><b>{won(o.price)}</b><span>{o.status === 'paid' ? '결제 완료' : '환불'}</span></div></li>;
-            })}
-          </ul>
-        ) : <div className="shelf-empty">결제 내역이 없어요</div>}
-
-        <SectionHeader en="SETTINGS" title="알림 · 설정" style={{ marginTop: 22 }} />
+        <LibSec en="SETTINGS" title="알림 · 설정" />
         <ul className="menu">
-          <li><Link className="mrow" to="/premium"><span>구독</span><span className="v">{premium ? `✦ 프리미엄(${s.plan === 'yearly' ? '연간' : '월간'}) · ${s.planUntil}까지` : `일반 회원 · 월 ${won(BRAND.subscription.monthly.price)}`} ›</span></Link></li>
-          <li><div className="mrow"><span>오늘의 운세 알림</span><button className={`switch-ui${s.notifyOn ? ' on' : ''}`} role="switch" aria-checked={s.notifyOn} aria-label="오늘의 운세 알림" onClick={() => s.setNotify(!s.notifyOn)} /></div></li>
-          <li><label className="mrow"><span>알림 시간</span><input type="time" className="time-in" value={s.notifyTime} onChange={(e) => s.setNotify(s.notifyOn, e.target.value)} /></label></li>
+          <li><Link className="mrow" to="/premium"><span>구독</span><span className="v">{premium ? `✦ 프리미엄 · ${s.plan === 'yearly' ? `연 ${won(BRAND.subscription.yearly.price)}` : `월 ${won(BRAND.subscription.monthly.price)}`} · ${s.planUntil}까지` : '일반 회원 · 무료'} ›</span></Link></li>
+          <li><div className="mrow"><span>오늘의 운세 알림</span><button className={`switch-ui${s.notifyOn ? ' on' : ''}`} role="switch" aria-checked={s.notifyOn} aria-label="오늘의 운세 알림" onClick={async () => { const on = !s.notifyOn; if (on && (await enablePush(s.notifyTime)) === 'denied') { toast('휴대폰 설정에서 알림을 켜 주세요'); return; } s.setNotify(on); void syncPushPrefs(on, s.notifyTime); }} /></div></li>
+          <li><label className="mrow"><span>알림 시간</span><input type="time" className="time-in" value={s.notifyTime} onChange={(e) => { s.setNotify(s.notifyOn, e.target.value); void syncPushPrefs(s.notifyOn, e.target.value); }} /></label></li>
           <li><div className="mrow"><span>이벤트·혜택 알림</span><button className={`switch-ui${s.eventNotify ? ' on' : ''}`} role="switch" aria-checked={s.eventNotify} aria-label="이벤트 혜택 알림" onClick={() => s.setEventNotify(!s.eventNotify)} /></div></li>
           <li>
             <div className="mrow"><span>글자 크기</span>

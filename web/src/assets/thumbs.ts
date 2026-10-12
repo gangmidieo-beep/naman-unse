@@ -1,4 +1,4 @@
-// scripts/make-images.mjs 가 만드는 파일 — 상품 id → 썸네일. 없는 상품은 먹색+금 한자로 대체. 직접 고치지 말 것.
+// scripts/crop-mockups.py 가 만드는 파일 — 상품 id → 썸네일(2차 시안에서 자름). 대표님 원본이 오면 _incoming 으로 교체. 직접 고치지 말 것.
 export const THUMBS: Partial<Record<string, string>> = {
   "jeongtong": "/img/thumb/thumb_jeongtong.webp",
   "pyeongsaeng": "/img/thumb/thumb_pyeongsaeng.webp",
@@ -9,6 +9,8 @@ export const THUMBS: Partial<Record<string, string>> = {
   "business": "/img/thumb/thumb_business.webp",
   "startup": "/img/thumb/thumb_startup.webp",
   "exam": "/img/thumb/thumb_exam.webp",
+  "moving": "/img/thumb/thumb_moving.webp",
+  "contract": "/img/thumb/thumb_contract.webp",
   "newyear": "/img/thumb/thumb_newyear.webp",
   "tojeong": "/img/thumb/thumb_tojeong.webp",
   "monthly": "/img/thumb/thumb_monthly.webp",
@@ -20,8 +22,25 @@ export const THUMBS: Partial<Record<string, string>> = {
   "couple": "/img/thumb/thumb_couple.webp",
   "spouse": "/img/thumb/thumb_spouse.webp",
   "reunion": "/img/thumb/thumb_reunion.webp",
-  "fun_tarot": "/img/thumb/thumb_fun_tarot.webp",
-  "fun_dream": "/img/thumb/thumb_fun_dream.webp",
+  "crush": "/img/thumb/thumb_crush.webp",
+  "solo": "/img/thumb/thumb_solo.webp",
+  "meeting": "/img/thumb/thumb_meeting.webp",
+  "loveyear": "/img/thumb/thumb_loveyear.webp",
+  "palm": "/img/thumb/thumb_palm.webp",
+  "face": "/img/thumb/thumb_face.webp",
+  "baby": "/img/thumb/thumb_baby.webp",
+  "tarot_love": "/img/thumb/thumb_tarot_love.webp",
+  "tarot_money": "/img/thumb/thumb_tarot_money.webp",
+  "tarot_work": "/img/thumb/thumb_tarot_work.webp",
+  "tarot_reunion": "/img/thumb/thumb_tarot_reunion.webp",
+  "tarot_spread3": "/img/thumb/thumb_tarot_spread3.webp",
+  "tarot_celtic": "/img/thumb/thumb_tarot_celtic.webp",
+  "fun_zodiac": "/img/thumb/thumb_fun_zodiac.webp",
+  "fun_star": "/img/thumb/thumb_fun_star.webp",
+  "fun_blood": "/img/thumb/thumb_fun_blood.webp",
   "fun_mbti": "/img/thumb/thumb_fun_mbti.webp",
-  "fun_factbomb": "/img/thumb/thumb_fun_factbomb.webp"
+  "fun_factbomb": "/img/thumb/thumb_fun_factbomb.webp",
+  "fun_dream": "/img/thumb/thumb_fun_dream.webp",
+  "fun_small": "/img/thumb/thumb_fun_small.webp",
+  "fun_oneline": "/img/thumb/thumb_fun_oneline.webp"
 };

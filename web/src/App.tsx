@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { exitApp, initNative } from './platform/native';
-import { useApp } from './store/app';
-import { ToastProvider } from './components/ui';
+import { useApp, usePremium } from './store/app';
+import { api, MOCK_MODE } from './lib/api';
+import { AdSlot, ToastProvider } from './components/ui';
 import { TabBar } from './components/layout';
 import { track } from './lib/track';
 import Home from './pages/Home';
@@ -11,7 +12,7 @@ import ProfileNew from './pages/ProfileNew';
 import DevComponents from './pages/DevComponents';
 import Today from './pages/Today';
 import { ZodiacDetail, ZodiacList } from './pages/Zodiac';
-import { UnseTab } from './pages/Catalog';
+import { FunList, UnseTab } from './pages/Catalog';
 import TarotTab from './pages/Tarot';
 import { Contact, Privacy, Terms } from './pages/Legal';
 import ProductDetail from './pages/ProductDetail';
@@ -30,15 +31,24 @@ const Admin = lazy(() => import('./admin/Admin')); // 관리자는 따로 불러
 const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev', '/product/', '/login', '/auth'];
 const noTab = (path: string) => NO_TAB.some((p) => path.startsWith(p)) || /^\/talisman\/[^/]+/.test(path);
 
-// 앱 종료 확인(안드로이드 홈에서 뒤로가기)
+// 앱 종료 확인(안드로이드 홈에서 뒤로가기) — 일반 회원은 종료 팝업 광고(관리자 "앱 종료 팝업" 배너 이미지가 있으면 그 이미지·링크, 없으면 AdMob 자리)
 function ExitSheet() {
   const [open, setOpen] = useState(false);
+  const premium = usePremium();
+  const [promo, setPromo] = useState<{ imageUrl: string | null; link: string | null; title: string } | null>(null);
   useEffect(() => { const on = () => setOpen(true); window.addEventListener('naman:exit', on); return () => window.removeEventListener('naman:exit', on); }, []);
+  useEffect(() => {
+    if (!open || premium || MOCK_MODE) return;
+    api<{ imageUrl: string | null; link: string | null; title: string }[]>('/banners?slot=exit_popup').then((r) => setPromo(r.find((b) => b.imageUrl) ?? null)).catch(() => {});
+  }, [open, premium]);
   if (!open) return null;
   return (
     <div className="sheet-bg" role="dialog" aria-modal="true" aria-label="앱 종료" onClick={() => setOpen(false)}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
+        {!premium && (promo?.imageUrl
+          ? <a href={promo.link ?? '#'} target="_blank" rel="noreferrer" className="exit-promo"><img src={promo.imageUrl} alt={promo.title} /></a>
+          : <AdSlot kind="앱 종료 팝업" slot="exit" />)}
         <h2 className="h2 center">나만의 운세를 종료할까요?</h2>
         <p className="muted center">내일 아침에도 오늘의 운세가 기다리고 있어요</p>
         <div className="mt14" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -76,6 +86,7 @@ export function App() {
           <Route path="/today" element={<Today />} />
           <Route path="/today/:field" element={<Navigate to="/today" replace />} />
           <Route path="/unse" element={<UnseTab />} />
+          <Route path="/fun" element={<FunList />} />
           <Route path="/tarot" element={<TarotTab />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />

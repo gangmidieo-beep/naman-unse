@@ -31,30 +31,30 @@ describe('공개 API', () => {
     for (const n of ['나', '배우자']) expect((await app.inject({ method: 'POST', url: '/profiles', headers: auth(token), payload: profile(n) })).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: '/profiles', headers: auth(token), payload: profile('자녀') })).statusCode).toBe(402);
   });
-  it('상품 26 + 부적 14 + 구독 2 + 배너 10', async () => {
+  it('상품 26 + 부적 30 + 구독 2 + 배너 10', async () => {
     const list = (await app.inject({ url: '/products' })).json() as any[];
     expect(list.filter((p) => p.kind === 'reading')).toHaveLength(26);
-    expect(list.filter((p) => p.kind === 'talisman')).toHaveLength(14);
+    expect(list.filter((p) => p.kind === 'talisman')).toHaveLength(30);
     expect(list.filter((p) => p.kind === 'subscription')).toHaveLength(2);
     expect((await app.inject({ url: '/banners?slot=home' })).json()).toHaveLength(10);
   });
-  it('v3: 타로 6·사진 2 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
+  it('v3: 타로 6·사진 3 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
     const list = (await app.inject({ url: '/products' })).json() as any[];
     expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(6);
-    expect(list.filter((p) => p.kind === 'photo')).toHaveLength(2);
+    expect(list.filter((p) => p.kind === 'photo')).toHaveLength(3);
     const wealth = list.find((p) => p.id === 'wealth');
     expect(wealth).toMatchObject({ tab: 'unse', category: 'fate', buttonLabel: '천궁도사의 상세풀이 받기', resultTitle: '천궁도사가 풀어드린 나의 운명서', recommend: ['t_wealth', 't_biz'] });
     expect(wealth.detailCopy.target).toHaveLength(3);
-    expect(list.find((p) => p.id === 't_wealth').buttonLabel).toBe('나만의 재물부적 받기 – 14,900원');
+    expect(list.find((p) => p.id === 't_wealth').buttonLabel).toBe('나만의 금전재물부적 받기 – 14,900원');
     expect(list.find((p) => p.id === 'tarot_celtic').meta.cards).toBe(10);
     const cats = (await app.inject({ url: '/categories' })).json() as any[];
-    expect(cats.filter((c) => c.tab === 'unse').map((c) => c.id)).toEqual(['fate', 'love', 'fun', 'photo']);
+    expect(cats.filter((c) => c.tab === 'unse').map((c) => c.id)).toEqual(['fate', 'love', 'photo']);
   });
   it('v3: 사진 분석 — 형식 검사, 결과만 돌려주고 저장 안 함', async () => {
     expect((await app.inject({ method: 'POST', url: '/photo/analyze', payload: { kind: 'palm', image: 'hello' } })).statusCode).toBe(400);
     const r = await app.inject({ method: 'POST', url: '/photo/analyze', payload: { kind: 'face', image: 'data:image/jpeg;base64,AAAA' } });
     expect(r.statusCode).toBe(200);
-    expect(r.json().sections).toHaveLength(5);
+    expect(r.json().sections).toHaveLength(7);
   });
   it('주문(mock) → 권한 → 구독 후 회원가 10%·사주 무제한', async () => {
     const o = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 'wealth' } });

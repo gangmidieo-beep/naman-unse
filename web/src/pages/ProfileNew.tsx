@@ -1,5 +1,6 @@
 // 사주 정보 입력 — 월하선녀가 한 칸씩 묻는 대화형(한 화면에 질문 하나).
 // 이름 → 성별 → 생년월일 → 양력 / 음력(평달) / 음력(윤달) → 태어난 시(모름) → (첫 실행) 푸시 알림 수신 동의 → 확인
+import { enablePush } from '../platform/native';
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { leapMonthOf, lunarToSolar, LUNAR_YEAR_MAX, LUNAR_YEAR_MIN } from '@naman/engine';
@@ -73,7 +74,7 @@ export default function ProfileNew() {
   };
   const back = () => (idx === 0 ? nav(-1) : setStep(steps[idx - 1]));
   const save = () => {
-    if (steps.includes('push')) setPushConsent(push);
+    if (steps.includes('push')) { setPushConsent(push); if (push) void enablePush(); }
     saveProfile({ ...p, name: p.name.trim() }, !editing && (first || sp.get('main') === '1'));
     toast(editing ? '정보를 고쳤어요' : `${p.name}님의 운세가 준비됐어요`);
     nav(sp.get('back') || '/', { replace: true });

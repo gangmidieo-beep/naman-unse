@@ -11,7 +11,7 @@ import { newId } from './auth.ts';
 
 const S = schema;
 // v3: 상품마다 탭·분류·버튼 문구·결과 제목·추천 부적·상세 문구
-const recommendOf = (id: string) => (talismanMap.rules.find((r) => r.products.includes(id))?.talismans ?? ['t_luck']).slice(0, 2);
+const recommendOf = (id: string) => (talismanMap.rules.find((r) => r.products.includes(id))?.talismans ?? ['t_all']).slice(0, 2);
 const TAB: Record<string, string> = { reading: 'unse', photo: 'unse', tarot: 'tarot', talisman: 'talisman' };
 function v3Fields(p: any) {
   const talismanBtn = () => {
@@ -20,7 +20,7 @@ function v3Fields(p: any) {
     return brand.buttons.talisman.replace('{name}', `${base}부적`).replace('{price}', `${p.price.toLocaleString('ko-KR')}원`);
   };
   const button = p.kind === 'talisman' ? talismanBtn() : p.kind === 'tarot' ? brand.buttons.tarot : p.kind === 'photo' ? brand.buttons.photo : (brand.buttons as any)[p.character][0];
-  const result = p.kind === 'tarot' ? brand.resultTitles.tarot : p.kind === 'photo' ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : p.kind === 'talisman' ? null : (brand.resultTitles as any)[p.character];
+  const result = p.resultTitle ?? (p.kind === 'tarot' ? brand.resultTitles.tarot : p.kind === 'photo' ? brand.resultTitles.photo.replace('{name}', p.title.replace(' 풀이', '')) : p.kind === 'talisman' ? null : (brand.resultTitles as any)[p.character]);
   return {
     tab: TAB[p.kind], category: p.kind === 'reading' ? (p.character === 'cheongung' ? 'fate' : 'love') : p.kind,
     listPrice: p.listPrice ?? null, showDiscount: true, buttonLabel: button, resultTitle: result,
@@ -28,6 +28,9 @@ function v3Fields(p: any) {
   };
 }
 export async function seedBase(db: Db) {
+  // 2차 수정(2026-10-08) 이전 DB 인지: 새 부적(t_jaesu)이 없으면 카탈로그 v2 로 한 번 맞춘다(아래 insert 전에 판단)
+  const needV2 = (await db.select({ id: S.products.id }).from(S.products).where(eq(S.products.id, 'jeongtong'))).length > 0
+    && (await db.select({ id: S.products.id }).from(S.products).where(eq(S.products.id, 't_jaesu'))).length === 0;
   const rows = [
     ...brand.fate.map((p) => ({ ...p, kind: 'reading' })),
     ...brand.love.map((p) => ({ ...p, kind: 'reading' })),
@@ -48,12 +51,13 @@ export async function seedBase(db: Db) {
     { id: 'today', kind: 'today', character: 'cheongung', group: '오늘의 운세', title: '오늘의 운세', cardCopy: '오늘 / 이번 주 / 이번 달', detail: null, price: 0, memberPrice: null, thumbHanja: '今', badge: null, visible: true, sort: 0, googleProductId: null, meta: null } as any,
   );
   await db.insert(S.products).values(rows).onConflictDoNothing();
+  if (needV2) await syncCatalogV2(db, rows);
   // v3 이전에 만든 DB: 새 칸이 비어 있는 상품만 채운다(관리자가 고친 값은 보존)
   for (const r of rows) if (r.tab) await db.update(S.products).set({ tab: r.tab, category: r.category, buttonLabel: r.buttonLabel, resultTitle: r.resultTitle, recommend: r.recommend, detailCopy: r.detailCopy }).where(and(eq(S.products.id, r.id), isNull(S.products.tab)));
   await db.insert(S.categories).values(brand.categories.filter((c) => c.id !== 'all').map((c: any, i) => ({ id: c.id, tab: 'unse', label: c.label, sub: c.sub ?? null, character: c.character ?? null, groups: c.groups ?? null, sort: i })))
     .onConflictDoNothing();
   await db.insert(S.categories).values(brand.groups.tarot.map((g, i) => ({ id: `tarot_${i}`, tab: 'tarot', label: g, sort: i }))).onConflictDoNothing();
-  await db.insert(S.banners).values(brand.banners.map((b, i) => ({ id: b.id, slot: 'home', title: b.title, copy: b.copy, link: b.link, character: b.character, sort: i, active: true }))).onConflictDoNothing();
+  await db.insert(S.banners).values(brand.banners.map((b, i) => ({ id: b.id, slot: 'home', title: b.title, copy: b.copy, link: b.link, character: b.character, imageUrl: `/img/v4/${b.image}.webp`, sort: i, active: true }))).onConflictDoNothing();
   await db.insert(S.banners).values({ id: 'exit_default', slot: 'exit_popup', title: '앱 종료 팝업', copy: 'AdMob 전면 광고', link: null, sort: 0, active: true }).onConflictDoNothing();
   await db.insert(S.adSettings).values([
     { slot: 'home_banner', enabled: brand.ads.homeBanner, config: { adsenseSlot: '' } },
@@ -63,6 +67,22 @@ export async function seedBase(db: Db) {
     { slot: 'content_banner', enabled: true, config: { adsenseSlot: '' } },
     { slot: 'tarot_banner', enabled: true, config: { adsenseSlot: '' } },
   ]).onConflictDoNothing();
+}
+
+// 카탈로그 v2(대표님 2차 수정): 정식 오픈 전이라 상품 값을 설정 파일 기준으로 다시 맞춘다 — 한 번만 실행
+// 부적 14 → 30종(빠진 부적은 숨김), 타로 3,000원, 구독 6,900/59,000, 운세 분류 4개, 홈 배너 10개(이미지 포함)
+async function syncCatalogV2(db: Db, rows: any[]) {
+  for (const r of rows) {
+    const { id, ...rest } = r;
+    await db.update(S.products).set({ ...rest, updatedAt: new Date() } as any).where(eq(S.products.id, id));
+  }
+  const ids = new Set(rows.map((r) => r.id));
+  const old = await db.select({ id: S.products.id, kind: S.products.kind }).from(S.products);
+  for (const o of old) if (o.kind === 'talisman' && !ids.has(o.id)) await db.update(S.products).set({ visible: false }).where(eq(S.products.id, o.id));
+  await db.delete(S.categories).where(eq(S.categories.tab, 'unse'));
+  await db.insert(S.categories).values(brand.categories.filter((c) => c.id !== 'all').map((c: any, i) => ({ id: c.id, tab: 'unse', label: c.label, sub: c.sub ?? null, character: c.character ?? null, groups: c.groups ?? null, sort: i })));
+  await db.delete(S.banners).where(eq(S.banners.slot, 'home'));
+  await db.insert(S.banners).values(brand.banners.map((b, i) => ({ id: b.id, slot: 'home', title: b.title, copy: b.copy, link: b.link, character: b.character, imageUrl: `/img/v4/${b.image}.webp`, sort: i, active: true })));
 }
 
 export async function createAdmin(db: Db, email: string, password: string, role: 'super' | 'operator' = 'super') {

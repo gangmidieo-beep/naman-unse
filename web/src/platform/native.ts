@@ -79,3 +79,9 @@ export async function saveImageNative(dataUrl: string, filename: string): Promis
   await Share.share({ title: '나만의 운세', files: [r.uri] }).catch(() => {});
   return true;
 }
+
+// 운세함에서 알림 켜기/끄기·알림 시간을 바꾸면 서버에도 알린다(매일 아침 자동 푸시 시간). 앱에서만.
+export async function syncPushPrefs(on: boolean, time: string) {
+  if (!isNativeApp()) return;
+  await apiAuth('/me/push', { method: 'POST', body: JSON.stringify({ consent: on, time }) }).catch(() => {});
+}

@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   pushTime: text(),
   pushToken: text(),
   pushConsent: boolean(),
+  lastDailyPush: text(), // 매일 아침 자동 푸시를 마지막으로 보낸 날(KST yyyy-mm-dd) — 하루 한 번만
   mergedInto: text(), // 게스트 → 로그인 계정으로 합쳐지면 대상 id
   createdAt: now(),
   lastSeenAt: now(),
