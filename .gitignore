@@ -19,3 +19,6 @@ scripts/tmp/
 web/public/img/_incoming/*
 !web/public/img/_incoming/.gitkeep
 server/.data/
+
+# 대표님 시안 원본(용량 큼 — 저장소 대신 프로젝트 폴더에 보관, scripts/crop-mockups.py 입력)
+docs/대표님자료/2차시안/
