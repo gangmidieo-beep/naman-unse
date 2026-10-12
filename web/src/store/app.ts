@@ -36,6 +36,7 @@ type State = {
   eventNotify: boolean;
   plan: Plan; // 프리미엄 구독(월간/연간)
   planUntil: string | null;
+  planAuto: boolean; // 자동결제로 이어지는지(앱 구독·웹 월 자동결제). false 면 이용권 — 만료 전 연장 안내
   purchases: Purchase[];
   talismans: MyTalisman[];
   account: Account | null;
@@ -50,7 +51,7 @@ type State = {
   setPushConsent: (on: boolean) => void;
   setNotify: (on: boolean, time?: string) => void;
   setEventNotify: (on: boolean) => void;
-  setPlan: (plan: Plan) => void;
+  setPlan: (plan: Plan, auto?: boolean) => void;
   addPurchase: (p: Purchase) => void;
   addTalisman: (t: MyTalisman) => void;
   setAccount: (a: Account | null) => void;
@@ -73,6 +74,7 @@ export const useApp = create<State>()(
       eventNotify: true,
       plan: null,
       planUntil: null,
+      planAuto: false,
       purchases: [],
       talismans: [],
       account: null,
@@ -95,8 +97,8 @@ export const useApp = create<State>()(
       setPushConsent: (on) => set({ pushConsent: on, notifyOn: on }),
       setNotify: (notifyOn, notifyTime) => set((s) => ({ notifyOn, notifyTime: notifyTime ?? s.notifyTime })),
       setEventNotify: (eventNotify) => set({ eventNotify }),
-      setPlan: (plan) =>
-        set({ plan, planUntil: plan ? new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 86400000).toISOString().slice(0, 10) : null }),
+      setPlan: (plan, auto = true) =>
+        set({ plan, planAuto: !!plan && auto, planUntil: plan ? new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 86400000).toISOString().slice(0, 10) : null }),
       addPurchase: (p) => set((s) => ({ purchases: [p, ...s.purchases] })),
       addTalisman: (t) => set((s) => ({ talismans: [t, ...s.talismans] })),
       setAccount: (account) => set({ account }),

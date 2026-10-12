@@ -22,6 +22,13 @@
       "when": 1791789881580,
       "tag": "0002_daily_push",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791853200000,
+      "tag": "0003_web_rebill",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { Button } from '../components/ui';
 import { useApp } from '../store/app';
-import { apiAuth, PENDING, type Pending } from '../platform/payments';
+import { apiAuth, PENDING, syncEntitlements, type Pending } from '../platform/payments';
 import { track } from '../lib/track';
 
 type Order = { id: string; status: string; productId: string; profileId: string | null; kind: string; amount: number };
@@ -26,7 +26,8 @@ export default function PayReturn() {
           try { localStorage.removeItem(PENDING); } catch { /* */ }
           track('pay_success', { product: o.productId, orderId: o.id, price: o.amount });
           if (o.kind === 'subscription') {
-            setPlan(o.productId.includes('yearly') ? 'yearly' : 'monthly');
+            setPlan(o.productId.includes('yearly') ? 'yearly' : 'monthly', !o.productId.includes('yearly')); // 웹: 월=자동결제, 연=1년 이용권
+            await syncEntitlements(); // 서버 기준 기간(연장분 포함)·자동결제 여부로 맞춤
             nav('/premium', { replace: true });
             return;
           }

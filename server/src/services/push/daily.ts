@@ -45,3 +45,29 @@ export async function runDailyPush(db: Db, http: typeof fetch, now = new Date())
   if (dead.length) await db.update(S.users).set({ pushToken: null }).where(inArray(S.users.pushToken, dead));
   return { sent };
 }
+
+// 이용권 만료 알림 — 자동결제가 아닌 구독(웹 연간 이용권·자동결제를 해지한 월 구독)이 끝나기 7일 전·1일 전 오전 10시(한국)에 한 번씩.
+// 웹은 앱 푸시를 못 받으니 화면(홈·운세함)에도 "N일 남았어요 · 연장하기" 를 띄운다(web: ExpiryNotice).
+export async function runExpiryReminders(db: Db, http: typeof fetch, now = new Date()) {
+  const { day, hm } = kstNow(now);
+  if (hm !== '10:00' || !fcmConfigured()) return { sent: 0 };
+  const dayMs = 86_400_000;
+  const today = Date.parse(`${day}T00:00:00+09:00`);
+  const rows = await db.select({ sub: S.subscriptions, token: S.users.pushToken }).from(S.subscriptions)
+    .innerJoin(S.users, eq(S.users.id, S.subscriptions.userId))
+    .where(and(
+      eq(S.subscriptions.autoRenew, false), inArray(S.subscriptions.status, ['active', 'grace']),
+      sql`${S.subscriptions.expiresAt} > ${new Date(today)} and ${S.subscriptions.expiresAt} < ${new Date(today + 9 * dayMs)}`,
+      or(isNull(S.subscriptions.remindDay), ne(S.subscriptions.remindDay, day)),
+      eq(S.users.pushConsent, true), isNotNull(S.users.pushToken), isNull(S.users.deletedAt),
+    )).limit(5000);
+  let sent = 0;
+  for (const { sub, token } of rows) {
+    const left = Math.round((Date.parse(`${kstNow(sub.expiresAt).day}T00:00:00+09:00`) - today) / dayMs); // 만료일(한국 날짜)까지 남은 날
+    if (left !== 7 && left !== 1) continue;
+    await db.update(S.subscriptions).set({ remindDay: day }).where(eq(S.subscriptions.id, sub.id));
+    const r = await sendPush([token!], { title: `✦ 프리미엄 이용 기간이 ${left}일 남았어요`, body: '연장하시면 남은 기간 뒤에 이어서 늘어나요. 혜택을 계속 누려 보세요.', link: '/premium' }, http);
+    sent += r.sent;
+  }
+  return { sent };
+}

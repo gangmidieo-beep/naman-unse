@@ -110,6 +110,9 @@ export const subscriptions = pgTable('subscriptions', {
   renewedAt: timestamp({ withTimezone: true }),
   expiresAt: timestamp({ withTimezone: true }).notNull(),
   canceledAt: timestamp({ withTimezone: true }),
+  rebillNo: text(), // 웹 월 자동결제(PayApp 정기결제) 등록번호
+  autoRenew: boolean().default(false).notNull(), // 자동결제 켜짐(앱 구독·웹 월 자동결제). 해지하면 false, 남은 기간까지 이용
+  remindDay: text(), // 만료 알림 보낸 날(한국 날짜) — 같은 날 두 번 안 보내게
 }, (t) => [index('subs_user').on(t.userId)]);
 
 export const readings = pgTable('readings', {

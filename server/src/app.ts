@@ -14,10 +14,10 @@ import { exchange, isConfigured, isProvider, startUrl, takeState } from './servi
 import { contentStats, dashboard, memberDetail, members, payments, range, subscriptionStats, toCsv } from './services/stats.ts';
 import { shareCard } from './services/card.ts';
 import { fulfillOrder, revokeOrder } from './services/payments/fulfill.ts';
-import { normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRequest } from './services/payments/payapp.ts';
+import { nextRebillDate, normalizePhone, parsePayappFeedback, payappCancel, payappEnv, payappRebillCancel, payappRebillRegist, payappRequest, rebillDay } from './services/payments/payapp.ts';
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
-import { runDailyPush } from './services/push/daily.ts';
+import { runDailyPush, runExpiryReminders } from './services/push/daily.ts';
 import { liveAI } from './services/reading/generate.ts';
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
@@ -127,6 +127,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const id = await needUser(req, rep);
     if (!id) return;
     const ids = [id, ...(await db.select({ id: S.users.id }).from(S.users).where(eq(S.users.mergedInto, id))).map((x) => x.id)]; // 합쳐진 게스트 기록까지
+    await stopRebills(ids, '회원 탈퇴').catch((e) => req.log.error(`[payapp rebill] 탈퇴 해지 실패 user=${id} ${e.message}`)); // 웹 월 자동결제가 있으면 다음 달부터 결제되지 않게 해지
     const orderIds = (await db.select({ id: S.orders.id }).from(S.orders).where(inArray(S.orders.userId, ids))).map((x) => x.id);
     if (orderIds.length) await db.update(S.readings).set({ content: null, profileId: null }).where(inArray(S.readings.orderId, orderIds));
     await db.update(S.orders).set({ profileId: null }).where(inArray(S.orders.userId, ids));
@@ -269,6 +270,33 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (PG() !== 'payapp' || !env) return rep.code(503).send({ error: '웹 결제 준비 중이에요. 잠시 후 다시 시도해 주세요.' });
     const phone = normalizePhone(b.phone ?? '');
     if (!phone) return rep.code(400).send({ error: '휴대폰 번호를 확인해 주세요 (예: 010-1234-5678)', code: 'phone' });
+    if (kind === 'subscription') {
+      // 이미 웹 월 자동결제 중이면 중복 결제 막기(연간으로 바꾸려면 먼저 해지)
+      const [auto] = await db.select({ id: S.subscriptions.id }).from(S.subscriptions)
+        .where(and(eq(S.subscriptions.userId, userId), eq(S.subscriptions.channel, 'pg'), eq(S.subscriptions.autoRenew, true), gt(S.subscriptions.expiresAt, new Date())));
+      if (auto) return rep.code(409).send({ error: '이미 월 자동결제로 이용 중이에요. 바꾸시려면 운세함 › 구독에서 자동결제를 해지한 뒤 다시 선택해 주세요.', code: 'sub_active' });
+      // 이용권 기간이 남아 있으면 월 자동결제는 기간이 끝난 뒤에(겹쳐서 두 번 내지 않게). 연간 이용권 연장은 언제든 가능
+      if (!p.id.includes('yearly')) {
+        const [pass] = await db.select({ until: S.subscriptions.expiresAt }).from(S.subscriptions)
+          .where(and(eq(S.subscriptions.userId, userId), inArray(S.subscriptions.status, ['active', 'grace']), gt(S.subscriptions.expiresAt, new Date())));
+        if (pass) return rep.code(409).send({ error: `프리미엄 이용 기간이 ${pass.until.toISOString().slice(0, 10)}까지 남아 있어요. 기간이 끝난 뒤 월 자동결제를 시작하시거나, 지금은 연간 이용권으로 연장해 주세요.`, code: 'pass_active' });
+      }
+    }
+    if (kind === 'subscription' && !p.id.includes('yearly')) {
+      // 월 구독 = PayApp 정기결제(매월 같은 날 자동 승인). 연간은 PayApp 에 연 단위 정기결제가 없어 1년 이용권으로 판매
+      const [o] = await db.insert(S.orders).values({ ...base, method: 'card' }).returning();
+      try {
+        const r = await payappRebillRegist({
+          orderId: o.id, amount, goodName: `나만의 운세 ${p.title}`, phone,
+          returnUrl: `${WEB()}/pay/return?order=${o.id}`, feedbackUrl: `${API()}/pay/payapp/feedback`, failUrl: `${API()}/pay/payapp/rebill-fail`,
+        }, env, http);
+        await db.update(S.orders).set({ providerRef: `R${r.rebillNo}` }).where(eq(S.orders.id, o.id)); // 1회차 승인 통보가 오면 결제번호(mul_no)로 바뀜
+        return { ...o, providerRef: `R${r.rebillNo}`, payUrl: r.payUrl, autoRenew: true };
+      } catch (e: any) {
+        await db.update(S.orders).set({ status: 'failed' }).where(eq(S.orders.id, o.id));
+        return rep.code(e.status ?? 502).send({ error: e.message });
+      }
+    }
     const [o] = await db.insert(S.orders).values(base).returning();
     try {
       const r = await payappRequest({
@@ -295,6 +323,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const env = payappEnv();
     const f = env ? parsePayappFeedback((req.body ?? {}) as Record<string, unknown>, env, (m) => req.log.warn(m)) : null;
     if (!f) return rep.code(400).type('text/plain').send('FAIL');
+    if (f.rebillNo) { await rebillFeedback(f, req.log); return rep.type('text/plain').send('SUCCESS'); }
     const [o] = await db.select().from(S.orders).where(eq(S.orders.id, f.orderId));
     if (!o || o.channel !== 'pg') return rep.type('text/plain').send('SUCCESS'); // 모르는 주문은 기록만 하고 재전송은 멈춘다
     if (f.state === 'paid') {
@@ -308,6 +337,70 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       await revokeOrder(db, o, o.status === 'paid' ? 'refunded' : 'cancelled');
     }
     return rep.type('text/plain').send('SUCCESS');
+  });
+  /* 웹 월 자동결제(PayApp 정기결제) 통보
+     - 1회차: var1 = 처음 만든 주문 → 그 주문을 확정하고 구독에 rebill_no 를 붙인다
+     - 2회차부터: 같은 rebill_no 로 새 결제번호(mul_no)가 온다 → 갱신 주문을 새로 만들어 확정(이용 기간 = 다음 결제일 + 2일)
+     - 취소·환불: 해당 결제번호의 주문만 되돌린다 */
+  type Feedback = NonNullable<ReturnType<typeof parsePayappFeedback>>;
+  const rebillUntil = () => new Date(nextRebillDate(new Date(), rebillDay()).getTime() + 2 * 86_400_000);
+  async function rebillFeedback(f: Feedback, log: { warn: (m: string) => void; error: (m: string) => void }) {
+    // 처음 주문은 var1 로 찾고, 2회차 통보에 var1 이 비어 와도 rebill_no 로 구독을 찾아 이어 간다
+    const [first] = f.orderId ? await db.select().from(S.orders).where(and(eq(S.orders.id, f.orderId), eq(S.orders.channel, 'pg'), eq(S.orders.kind, 'subscription'))) : [];
+    const [sub] = await db.select().from(S.subscriptions).where(and(eq(S.subscriptions.rebillNo, f.rebillNo), eq(S.subscriptions.channel, 'pg'))).orderBy(desc(S.subscriptions.expiresAt)).limit(1);
+    const userId = first?.userId ?? sub?.userId;
+    if (!userId) { log.warn(`[payapp rebill] 모르는 정기결제 rebill=${f.rebillNo}`); return; }
+    const [same] = f.mulNo ? await db.select().from(S.orders).where(and(eq(S.orders.providerRef, f.mulNo), eq(S.orders.userId, userId))) : [];
+    if (f.state === 'refunded' || f.state === 'cancelled') {
+      const target = same ?? (first?.status === 'pending' ? first : null);
+      if (target) await revokeOrder(db, target, target.status === 'paid' ? 'refunded' : 'cancelled');
+      return;
+    }
+    if (f.state === 'failed') { log.warn(`[payapp rebill] 자동결제 실패 rebill=${f.rebillNo} user=${userId}`); return; }
+    if (f.state !== 'paid') return;
+    const expected = first?.amount ?? sub!.amount;
+    if (f.amount !== expected) { log.error(`[payapp rebill] 금액 불일치 rebill=${f.rebillNo} 주문=${expected} 통보=${f.amount}`); return; }
+    if (same?.status === 'paid') return; // 같은 통보가 다시 옴
+    const opts = { ref: f.mulNo, method: f.method, expiresAt: rebillUntil(), rebillNo: f.rebillNo, autoRenew: true };
+    if (first?.status === 'pending') { await fulfillOrder(db, first, opts); return; }
+    // 다음 달 자동 승인 → 갱신 주문
+    const [renew] = await db.insert(S.orders).values({ id: newId('O'), userId, productId: first?.productId ?? 'premium_monthly', kind: 'subscription', amount: f.amount, discount: 0, method: 'card', channel: 'pg', status: 'pending', providerRef: f.mulNo }).returning();
+    await fulfillOrder(db, renew, opts);
+  }
+  // 2회차 이후 자동 승인이 실패하면 PayApp 이 failurl 로 알려준다(pay_state=99). 기간이 끝나면 자연히 일반 회원으로 돌아간다.
+  app.post('/pay/payapp/rebill-fail', { logLevel: 'warn' }, async (req, rep) => {
+    const env = payappEnv();
+    const f = env ? parsePayappFeedback((req.body ?? {}) as Record<string, unknown>, env, (m) => req.log.warn(m)) : null;
+    if (!f) return rep.code(400).type('text/plain').send('FAIL');
+    req.log.warn(`[payapp rebill] 자동결제 승인 실패 rebill=${f.rebillNo} order=${f.orderId}`);
+    return rep.type('text/plain').send('SUCCESS');
+  });
+  // 자동결제 해지(웹) — PayApp 정기결제를 해지하고, 이미 낸 기간까지는 그대로 이용
+  async function stopRebills(userIds: string[], why: string) {
+    const env = payappEnv();
+    const subs = await db.select().from(S.subscriptions).where(and(inArray(S.subscriptions.userId, userIds), eq(S.subscriptions.channel, 'pg'), eq(S.subscriptions.autoRenew, true)));
+    for (const s of subs) {
+      if (s.rebillNo) {
+        if (!env) throw Object.assign(new Error('PayApp 연결 정보가 없어요'), { status: 503 });
+        await payappRebillCancel(s.rebillNo, env, http);
+      }
+      await db.update(S.subscriptions).set({ autoRenew: false, canceledAt: new Date() }).where(eq(S.subscriptions.id, s.id));
+      app.log.info(`[payapp rebill] 해지 sub=${s.id} (${why})`);
+    }
+    return subs.length;
+  }
+  app.post('/me/subscription/cancel', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [g] = await db.select({ id: S.subscriptions.id }).from(S.subscriptions)
+      .where(and(eq(S.subscriptions.userId, userId), eq(S.subscriptions.channel, 'google'), eq(S.subscriptions.autoRenew, true), gt(S.subscriptions.expiresAt, new Date())));
+    try {
+      const n = await stopRebills([userId], '사용자 해지');
+      if (!n && g) return rep.code(409).send({ error: '앱에서 결제한 구독은 Google Play › 결제 및 구독에서 해지해 주세요.', code: 'google' });
+      if (!n) return rep.code(404).send({ error: '해지할 자동결제가 없어요' });
+    } catch (e: any) { return rep.code(e.status ?? 502).send({ error: e.message }); }
+    const [s] = await db.select().from(S.subscriptions).where(eq(S.subscriptions.userId, userId)).orderBy(desc(S.subscriptions.expiresAt));
+    return { ok: true, subscription: s ?? null };
   });
   // Google Play — 앱이 받은 purchaseToken 을 서버에서 Google 에 다시 확인
   app.post('/billing/google/verify', async (req, rep) => {
@@ -347,7 +440,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [o] = await db.select().from(S.orders).where(eq(S.orders.providerRef, n.purchaseToken));
     if (!o) return { ok: true };
     const s = await verifySubscription(n.purchaseToken, http);
-    await db.update(S.subscriptions).set({ status: s.status, expiresAt: s.expiresAt, renewedAt: new Date(), canceledAt: s.status === 'canceled' ? new Date() : null })
+    await db.update(S.subscriptions).set({ status: s.status, expiresAt: s.expiresAt, renewedAt: new Date(), canceledAt: s.status === 'canceled' ? new Date() : null, autoRenew: s.status === 'active' || s.status === 'grace' })
       .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, 'google')));
     if (n.type === 12) await revokeOrder(db, o, 'refunded'); // SUBSCRIPTION_REVOKED = 환불
     return { ok: true };
@@ -566,10 +659,15 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       if (!env || !cur.providerRef) return rep.code(503).send({ error: 'PayApp 연결 정보가 없어요' });
       try { await payappCancel(cur.providerRef, `관리자 환불 ${id}`, env, http); } catch (e: any) { return rep.code(502).send({ error: e.message }); }
     }
+    let warning = '';
+    // 웹 월 자동결제 주문을 환불하면 다음 달 자동결제도 함께 해지(환불했는데 또 결제되는 일 방지)
+    if (cur.channel === 'pg' && cur.kind === 'subscription') {
+      try { await stopRebills([cur.userId], `관리자 환불 ${id}`); } catch (e: any) { warning = `환불은 됐지만 자동결제 해지에 실패했어요. PayApp 판매자 사이트 › 정기결제에서 직접 해지해 주세요. (${e.message})`; }
+    }
     // Google Play 주문은 Play Console 에서 환불하면 RTDN·환불 조회로 반영된다. 여기서는 권한만 회수.
     const o = await revokeOrder(db, cur, 'refunded');
     await audit(req, 'order.refund', id);
-    return o;
+    return warning ? { ...o, warning } : o;
   });
   // 6 푸시 — 문구 → 딥링크 → 대상 → 즉시/예약. FCM 키가 있으면 실제 발송, 없으면 대상 수만 기록
   const DEEP_LINKS = ['/today', '/today?tab=week', '/unse', '/unse?cat=fate', '/unse?cat=love', '/tarot', '/talisman', '/box', '/premium', '/zodiac', '/fun/dream', '/fun/small', '/fun/oneline', ...(await db.select({ id: S.products.id }).from(S.products).where(inArray(S.products.kind, ['reading', 'tarot', 'photo']))).map((p) => `/product/${p.id}`)];
@@ -626,6 +724,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   // 예약 푸시 — 1분마다 도래한 캠페인을 발송 처리(FCM 연결 전 MOCK) + 매일 아침 자동 푸시(사용자 알림 시간)
   const timer = setInterval(async () => {
     await runDailyPush(db, http).catch((e) => app.log.warn(`[daily push] ${(e as Error).message}`));
+    await runExpiryReminders(db, http).catch((e) => app.log.warn(`[expiry remind] ${(e as Error).message}`));
     const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
     for (const c of due) {
       await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시

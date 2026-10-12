@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { openDb } from '../src/db/index.ts';
 import { buildApp } from '../src/app.ts';
-import { normalizePhone, parsePayappFeedback } from '../src/services/payments/payapp.ts';
+import { nextRebillDate, normalizePhone, parsePayappFeedback, rebillDay } from '../src/services/payments/payapp.ts';
 import { mapSubscriptionState, readProductPurchase, readRtdn, readSubscription, subscriptionUsable } from '../src/services/payments/google-play.ts';
 
 const ENV = { userid: 'naman_test', linkkey: 'k+ey/AbC=', linkval: 'v+al/XyZ=' };
@@ -12,7 +12,8 @@ const calls: URLSearchParams[] = [];
 const fakePayApp = (async (_url: string, init: any) => {
   const body = new URLSearchParams(init.body);
   calls.push(body);
-  if (body.get('cmd') === 'paycancel') return new Response('state=1');
+  if (body.get('cmd') === 'paycancel' || body.get('cmd') === 'rebillCancel') return new Response('state=1');
+  if (body.get('cmd') === 'rebillRegist') return new Response(`state=1&errno=00000&rebill_no=RB${calls.length}&payurl=${encodeURIComponent('http://payapp.kr/R/abc' + calls.length)}`);
   return new Response(`state=1&mul_no=MUL${calls.length}&payurl=${encodeURIComponent('https://www.payapp.kr/L/abc' + calls.length)}`);
 }) as unknown as typeof fetch;
 
@@ -95,21 +96,79 @@ describe('PayApp 웹 결제', () => {
     const ent = (await app.inject({ url: '/me/entitlements', headers: auth(token) })).json();
     expect(ent.owned.filter((x: any) => x.orderId === orderId)).toHaveLength(1);
   });
-  it('웹 프리미엄 30일 이용권 → 프리미엄, 연간권 추가 시 기간 이어 붙임, 환불 시 즉시 종료', async () => {
+  it('웹 월 구독 = PayApp 정기결제(매월 자동결제): 등록 → 1회차 → 다음 달 자동 승인 → 해지 → 기간까지 이용', async () => {
     const t = await guest('pay-3');
+    const before = calls.length;
     const m = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055556666' } })).json();
-    await feedback(m.id, m.amount);
+    const reg = calls[before];
+    expect(reg.get('cmd')).toBe('rebillRegist');
+    expect(reg.get('rebillCycleType')).toBe('Month');
+    expect(reg.get('goodprice')).toBe('6900');
+    expect(reg.get('var1')).toBe(m.id);
+    expect(reg.get('failurl')).toBe('https://api.example.kr/pay/payapp/rebill-fail');
+    expect(reg.get('rebillCycleMonth')).toBe(rebillDay());
+    expect(m.payUrl.startsWith('https://payapp.kr/')).toBe(true); // http 로 와도 https 로
+    const rb = m.providerRef.slice(1);
+    // 1회차 승인
+    await feedback(m.id, m.amount, '4', { rebill_no: rb, mul_no: 'RM1' });
     let ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
     expect(ent.premium).toBe(true);
-    const days1 = (new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5;
-    expect(Math.round(days1)).toBe(30);
+    expect(ent.subscription.autoRenew).toBe(true);
+    expect(ent.subscription.rebillNo).toBe(rb);
+    const days = (new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5;
+    expect(days).toBeGreaterThan(28); expect(days).toBeLessThan(35);
+    // 자동결제 중에는 연간 이용권 중복 구매 막기
+    const dup = await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_yearly', phone: '01055556666' } });
+    expect(dup.statusCode).toBe(409);
+    // 다음 달 자동 승인(같은 rebill_no, 새 결제번호) → 갱신 주문이 생기고, 같은 통보가 또 와도 한 번만
+    await feedback(m.id, m.amount, '4', { rebill_no: rb, mul_no: 'RM2' });
+    await feedback(m.id, m.amount, '4', { rebill_no: rb, mul_no: 'RM2' });
+    ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect(ent.owned.filter((x: any) => x.productId === 'premium_monthly')).toHaveLength(2);
+    await feedback('', m.amount, '4', { rebill_no: rb, mul_no: 'RM2b' }); // 2회차 통보에 var1 이 비어 와도 rebill_no 로 이어 감
+    ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect(ent.owned.filter((x: any) => x.productId === 'premium_monthly')).toHaveLength(3);
+    // 금액이 다르면 확정하지 않음
+    await feedback(m.id, 100, '4', { rebill_no: rb, mul_no: 'RM3' });
+    expect((await app.inject({ url: '/me/entitlements', headers: auth(t) })).json().owned.filter((x: any) => x.productId === 'premium_monthly')).toHaveLength(3);
+    // 해지 → PayApp rebillCancel, 남은 기간은 그대로 프리미엄
+    const c0 = calls.length;
+    const c = await app.inject({ method: 'POST', url: '/me/subscription/cancel', headers: auth(t) });
+    expect(c.statusCode).toBe(200);
+    expect(calls[c0].get('cmd')).toBe('rebillCancel');
+    expect(calls[c0].get('rebill_no')).toBe(rb);
+    ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect(ent.premium).toBe(true);
+    expect(ent.subscription.autoRenew).toBe(false);
+    expect((await app.inject({ method: 'POST', url: '/me/subscription/cancel', headers: auth(t) })).statusCode).toBe(404);
+    // 남은 기간 중에 월 자동결제를 다시 걸면 겹쳐 결제 → 막음
+    const again = await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055556666' } });
+    expect(again.statusCode).toBe(409); expect(again.json().code).toBe('pass_active');
+    // 해지 후 연간 이용권은 남은 기간 뒤에 이어 붙음
     const y = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_yearly', phone: '01055556666' } })).json();
+    expect(calls[calls.length - 1].get('cmd')).toBe('payrequest');
+    const exp0 = new Date(ent.subscription.expiresAt).getTime();
     await feedback(y.id, y.amount);
     ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
-    expect(Math.round((new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5)).toBe(395);
+    expect(Math.round((new Date(ent.subscription.expiresAt).getTime() - exp0) / 864e5)).toBe(365);
     await feedback(y.id, y.amount, '9'); // 결제사에서 환불
     ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
     expect(ent.premium).toBe(false);
+  });
+  it('자동결제 실패 통보(failurl)는 SUCCESS 로 받고 기록만', async () => {
+    const r = await app.inject({ method: 'POST', url: '/pay/payapp/rebill-fail', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({ userid: ENV.userid, linkkey: ENV.linkkey, linkval: ENV.linkval, var1: 'O_x', rebill_no: 'RB0', pay_state: '99', price: '6900' }).toString() });
+    expect(r.body).toBe('SUCCESS');
+  });
+  it('다음 결제일 계산(한국 날짜, 말일 처리)', () => {
+    const kst = (s: string) => new Date(`${s}+09:00`);
+    expect(rebillDay(kst('2026-10-13T08:00:00'))).toBe('13');
+    expect(rebillDay(kst('2026-01-30T08:00:00'))).toBe('90');
+    expect(rebillDay(kst('2026-02-28T08:00:00'))).toBe('90');
+    expect(rebillDay(kst('2026-10-12T23:30:00'))).toBe('12');
+    expect(nextRebillDate(kst('2026-10-13T08:00:00'), '13').toISOString()).toBe(kst('2026-11-13T00:00:00').toISOString());
+    expect(nextRebillDate(kst('2026-01-31T08:00:00'), '90').toISOString()).toBe(kst('2026-02-28T00:00:00').toISOString());
+    expect(nextRebillDate(kst('2026-12-05T08:00:00'), '5').toISOString()).toBe(kst('2027-01-05T00:00:00').toISOString());
   });
   it('프리미엄 회원은 회원가(10% 할인)로 주문', async () => {
     const t = await guest('pay-4');

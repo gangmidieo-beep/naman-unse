@@ -11,8 +11,9 @@ export const payappEnv = (): PayAppEnv | null => {
 };
 
 // pay_state → 우리 주문 상태
-const STATES: Record<string, 'paid' | 'cancelled' | 'refunded'> = {
+const STATES: Record<string, 'paid' | 'cancelled' | 'refunded' | 'failed'> = {
   '4': 'paid',
+  '99': 'failed', // 정기결제 2회차 이후 승인 실패(failurl 로 통보)
   '8': 'cancelled', '16': 'cancelled', '31': 'cancelled', '32': 'cancelled',
   '9': 'refunded', '64': 'refunded', '70': 'refunded', '71': 'refunded',
 };
@@ -67,6 +68,7 @@ export function parsePayappFeedback(body: Record<string, unknown>, env: PayAppEn
     amount: Number(body.price ?? NaN),
     state: STATES[String(body.pay_state)] ?? null,
     method: String(body.pay_type ?? ''),
+    rebillNo: String(body.rebill_no ?? ''), // 정기결제일 때만 값이 있음
   };
 }
 
@@ -76,4 +78,57 @@ export async function payappCancel(mulNo: string, memo: string, env: PayAppEnv, 
   const res = await http('https://api.payapp.kr/oapi/apiLoad.html', { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) });
   const data = new URLSearchParams(await res.text());
   if (data.get('state') !== '1') throw Object.assign(new Error(data.get('errorMessage') || 'PayApp 취소가 거절됐어요'), { status: 502 });
+}
+
+/* ---------- 정기결제(월 자동결제) ----------
+   cmd=rebillRegist → payurl 에서 구매자가 카드 등록 + 1회차 승인 → 이후 매월 같은 날 PayApp 이 자동 승인하고 feedbackurl 로 통보(rebill_no 포함).
+   PayApp 정기결제 주기는 월·주·일만 있어서 "연간 자동결제"는 지원되지 않는다 → 연간은 1년 이용권 + 만료 전 알림.
+   카드 번호는 PayApp 결제창에서만 입력(우리 서버는 카드 정보를 받지도 저장하지도 않음). */
+const kstDate = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
+// 매월 결제일: 오늘(한국 날짜). 29~31일은 짧은 달에 빠지지 않도록 "말일(90)"
+export const rebillDay = (now = new Date()) => {
+  const [y, m, d] = kstDate(now).split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return d >= 29 || d === last ? '90' : String(d); // 2월 28일(말일)에 승인된 말일 결제도 "말일"로 이어지게
+};
+// 다음 결제 예정일(한국 날짜 기준) — 이용 기간은 여기에 여유 2일을 더해 결제 처리 시간 동안 끊기지 않게
+export function nextRebillDate(from: Date, day: string): Date {
+  const k = new Date(from.getTime() + 9 * 3600_000);
+  const y = k.getUTCFullYear(), m = k.getUTCMonth() + 1;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const dd = day === '90' ? last : Math.min(+day, last);
+  return new Date(Date.UTC(y, m, dd) - 9 * 3600_000); // 다음 달 해당 일 00:00 KST
+}
+
+export type RebillRequest = { orderId: string; amount: number; goodName: string; phone: string; returnUrl: string; feedbackUrl: string; failUrl: string; now?: Date };
+export async function payappRebillRegist(req: RebillRequest, env: PayAppEnv, http: typeof fetch = fetch): Promise<{ payUrl: string; rebillNo: string; day: string }> {
+  const now = req.now ?? new Date();
+  const day = rebillDay(now);
+  const expire = kstDate(new Date(now.getTime() + 5 * 365 * 86_400_000)); // 5년 뒤 만료(해지 전까지 매월)
+  const form = new URLSearchParams({
+    cmd: 'rebillRegist', userid: env.userid, goodname: req.goodName.slice(0, 40), goodprice: String(req.amount), recvphone: req.phone,
+    rebillCycleType: 'Month', rebillCycleMonth: day, rebillExpire: expire,
+    feedbackurl: req.feedbackUrl, failurl: req.failUrl, returnurl: req.returnUrl, var1: req.orderId, smsuse: 'n', openpaytype: 'card',
+  });
+  let res: Response;
+  try {
+    res = await http('https://api.payapp.kr/oapi/apiLoad.html', { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) });
+  } catch {
+    throw Object.assign(new Error('결제창을 열지 못했어요. 잠시 후 다시 시도해 주세요.'), { status: 502 });
+  }
+  const data = new URLSearchParams(await res.text());
+  if (data.get('state') !== '1') throw Object.assign(new Error(data.get('errorMessage') || '정기결제 요청이 거절됐어요'), { status: 502 });
+  let url: URL;
+  try { url = new URL(data.get('payurl') ?? ''); } catch { throw Object.assign(new Error('결제 주소가 올바르지 않아요'), { status: 502 }); }
+  if (!(url.hostname === 'payapp.kr' || url.hostname.endsWith('.payapp.kr'))) throw Object.assign(new Error('결제 주소가 올바르지 않아요'), { status: 502 });
+  url.protocol = 'https:'; // 문서 예시가 http 로 오는 경우가 있어 https 로 맞춤
+  return { payUrl: url.href, rebillNo: data.get('rebill_no') ?? '', day };
+}
+
+// 자동결제 해지 — 다음 달부터 결제되지 않음(이미 낸 기간은 그대로 이용). 이미 해지된 건이면 성공으로 본다.
+export async function payappRebillCancel(rebillNo: string, env: PayAppEnv, http: typeof fetch = fetch): Promise<void> {
+  const form = new URLSearchParams({ cmd: 'rebillCancel', userid: env.userid, linkkey: env.linkkey, rebill_no: rebillNo });
+  const res = await http('https://api.payapp.kr/oapi/apiLoad.html', { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) });
+  const data = new URLSearchParams(await res.text());
+  if (data.get('state') !== '1' && data.get('errno') !== '20023') throw Object.assign(new Error(data.get('errorMessage') || '자동결제 해지가 거절됐어요'), { status: 502 });
 }

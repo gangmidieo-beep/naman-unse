@@ -1,5 +1,6 @@
 // 나의 운세함 — "개인 서재": 인사말 + 내 사주정보(일반 2개 / 프리미엄 무제한) · 나의 운명서 · 나의 인연서 · 나의 부적함 · 결제 내역 · 알림 설정 · 설정
 import { useEffect, useState } from 'react';
+import { ExpiryNotice } from '../components/ExpiryNotice';
 import { Link, useNavigate } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { Icon } from '../components/Icon';
@@ -91,6 +92,7 @@ export default function Box() {
             ))}
           </div>
         )}
+        <ExpiryNotice />
 
         <LibSec en="DESTINY" title={<>나의 <em>운명서</em></>}>
           {fate.length ? fate.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)
@@ -139,7 +141,7 @@ export default function Box() {
 
         <LibSec en="SETTINGS" title="알림 · 설정" />
         <ul className="menu">
-          <li><Link className="mrow" to="/premium"><span>구독</span><span className="v">{premium ? `✦ 프리미엄 · ${s.plan === 'yearly' ? `연 ${won(BRAND.subscription.yearly.price)}` : `월 ${won(BRAND.subscription.monthly.price)}`} · ${s.planUntil}까지` : '일반 회원 · 무료'} ›</span></Link></li>
+          <li><Link className="mrow" to="/premium"><span>구독</span><span className="v">{premium ? `✦ 프리미엄 · ${s.plan === 'yearly' ? `연 ${won(BRAND.subscription.yearly.price)}` : `월 ${won(BRAND.subscription.monthly.price)}`} · ${s.planAuto ? '자동결제 중' : `${s.planUntil}까지`}` : '일반 회원 · 무료'} ›</span></Link></li>
           <li><div className="mrow"><span>오늘의 운세 알림</span><button className={`switch-ui${s.notifyOn ? ' on' : ''}`} role="switch" aria-checked={s.notifyOn} aria-label="오늘의 운세 알림" onClick={async () => { const on = !s.notifyOn; if (on && (await enablePush(s.notifyTime)) === 'denied') { toast('휴대폰 설정에서 알림을 켜 주세요'); return; } s.setNotify(on); void syncPushPrefs(on, s.notifyTime); }} /></div></li>
           <li><label className="mrow"><span>알림 시간</span><input type="time" className="time-in" value={s.notifyTime} onChange={(e) => { s.setNotify(s.notifyOn, e.target.value); void syncPushPrefs(s.notifyOn, e.target.value); }} /></label></li>
           <li><div className="mrow"><span>이벤트·혜택 알림</span><button className={`switch-ui${s.eventNotify ? ' on' : ''}`} role="switch" aria-checked={s.eventNotify} aria-label="이벤트 혜택 알림" onClick={() => s.setEventNotify(!s.eventNotify)} /></div></li>

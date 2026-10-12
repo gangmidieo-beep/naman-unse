@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { AppHeader, SectionHeader } from '../components/layout';
 import { AdSlot, ProductCard, RollingBanner, TodayCard, toCardItem, useToast, type BannerItem } from '../components/ui';
 import { PremiumButton } from '../components/PremiumPopup';
+import { ExpiryNotice } from '../components/ExpiryNotice';
 import { usePremium, useApp, useMainProfile } from '../store/app';
 import { useTodayFortune } from '../lib/fortune';
 import { BRAND, productById, type Product } from '../lib/catalog';
@@ -45,6 +46,7 @@ export default function Home() {
           to={isSample ? '/profile/new?back=/today&first=1' : '/today'} />
 
         {!premium && <PremiumButton />}
+        <ExpiryNotice />
 
         <SectionHeader en="SPECIAL" title={<>지금 많이 찾는 <em>풀이</em></>} />
         <RollingBanner items={banners} />

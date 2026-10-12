@@ -11,7 +11,7 @@ import './styles/v4.css';
 import { App } from './App';
 import { loadServerCatalog } from './lib/catalog';
 import { useApp } from './store/app';
-import { apiAuth } from './platform/payments';
+import { syncEntitlements } from './platform/payments';
 
 if (!__MOCK_MODE__ && __API_ORIGIN__) {
   await loadServerCatalog(__API_ORIGIN__);
@@ -19,9 +19,7 @@ if (!__MOCK_MODE__ && __API_ORIGIN__) {
   void (async () => {
     const hasToken = (() => { try { return !!useApp.getState().account?.token || !!JSON.parse(localStorage.getItem('naman-guest') || '{}').token; } catch { return false; } })();
     if (!hasToken) return;
-    const e = await apiAuth<{ premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string } | null }>('/me/entitlements').catch(() => null);
-    if (!e) return;
-    useApp.setState({ plan: e.premium ? e.subscription?.plan ?? 'monthly' : null, planUntil: e.premium && e.subscription ? e.subscription.expiresAt.slice(0, 10) : null });
+    await syncEntitlements();
   })();
 }
 createRoot(document.getElementById('root')!).render(

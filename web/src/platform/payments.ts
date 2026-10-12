@@ -132,3 +132,22 @@ const PHONE = 'naman-pay-phone';
 export const savedPhone = () => { try { return localStorage.getItem(PHONE) ?? ''; } catch { return ''; } };
 export const savePhone = (v: string) => { try { localStorage.setItem(PHONE, v); } catch { /* */ } };
 export const phoneOk = (v: string) => /^01[016789]\d{7,8}$/.test(v.replace(/\D/g, ''));
+
+// 프리미엄 여부·기간·자동결제는 서버가 기준(이용권 만료·환불·해지 반영)
+type Ent = { premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string; autoRenew?: boolean; channel?: string } | null };
+export async function syncEntitlements(): Promise<Ent | null> {
+  const e = await apiAuth<Ent>('/me/entitlements').catch(() => null);
+  if (!e) return null;
+  const s = e.subscription;
+  useApp.setState({ plan: e.premium ? s?.plan ?? 'monthly' : null, planUntil: e.premium && s ? s.expiresAt.slice(0, 10) : null, planAuto: !!(e.premium && s?.autoRenew) });
+  return e;
+}
+// 웹 월 자동결제 해지 — 다음 달부터 결제되지 않고, 이미 낸 기간까지는 프리미엄 유지
+export async function cancelAutoRenew(): Promise<{ ok: boolean; message?: string; code?: string }> {
+  if (MOCK_MODE) { useApp.setState({ planAuto: false }); return { ok: true }; }
+  try {
+    await apiAuth('/me/subscription/cancel', { method: 'POST', body: '{}' });
+    await syncEntitlements();
+    return { ok: true };
+  } catch (e: any) { return { ok: false, message: e.message, code: e.code }; }
+}

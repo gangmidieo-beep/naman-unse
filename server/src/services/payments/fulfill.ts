@@ -7,7 +7,7 @@ type Order = typeof S.orders.$inferSelect;
 const DAY = 86_400_000;
 export const passDays = (productId: string) => (productId.includes('yearly') ? 365 : 30);
 
-export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; method?: string; expiresAt?: Date; subStatus?: string } = {}): Promise<Order> {
+export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; method?: string; expiresAt?: Date; subStatus?: string; autoRenew?: boolean; rebillNo?: string } = {}): Promise<Order> {
   if (order.status === 'paid') return order;
   const [o] = await db.update(S.orders)
     .set({ status: 'paid', paidAt: new Date(), providerRef: opts.ref ?? order.providerRef, method: opts.method || order.method })
@@ -19,16 +19,18 @@ export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; m
   }
   if (o.kind === 'subscription') {
     const plan = o.productId.includes('yearly') ? 'yearly' : 'monthly';
+    // 자동결제: 앱(Google Play) 구독은 기본 켜짐, 웹은 월 정기결제(rebillNo)일 때만
+    const auto = { autoRenew: opts.autoRenew ?? (o.channel === 'google' || !!opts.rebillNo), ...(opts.rebillNo ? { rebillNo: opts.rebillNo } : {}) };
     const [cur] = await db.select().from(S.subscriptions)
       .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
     if (cur) {
       // 웹 이용권은 남은 기간 뒤에 이어 붙이고, Google Play 는 Google 이 알려준 만료일을 그대로 쓴다
       const expiresAt = opts.expiresAt ?? new Date(cur.expiresAt.getTime() + passDays(o.productId) * DAY);
-      await db.update(S.subscriptions).set({ plan, status: opts.subStatus ?? 'active', amount: o.amount, renewedAt: new Date(), expiresAt, canceledAt: null }).where(eq(S.subscriptions.id, cur.id));
+      await db.update(S.subscriptions).set({ plan, status: opts.subStatus ?? 'active', amount: o.amount, renewedAt: new Date(), expiresAt, canceledAt: null, remindDay: null, ...auto }).where(eq(S.subscriptions.id, cur.id));
     } else {
       await db.insert(S.subscriptions).values({
         id: newId('s_'), userId: o.userId, plan, status: opts.subStatus ?? 'active', channel: o.channel, amount: o.amount,
-        expiresAt: opts.expiresAt ?? new Date(Date.now() + passDays(o.productId) * DAY),
+        expiresAt: opts.expiresAt ?? new Date(Date.now() + passDays(o.productId) * DAY), ...auto,
       });
     }
   }
@@ -47,7 +49,7 @@ export async function revokeOrder(db: Db, order: Order, status: 'cancelled' | 'r
   if (order.status === status) return order;
   const [o] = await db.update(S.orders).set({ status, refundStatus: status === 'refunded' ? 'done' : order.refundStatus }).where(eq(S.orders.id, order.id)).returning();
   if (order.status === 'paid' && o.kind === 'subscription') {
-    await db.update(S.subscriptions).set({ status: 'expired', expiresAt: new Date(), canceledAt: new Date() })
+    await db.update(S.subscriptions).set({ status: 'expired', expiresAt: new Date(), canceledAt: new Date(), autoRenew: false })
       .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
   }
   return o;

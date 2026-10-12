@@ -109,6 +109,30 @@ test('프리미엄 안내 버튼 → 팝업(월 6,900 / 연 59,000, 정가 82,80
   expect(nav.y).toBeLessThan(5); // 하단 탭 → 상단 메뉴
   const cards = page.locator('.plist .row4');
   const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(3).boundingBox())!];
-  expect(Math.abs(a.y - b.y)).toBeLessThan(2); // 한 줄에 4개
+  expect(Math.abs(a.y - b.y)).toBeLessThan(a.height / 2); // 한 줄에 4개(등장 애니메이션 중 몇 px 차이는 허용)
   expect((await page.locator('.app').boundingBox())!.width).toBeGreaterThan(1000);
+});
+
+test('월 구독 = 매월 자동결제 안내 · 자동결제 해지 → 기간까지 이용 · 만료 임박 시 연장 안내', async ({ page }) => {
+  await seed(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /프리미엄 멤버십/ }).click();
+  const dlg = page.getByRole('dialog', { name: '나만의 운세 프리미엄' });
+  await expect(dlg.getByText('매월 자동결제 · 언제든 해지')).toBeVisible();
+  await dlg.getByRole('link', { name: /상세 혜택 보기/ }).click();
+  await page.getByRole('button', { name: /프리미엄 시작하기 · 6,900원/ }).click();
+  await expect(page.getByText(/매월 자동결제 · 6,900원/)).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText(/카드 번호를 받거나 저장하지 않아요/)).toBeVisible();
+  await page.getByRole('button', { name: '자동결제 해지' }).click();
+  await expect(page.locator('.pask')).toContainText('다음 달부터 결제되지 않아요');
+  await page.locator('.pask').getByRole('button', { name: '자동결제 해지' }).click();
+  await expect(page.getByText(/자동결제 아님/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /연간 이용권으로 연장/ })).toBeVisible();
+  // 이용권이 3일 남은 회원 → 홈·운세함에 연장 안내
+  const d = new Date(Date.now() + 9 * 3600e3 + 3 * 864e5).toISOString().slice(0, 10);
+  await seed(page, { plan: 'yearly', planAuto: false, planUntil: d });
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: /3일 남았어요/ })).toBeVisible();
+  await page.goto('/box');
+  await expect(page.getByRole('link', { name: /3일 남았어요/ })).toBeVisible();
 });

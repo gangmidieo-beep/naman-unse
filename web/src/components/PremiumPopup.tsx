@@ -13,8 +13,9 @@ const SUB = BRAND.subscription as typeof BRAND.subscription & { yearly: { listPr
 export const YEAR_LIST = SUB.yearly.listPrice ?? SUB.monthly.price * 12; // 6,900 × 12 = 82,800
 export const YEAR_RATE = Math.round((1 - SUB.yearly.price / YEAR_LIST) * 100); // 29
 export const perMonth = (y: number) => Math.round(y / 12);
-// 웹(PayApp)은 자동 재결제가 아니라 30일·1년 이용권 — 문구를 정확히
-export const autoRenew = () => isNativeApp() || getPayments().id === 'mock';
+// 자동결제 여부 — 앱(Google Play)은 월·연 모두 자동 갱신. 웹(PayApp)은 월 = 매월 자동결제(정기결제), 연 = 1년 이용권
+// (PayApp 정기결제는 월·주·일 주기만 있어 연 단위 자동결제가 없음 → 만료 7일·1일 전 알림 + 화면 연장 안내)
+export const autoRenewOf = (plan: PlanId) => plan === 'monthly' || isNativeApp() || getPayments().id === 'mock';
 
 export const FEATURES = [
   { img: 'premium_f1', t: '오늘의 타로', s: '상세 해석', d: '지금 필요한 조언과 메시지를 담은 타로 카드 해석을 더 깊이 있게 만나보세요.' },
@@ -43,7 +44,7 @@ export function useSubscribe() {
     const r = await pay.subscribe(cur.id, { phone });
     if (r.status === 'redirect') return true; // PayApp 결제창으로 이동 중
     setBusy(false);
-    if (r.status === 'paid') { setPlan(pick); track('pay_success', { product: cur.id, price: cur.price }); toast('프리미엄 회원이 되셨어요 ✦'); return true; }
+    if (r.status === 'paid') { setPlan(pick, autoRenewOf(pick)); track('pay_success', { product: cur.id, price: cur.price }); toast('프리미엄 회원이 되셨어요 ✦'); return true; }
     if (r.status === 'failed') { track('pay_fail', { product: cur.id, message: r.message }); toast(r.message ?? '결제에 실패했어요'); }
     else { track('pay_cancel', { product: cur.id }); toast('구독을 취소했어요'); }
     return false;
@@ -51,21 +52,20 @@ export function useSubscribe() {
   return { subscribe, busy, phone, setPhone, needsPhone: pay.needsPhone, phoneReady: !pay.needsPhone || phoneOk(phone) };
 }
 
-export function PlanPicker({ pick, setPick }: { pick: PlanId; setPick: (p: PlanId) => void }) {
-  const auto = autoRenew();
+export function PlanPicker({ pick, setPick, only }: { pick: PlanId; setPick: (p: PlanId) => void; only?: PlanId }) {
   return (
     <div className="pplans" role="radiogroup" aria-label="요금제">
-      <button role="radio" aria-checked={pick === 'monthly'} className={`pplan${pick === 'monthly' ? ' on' : ''}`} onClick={() => setPick('monthly')}>
+      {only !== 'yearly' && <button role="radio" aria-checked={pick === 'monthly'} className={`pplan${pick === 'monthly' ? ' on' : ''}`} onClick={() => setPick('monthly')}>
         <i aria-hidden />
         <b>월간 구독</b>
-        <span className="pr"><strong>{won(SUB.monthly.price)}</strong><small>{auto ? '매월 자동결제' : '30일 이용권'}</small></span>
-      </button>
-      <button role="radio" aria-checked={pick === 'yearly'} className={`pplan${pick === 'yearly' ? ' on' : ''}`} onClick={() => setPick('yearly')}>
+        <span className="pr"><strong>{won(SUB.monthly.price)}</strong><small>매월 자동결제 · 언제든 해지</small></span>
+      </button>}
+      {only !== 'monthly' && <button role="radio" aria-checked={pick === 'yearly'} className={`pplan${pick === 'yearly' ? ' on' : ''}`} onClick={() => setPick('yearly')}>
         <i aria-hidden />
         <b>연간 구독</b>
-        <span className="pr"><s>{won(YEAR_LIST)}</s><strong>{won(SUB.yearly.price)}</strong><small>{auto ? '매년 자동결제' : '1년 이용권'} · 월 {won(perMonth(SUB.yearly.price))}</small></span>
+        <span className="pr"><s>{won(YEAR_LIST)}</s><strong>{won(SUB.yearly.price)}</strong><small>{autoRenewOf('yearly') && only !== 'yearly' ? '매년 자동결제' : '1년 이용권'} · 월 {won(perMonth(SUB.yearly.price))}</small></span>
         <em className="off">약 {YEAR_RATE}% 할인</em>
-      </button>
+      </button>}
     </div>
   );
 }
