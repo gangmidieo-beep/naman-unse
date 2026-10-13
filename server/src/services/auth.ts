@@ -25,3 +25,11 @@ export async function verify<T extends UserClaims | AdminClaims>(token: string):
   }
 }
 export const newId = (prefix = '') => prefix + randomBytes(8).toString('hex');
+// PDF 내려받기 링크용 짧은 토큰(10분) — 브라우저·앱이 주소만 열어도 받도록. 사용자 토큰과 섞이지 않게 kind=pdf
+export async function signPdf(orderId: string) {
+  return new SignJWT({ kind: 'pdf' }).setProtectedHeader({ alg: 'HS256' }).setSubject(orderId).setIssuedAt().setExpirationTime('10m').sign(secret());
+}
+export async function verifyPdf(token: string): Promise<string | null> {
+  const p = await verify<any>(token);
+  return p && (p as any).kind === 'pdf' ? String(p.sub) : null;
+}

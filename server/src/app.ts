@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { join, extname } from 'node:path';
 import { openDb, schema as S, type Db } from './db/index.ts';
 import { seedBase, seedDemo } from './services/seed.ts';
-import { newId, signAdmin, signUser, verify, type AdminClaims, type UserClaims } from './services/auth.ts';
+import { newId, signAdmin, signPdf, signUser, verify, verifyPdf, type AdminClaims, type UserClaims } from './services/auth.ts';
+import { readingHtml, renderPdf } from './services/reading/pdf.ts';
 import { exchange, isConfigured, isProvider, startUrl, takeState } from './services/oauth.ts';
 import { contentStats, dashboard, memberDetail, members, payments, range, subscriptionStats, toCsv } from './services/stats.ts';
 import { shareCard } from './services/card.ts';
@@ -455,6 +456,38 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!r) return rep.code(404).send({ error: '풀이를 찾지 못했어요' });
     const { tokensIn, tokensOut, costKrw, model, ...pub } = r; void tokensIn; void tokensOut; void costKrw; void model; // 원가는 관리자만
     return pub;
+  });
+  // 정통 감정서 A4 PDF — 화면에서 링크를 받아(10분짜리) 주소를 열면 내려받기. 같은 풀이는 메모리에 잠깐 보관해 다시 만들지 않음
+  const pdfCache = new Map<string, Buffer>();
+  app.post('/readings/:oid/pdf-link', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
+    if (!o || o.status !== 'paid') return rep.code(404).send({ error: '결제된 풀이가 없어요' });
+    const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
+    if (!r || r.status !== 'done' || (r.content as any)?.version !== 2) return rep.code(409).send({ error: '감정서가 완성된 뒤에 PDF 로 받을 수 있어요' });
+    return { url: `${API()}/pdf?t=${await signPdf(o.id)}` }; // 경로 파라미터는 길이 제한(100자)이 있어 쿼리로
+  });
+  app.get('/pdf', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const oid = await verifyPdf(String((req.query as any).t ?? ''));
+    if (!oid) return rep.code(410).type('text/plain; charset=utf-8').send('링크가 만료됐어요. 풀이 화면에서 PDF 저장을 다시 눌러 주세요.');
+    const [o] = await db.select().from(S.orders).where(eq(S.orders.id, oid));
+    const [r] = o ? await db.select().from(S.readings).where(eq(S.readings.orderId, o.id)) : [];
+    const c = r?.content as any;
+    if (!o || !r || r.status !== 'done' || c?.version !== 2) return rep.code(404).type('text/plain; charset=utf-8').send('감정서를 찾을 수 없어요');
+    const [p] = await db.select().from(S.products).where(eq(S.products.id, o.productId));
+    const title = p?.title ?? o.productId;
+    const key = `${r.id}:${r.doneAt?.getTime() ?? 0}`;
+    let pdf = pdfCache.get(key);
+    if (!pdf) {
+      const resultTitle = (p as any)?.resultTitle || (c.character === 'wolha' ? '월하선녀가 풀어드린 나의 인연서' : '천궁도사가 풀어드린 나의 운명서');
+      try { pdf = await renderPdf(readingHtml(c, { productTitle: title, resultTitle }), `${title} · ${c.people?.[0]?.name ?? ''} 님`); }
+      catch (e: any) { req.log.error(`[pdf] ${e.message}`); return rep.code(503).type('text/plain; charset=utf-8').send('PDF 를 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); }
+      pdfCache.set(key, pdf);
+      if (pdfCache.size > 8) pdfCache.delete(pdfCache.keys().next().value!);
+    }
+    const name = `나만의운세_${title}_${c.people?.[0]?.name ?? ''}.pdf`.replace(/[\\/:*?"<>|\s]+/g, '_');
+    return rep.type('application/pdf').header('content-disposition', `attachment; filename="naman-unse.pdf"; filename*=UTF-8''${encodeURIComponent(name)}`).header('cache-control', 'private, no-store').send(pdf);
   });
   app.get('/me/entitlements', async (req, rep) => {
     const userId = await needUser(req, rep);

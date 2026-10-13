@@ -37,8 +37,8 @@ describe('장 구성·프롬프트', () => {
     expect(checkQuality(bad, ['김현재'], chaptersFor('jeongtong', '정통운세')).join()).toContain('금지 표현');
     expect(checkQuality(c, ['없는이름'], chaptersFor('jeongtong', '정통운세')).join()).toContain('이름 누락');
   });
-  it('AI 응답(가짜) → 두 번에 나눠 호출, 장 합치기, 원가 계산', async () => {
-    Object.assign(process.env, { READING_AI: 'live', ANTHROPIC_API_KEY: 'test', ANTHROPIC_MODEL: 'test-model' });
+  it('(READING_LONG=off) AI 응답(가짜) → 두 번에 나눠 호출, 장 합치기, 원가 계산', async () => {
+    Object.assign(process.env, { READING_AI: 'live', ANTHROPIC_API_KEY: 'test', ANTHROPIC_MODEL: 'test-model', READING_LONG: 'off' }); // 예전 9장 방식
     let n = 0;
     const fake = (async (_u: string, init: any) => {
       n++;
@@ -49,7 +49,7 @@ describe('장 구성·프롬프트', () => {
       return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(json) }], usage: { input_tokens: 2000, output_tokens: 3000 } }));
     }) as unknown as typeof fetch;
     const g = await generateReading({ id: 'jeongtong', title: '정통운세' }, [ME], { http: fake });
-    for (const k of ['READING_AI', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL']) delete process.env[k];
+    for (const k of ['READING_AI', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', 'READING_LONG']) delete process.env[k];
     expect(n).toBe(2);
     expect(g.content.chapters).toHaveLength(9);
     expect(g.content.generatedBy).toBe('ai');

@@ -575,3 +575,66 @@
 .el-legend i { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
 .el-legend i.el-wood { background: #3E8E57; } .el-legend i.el-fire { background: #D9372B; } .el-legend i.el-earth { background: #F2C230; }
 .el-legend i.el-metal { background: #fff; border: 1px solid #CFC6B4; } .el-legend i.el-water { background: #161616; }
+
+/* 정통 감정서 분석표 · 장편 결과지 (2026-10-13) */
+.rep4 { margin: 18px 14px 0; }
+.rep4 .rh { font-family: var(--serif); font-size: 19px; font-weight: 900; margin: 22px 4px 8px; padding-bottom: 6px; border-bottom: 2px solid var(--gold, #a8823e); }
+.rep4 .rh small { font-family: var(--sans); font-size: 13px; color: var(--ink-4); font-weight: 600; margin-left: 8px; }
+.rep4 .tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.rep4 table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fffdf7; }
+.rep4 th, .rep4 td { border: 1px solid #e3d7bd; padding: 6px 4px; text-align: center; vertical-align: middle; }
+.rep4 thead th, .rep4 .won4 tbody th { background: #f5ecd8; font-weight: 800; white-space: nowrap; }
+.rep4 .won4 thead th.me { color: #C8312A; }
+.rep4 .won4 td.hz { font-family: var(--brush); font-size: 34px; line-height: 1.1; padding: 6px 0 4px; }
+.rep4 .won4 td.hz small { display: block; font-family: var(--sans); font-size: 11px; line-height: 1.2; }
+.rep4 .won4 td.me { box-shadow: inset 0 0 0 2px #C8312A; }
+.rep4 .won4 td.ss { font-weight: 800; color: #6b4f1a; }
+.rep4 td.sm, .rep4 .sm { font-size: 13px; color: var(--ink-3); }
+.rep4 td.el-wood, .rep4 b.el-wood, .rep4 span.el-wood { background: #3E8E57; color: #fff; }
+.rep4 td.el-fire, .rep4 b.el-fire, .rep4 span.el-fire { background: #D9372B; color: #fff; }
+.rep4 td.el-earth, .rep4 b.el-earth, .rep4 span.el-earth { background: #F2C230; color: #2A1E08; }
+.rep4 td.el-metal, .rep4 b.el-metal, .rep4 span.el-metal { background: #fff; color: #222; }
+.rep4 td.el-water, .rep4 b.el-water, .rep4 span.el-water { background: #161616; color: #fff; }
+.rep4 .rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.rep4 .rbox { background: #fffdf7; border: 1px solid #e3d7bd; border-radius: 12px; padding: 12px; margin-top: 10px; }
+.rep4 .rgrid .rbox { margin-top: 0; }
+.rep4 .rbox h3 { font-size: 15px; font-weight: 900; margin: 0 0 8px; color: #6b4f1a; }
+.rep4 .rbox h3 small { font-size: 12px; color: var(--ink-4); margin-left: 4px; }
+.rep4 .rbar { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 4px 0; }
+.rep4 .rbar .lb { width: 36px; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.rep4 .rbar .lb i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid #ccc; }
+.rep4 .rbar i.el-wood { background: #3E8E57; } .rep4 .rbar i.el-fire { background: #D9372B; } .rep4 .rbar i.el-earth { background: #F2C230; } .rep4 .rbar i.el-metal { background: #fff; } .rep4 .rbar i.el-water { background: #161616; }
+.rep4 .tr { flex: 1; display: block; height: 10px; border-radius: 6px; background: #efe5cf; overflow: hidden; }
+.rep4 .tr b { display: block; height: 100%; background: #a8823e; border-right: 1px solid rgba(0,0,0,.15); }
+.rep4 .tr.wide { margin: 6px 0; }
+.rep4 .rbar .n { width: 18px; text-align: right; font-weight: 800; }
+.rep4 .rtg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 13px; }
+.rep4 .rtg span { border: 1px solid #ece2cc; border-radius: 8px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; }
+.rep4 .rtg span.off { color: #b5ab98; }
+.rep4 .big { font-family: var(--serif); font-size: 24px; font-weight: 900; margin: 0; }
+.rep4 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 6px; }
+.rep4 .chips span { padding: 3px 9px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid #ccc; }
+.rep4 .chips .gi { background: #eee; color: #555; }
+.rep4 .dw4 td { min-width: 62px; font-size: 12px; padding: 6px 3px; }
+.rep4 .dw4 b { display: block; font-family: var(--brush); font-size: 24px; line-height: 1.15; margin: 3px 0; }
+.rep4 .dw4 small { display: block; line-height: 1.35; }
+.rep4 .dw4 td.cur { background: #fbf0d4; box-shadow: inset 0 0 0 2px #C8312A; }
+.rep4 .dw4 em { display: block; font-style: normal; font-weight: 900; color: #C8312A; }
+.rep4 .list4 td, .rep4 .list4 th { font-size: 13px; padding: 5px 3px; white-space: nowrap; }
+@media (max-width: 420px) { .rep4 .rgrid { grid-template-columns: 1fr; } }
+.toc4 .pt { font-family: var(--serif); font-weight: 900; color: #6b4f1a; margin: 14px 0 4px; font-size: 16px; }
+.part4 { text-align: center; margin: 34px 14px 8px; padding: 18px 0 14px; border-top: 1px solid #e3d7bd; border-bottom: 1px solid #e3d7bd; }
+.part4 small { display: block; letter-spacing: .35em; color: var(--gold, #a8823e); font-size: 12px; }
+.part4 h2 { font-family: var(--serif); font-size: 23px; font-weight: 900; margin: 6px 0 0; }
+.pdf-bar { display: flex; gap: 8px; margin: 18px 14px 0; }
+.pdf-bar button { flex: 1; }
+.toc-fab { position: fixed; right: max(14px, calc(50% - var(--app-max, 480px) / 2 + 14px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); z-index: 30; border: 0; border-radius: 24px; padding: 10px 16px; font-weight: 900; font-size: 15px; background: #241d14; color: #f3e6c8; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.wait-prog { width: min(320px, 80vw); margin: 14px auto 0; }
+.wait-prog .tr { display: block; height: 10px; border-radius: 6px; background: rgba(255,255,255,.18); overflow: hidden; }
+.wait-prog .tr b { display: block; height: 100%; background: linear-gradient(90deg, #c9a35a, #f1d48b); transition: width .6s; }
+.wait-prog p { text-align: center; font-size: 15px; margin: 8px 0 0; }
+@media print {
+  .toc-fab, .pdf-bar, .tabs, header, .recom, .btn-row, .note { display: none !important; }
+  .chap { break-inside: auto; } .part4 { break-before: page; }
+}
+.rep4 .tr b.el-wood { background: #3E8E57; } .rep4 .tr b.el-fire { background: #D9372B; } .rep4 .tr b.el-earth { background: #F2C230; } .rep4 .tr b.el-metal { background: #d8d2c4; } .rep4 .tr b.el-water { background: #161616; }

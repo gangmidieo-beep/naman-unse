@@ -128,6 +128,8 @@ export const readings = pgTable('readings', {
   costKrw: integer(),
   createdAt: now(),
   doneAt: timestamp({ withTimezone: true }),
+  startedAt: timestamp({ withTimezone: true }), // 생성 시작(멈춤 판정용 — 장편은 몇 분 걸림)
+  attempts: integer().default(0).notNull(), // 실패 후 자동 재시도 횟수
 });
 
 export const talismans = pgTable('talismans', {

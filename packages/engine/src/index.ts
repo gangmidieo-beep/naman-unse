@@ -138,3 +138,4 @@ export const kstDateString = (date: Date) => {
 export { jeolgiOfYear, MONTH_STEM_BASE };
 export { tojeong, ganjiNum, type TojeongInput } from './tojeong.ts';
 export { lunarMonthDays } from './lunar.ts';
+export { analyzeSaju, ELEMENT_LUCK, type SajuReport } from './analysis.ts';

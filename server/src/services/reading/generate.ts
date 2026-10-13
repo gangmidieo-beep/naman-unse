@@ -1,12 +1,13 @@
 // 유료 풀이 생성 — 결제 완료 → readings(queued) → 워커가 생성 → done.
 // 실제 AI 호출은 READING_AI=live + ANTHROPIC_API_KEY + ANTHROPIC_MODEL 이 모두 있을 때만(비용 보고·승인 후 켬). 아니면 예시 풀이로 흐름만 완성.
-import { and, eq, inArray, lt } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { calcSaju, solarToLunar, tojeong, type SajuResult } from '@naman/engine';
 import outline from '../../../../packages/content/data/reading-outline.json' with { type: 'json' };
 import sajuSample from '../../../../packages/content/data/sample-readings/saju.json' with { type: 'json' };
 import pairSample from '../../../../packages/content/data/sample-readings/gunghap.json' with { type: 'json' };
 import yearSample from '../../../../packages/content/data/sample-readings/newyear.json' with { type: 'json' };
 import { schema as S, type Db } from '../../db/index.ts';
+import { generateLong, reportsFor, type LongContent } from './long.ts';
 
 export type Chapter = { id: string; title: string; say: string; body: string; highlight: string };
 export type Closing = { title: string; body: string; tips: string[] };
@@ -81,7 +82,7 @@ async function callClaude(system: string, user: string, http: typeof fetch) {
   return { json, tokensIn: j.usage?.input_tokens ?? 0, tokensOut: j.usage?.output_tokens ?? 0 };
 }
 // 입력 USD/1M, 출력 USD/1M — 모델 단가는 환경변수로(관리자 원가 표시용). 기본값은 추정치.
-const rate = () => ({ inp: +(process.env.AI_PRICE_IN_PER_M ?? 3), out: +(process.env.AI_PRICE_OUT_PER_M ?? 15) });
+const rate = () => ({ inp: +(process.env.AI_PRICE_IN_PER_M ?? 2), out: +(process.env.AI_PRICE_OUT_PER_M ?? 10) });
 
 function samplePerson(): Person { return { name: '홍길동', gender: 'M', year: 1975, month: 3, day: 15, calendar: 'solar', hour: null }; }
 export function sampleContent(product: { id: string; title: string }, people: Person[]): ReadingContent {
@@ -98,10 +99,14 @@ export function sampleContent(product: { id: string; title: string }, people: Pe
   };
 }
 
-export async function generateReading(product: { id: string; title: string }, people: Person[], opts: { focus?: string; http?: typeof fetch; now?: Date } = {}) {
+export async function generateReading(product: { id: string; title: string }, people: Person[], opts: { focus?: string; http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent) => Promise<void> } = {}) {
   const ps = people.length ? people : [samplePerson()];
   const titles = chaptersFor(product.id, product.title);
-  if (!liveAI()) return { content: sampleContent(product, ps), tokensIn: 0, tokensOut: 0, costKrw: 0, issues: [] as string[] };
+  if (!liveAI()) return { content: { ...sampleContent(product, ps), ...reportsFor(ps, opts.now) } as ReadingContent, tokensIn: 0, tokensOut: 0, costKrw: 0, issues: [] as string[] };
+  if (process.env.READING_LONG !== 'off') { // A4 40~50장 정통 감정서(기본). READING_LONG=off 면 예전 9장짜리
+    const g = await generateLong(product, groupOf(product.id), characterOf(product.id), ps, { http: opts.http, now: opts.now, prev: opts.prev, onProgress: opts.onProgress });
+    return { content: g.content as any, tokensIn: g.tokensIn, tokensOut: g.tokensOut, costKrw: g.costKrw, issues: g.content.issues ?? [] };
+  }
   const sajus = ps.map((p) => calcSaju({ ...p, leapMonth: p.leap, timeUnknown: p.hour == null }));
   const half = Math.ceil(titles.length / 2);
   const parts = [titles.slice(0, half), titles.slice(half)];
@@ -126,17 +131,20 @@ export async function generateReading(product: { id: string; title: string }, pe
   return { content, tokensIn, tokensOut, costKrw, issues: checkQuality(content, ps.map((p) => p.name), titles) };
 }
 
-/* ---------- 워커: 3초마다 대기 풀이를 최대 3개씩 ---------- */
+/* ---------- 워커: 3초마다 대기 풀이를 최대 2개씩(장편은 한 건에 AI 호출 십수 번 — 호출 수는 READING_CONCURRENCY 로 제한) ---------- */
+const MAX_ATTEMPTS = 3;
 export function startReadingWorker(db: Db, log: { warn: (m: string) => void }, http?: typeof fetch) {
   let busy = false;
   const tick = async () => {
     if (busy) return;
     busy = true;
     try {
-      // 10분 넘게 generating 이면 멈춘 것으로 보고 다시 대기열로
-      await db.update(S.readings).set({ status: 'queued' }).where(and(eq(S.readings.status, 'generating'), lt(S.readings.createdAt, new Date(Date.now() - 600_000))));
-      const list = await db.select().from(S.readings).where(eq(S.readings.status, 'queued')).limit(3);
-      if (list.length) await db.update(S.readings).set({ status: 'generating' }).where(inArray(S.readings.id, list.map((x) => x.id)));
+      // 40분 넘게 generating 이면 멈춘 것으로 보고 다시 대기열로(서버 재시작 등). 끝난 장은 content 에 남아 있어 이어서 쓴다
+      await db.update(S.readings).set({ status: 'queued' }).where(and(eq(S.readings.status, 'generating'), or(lt(S.readings.startedAt, new Date(Date.now() - 2_400_000)), and(isNull(S.readings.startedAt), lt(S.readings.createdAt, new Date(Date.now() - 2_400_000))))));
+      // 실패한 풀이는 3분 뒤 자동으로 다시(최대 3번)
+      await db.update(S.readings).set({ status: 'queued' }).where(and(eq(S.readings.status, 'failed'), lt(S.readings.attempts, MAX_ATTEMPTS), lt(S.readings.startedAt, new Date(Date.now() - 180_000))));
+      const list = await db.select().from(S.readings).where(eq(S.readings.status, 'queued')).limit(2);
+      if (list.length) await db.update(S.readings).set({ status: 'generating', startedAt: new Date() }).where(inArray(S.readings.id, list.map((x) => x.id)));
       await Promise.all(list.map((r) => runOne(db, r, http).catch((e) => log.warn(`[reading] ${r.id} 실패: ${e.message}`))));
     } finally { busy = false; }
   };
@@ -152,14 +160,20 @@ export async function runOne(db: Db, r: typeof S.readings.$inferSelect, http?: t
   const people: Person[] = ids.map((id) => profs.find((x) => x.id === id)).filter(Boolean).map((x: any) => ({
     name: x.name, gender: x.gender, year: x.birthYear, month: x.birthMonth, day: x.birthDay, calendar: x.calendar, leap: x.leap, hour: x.birthHour,
   }));
+  const prev = (r.content as any)?.version === 2 ? (r.content as Partial<LongContent>) : null;
+  const save = async (c: LongContent) => { await db.update(S.readings).set({ content: c as any }).where(eq(S.readings.id, r.id)); };
   try {
-    const g = await generateReading({ id: r.productId, title: p?.title ?? r.productId }, people, { http });
+    const g = await generateReading({ id: r.productId, title: p?.title ?? r.productId }, people, { http, prev, onProgress: save });
     await db.update(S.readings).set({
       status: 'done', content: { ...g.content, issues: g.issues } as any, model: g.content.generatedBy === 'ai' ? process.env.ANTHROPIC_MODEL ?? null : 'sample',
-      tokensIn: g.tokensIn, tokensOut: g.tokensOut, costKrw: g.costKrw, doneAt: new Date(),
+      tokensIn: (r.tokensIn ?? 0) + g.tokensIn, tokensOut: (r.tokensOut ?? 0) + g.tokensOut, costKrw: (r.costKrw ?? 0) + g.costKrw, doneAt: new Date(),
     }).where(eq(S.readings.id, r.id));
-  } catch (e) {
-    await db.update(S.readings).set({ status: 'failed' }).where(eq(S.readings.id, r.id));
+  } catch (e: any) {
+    // 끝난 장은 저장해 두고(다음 시도에서 이어서), 쓴 토큰·원가도 누적
+    await db.update(S.readings).set({
+      status: 'failed', attempts: (r.attempts ?? 0) + 1, ...(e.partial ? { content: e.partial } : {}),
+      tokensIn: (r.tokensIn ?? 0) + (e.tokensIn ?? 0), tokensOut: (r.tokensOut ?? 0) + (e.tokensOut ?? 0), costKrw: (r.costKrw ?? 0) + (e.costKrw ?? 0),
+    }).where(eq(S.readings.id, r.id));
     throw e;
   }
 }

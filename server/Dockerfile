@@ -12,7 +12,9 @@ RUN npm ci --no-audit --no-fund
 
 FROM node:22-slim
 # 공유 카드 이미지(SVG→PNG)에 한글 글꼴이 필요
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
+# 정통 감정서 PDF(Chromium 인쇄)와 한글 글꼴
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk chromium && rm -rf /var/lib/apt/lists/*
+ENV CHROMIUM_PATH=/usr/bin/chromium
 WORKDIR /app
 ENV NODE_ENV=production APP_ENV=production PORT=8791
 COPY --from=deps /app/node_modules ./node_modules

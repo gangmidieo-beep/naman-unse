@@ -6,7 +6,8 @@ import saju from '@naman/content/data/sample-readings/saju.json';
 import gunghap from '@naman/content/data/sample-readings/gunghap.json';
 import newyear from '@naman/content/data/sample-readings/newyear.json';
 import { sajuOf } from '@naman/content';
-import { solarToLunar, tojeong } from '@naman/engine';
+import { analyzeSaju, solarToLunar, tojeong, type SajuReport } from '@naman/engine';
+import { ReportTables } from '../components/ReportTables';
 import { newYearTarget } from '../lib/dates';
 import { SubHeader } from '../components/layout';
 import { Button, CharacterBubble, ProductCard, toCardItem, useToast } from '../components/ui';
@@ -20,7 +21,7 @@ import { PhotoReading } from './Photo';
 import { optionalImg } from '../assets/images';
 import { birthLabel, hourLabel } from './ProfileNew';
 import { MOCK_MODE } from '../lib/api';
-import { apiAuth } from '../platform/payments';
+import { apiAuth, isNativeApp } from '../platform/payments';
 
 type Sample = (typeof saju);
 const sampleFor = (productId: string, who: string): Sample =>
@@ -47,7 +48,7 @@ const EL: Record<string, 'wood' | 'fire' | 'earth' | 'metal' | 'water'> = {
   壬: 'water', 癸: 'water', 亥: 'water', 子: 'water',
 };
 const EL_KO = { wood: '목', fire: '화', earth: '토', metal: '금', water: '수' } as const;
-function PillarTable({ p }: { p: Profile }) {
+export function PillarTable({ p }: { p: Profile }) {
   const s = useMemo(() => sajuOf(p), [p]);
   const cols = [['시주', s.pillars.hour], ['일주', s.pillars.day], ['월주', s.pillars.month], ['연주', s.pillars.year]] as const;
   const chars = cols.flatMap(([, v]) => (v ? [v.hanja[0], v.hanja[1]] : []));
@@ -86,7 +87,7 @@ export default function ReadingPage() {
   const { purchases, profiles } = useApp();
   // 실결제 모드: 서버가 쓴 풀이를 3초마다 확인(queued → generating → done). 다른 기기에서 열어도 서버 주문으로 찾음
   const live = !MOCK_MODE && !orderId.startsWith('sample-');
-  const [srv, setSrv] = useState<{ status: string; content?: any; productId?: string; profileId?: string } | null>(null);
+  const [srv, setSrv] = useState<{ status: string; content?: any; productId?: string; profileId?: string; attempts?: number } | null>(null);
   useEffect(() => {
     if (!live) return;
     let stop = false;
@@ -94,7 +95,8 @@ export default function ReadingPage() {
       const r = await apiAuth<any>(`/readings/${encodeURIComponent(orderId)}`).catch(() => ({ status: 'missing' }));
       if (stop) return;
       setSrv(r);
-      if (r.status === 'queued' || r.status === 'generating') setTimeout(poll, 3000);
+      // 장편은 몇 분 걸리고, 실패해도 서버가 자동으로 다시 쓴다(최대 3번)
+      if (r.status === 'queued' || r.status === 'generating' || (r.status === 'failed' && (r.attempts ?? 0) < 3)) setTimeout(poll, 4000);
     };
     poll();
     return () => { stop = true; };
@@ -115,7 +117,8 @@ export default function ReadingPage() {
     return () => clearTimeout(t);
   }, [step, live, srv?.status]);
 
-  if (live && srv && (srv.status === 'failed' || srv.status === 'missing') && !(pre && (isTarot(pre) || isPhoto(pre))))
+  const retrying = srv?.status === 'failed' && (srv.attempts ?? 0) < 3;
+  if (live && srv && ((srv.status === 'failed' && !retrying) || srv.status === 'missing') && !(pre && (isTarot(pre) || isPhoto(pre))))
     return (
       <>
         <SubHeader title="풀이" />
@@ -132,13 +135,25 @@ export default function ReadingPage() {
 
   const who = charOf(p);
   const c = CHAR[who];
-  const r: Sample = live && srv?.content?.chapters ? srv.content : sampleFor(p.id, who);
+  const r: Sample = live && srv?.status === 'done' && srv?.content?.chapters?.length ? srv.content : sampleFor(p.id, who);
   const isSampleText = !(live && srv?.content?.generatedBy === 'ai');
   const [pid, partnerId] = order.profileId.split('+');
   const person = profiles.find((x) => x.id === pid) ?? SAMPLE_PROFILE;
   const partner = partnerId ? profiles.find((x) => x.id === partnerId) : undefined;
   const title = displayTitle(p);
   const loading = optionalImg('loading_cheongung');
+  const prog = srv?.content?.progress as { done: number; total: number } | undefined;
+  const v2 = live && srv?.status === 'done' && srv?.content?.version === 2 ? srv.content : null;
+  const reports: { r: SajuReport; name: string; birth?: string }[] = v2
+    ? v2.reports.map((rr: SajuReport, i: number) => ({ r: rr, name: v2.people[i]?.name ?? '', birth: v2.people[i]?.birth }))
+    : [person, partner].filter(Boolean).map((x) => ({ r: analyzeSaju(sajuOf(x!)), name: x!.name, birth: `${birthLabel(x!)} · ${hourLabel(x!.hour)}` }));
+  const savePdf = async () => {
+    try {
+      const { url } = await apiAuth<{ url: string }>(`/readings/${encodeURIComponent(orderId)}/pdf-link`, { method: 'POST', body: '{}' });
+      if (isNativeApp()) window.open(url, '_system'); else window.location.assign(url);
+      toast('PDF 를 만들고 있어요. 잠시 뒤 내려받기가 시작돼요.');
+    } catch (e: any) { toast(e.message ?? 'PDF 를 만들지 못했어요'); }
+  };
 
   if (step < STEPS.length)
     return (
@@ -148,7 +163,13 @@ export default function ReadingPage() {
           <span className="ring r1" /><span className="ring r2" />
           {Array.from({ length: 10 }, (_, i) => <i key={i} style={{ transform: `rotate(${i * 36}deg) translateY(-118px)` }}>✦</i>)}
         </div>
-        <h1 className="wait-title">{who === 'cheongung' ? '별을 읽고 있소…' : '붉은 실을 따라가고 있어요…'}<small>{title} · 약 1분</small></h1>
+        <h1 className="wait-title">{who === 'cheongung' ? '별을 읽고 있소…' : '붉은 실을 따라가고 있어요…'}<small>{title} · {live ? 'A4 40~50장 정통 감정서 · 3~5분' : '약 1분'}</small></h1>
+        {live && prog && (
+          <div className="wait-prog" role="progressbar" aria-valuemin={0} aria-valuemax={prog.total} aria-valuenow={prog.done}>
+            <span className="tr"><b style={{ width: `${Math.round((prog.done / prog.total) * 100)}%` }} /></span>
+            <p>{retrying ? '잠시 문제가 있어 이어서 쓰고 있어요' : `${prog.done} / ${prog.total}장 작성`}</p>
+          </div>
+        )}
         <ol className="wait-steps">
           {STEPS.map((s, i) => <li key={s} className={i < step ? 'done' : i === step ? 'on' : ''}>{i < step ? '✓ ' : ''}{s}</li>)}
         </ol>
@@ -173,11 +194,12 @@ export default function ReadingPage() {
               {partner && <p>{partner.name}님 · {birthLabel(partner)}</p>}
             </div>
             {isTarot(p) ? <TarotReading p={p} orderId={order.orderId} /> : isPhoto(p) ? <PhotoReading p={p} orderId={order.orderId} /> : <>
-            <PillarTable p={person} />
             {p.id === 'tojeong' && <Gwae p={person} />}
-            {isSampleText && person.id !== SAMPLE_PROFILE.id && !isTarot(p) && !isPhoto(p) && <p className="note" style={{ margin: '10px 18px 0' }}>시안 단계라 본문은 예시 인물(홍길동)의 풀이예요. 정식 오픈 때 {person.name}님 사주로 새로 써 드려요.</p>}
+            {isSampleText && person.id !== SAMPLE_PROFILE.id && !isTarot(p) && !isPhoto(p) && <p className="note" style={{ margin: '10px 18px 0' }}>지금은 예시 풀이예요. 정식 감정서(A4 40~50장)는 {person.name}님 사주로 새로 써 드려요. 아래 분석표는 {person.name}님 사주로 계산한 실제 값이에요.</p>}
+            {reports.map((x) => <ReportTables key={x.name} r={x.r} name={x.name} birth={x.birth} />)}
+            {v2 ? <LongBody c={v2} who={who} /> : <>
             <div className="chap"><CharacterBubble who={who}>{r.intro}</CharacterBubble></div>
-            <nav className="toc" aria-label="목차">
+            <nav className="toc" id="toc" aria-label="목차">
               <h2>목차</h2>
               <ol>{r.chapters.map((ch, i) => <li key={ch.id}><a href={`#${ch.id}`}><i>{i + 1}</i>{ch.title}</a></li>)}</ol>
             </nav>
@@ -195,10 +217,13 @@ export default function ReadingPage() {
               <ul className="tips">{r.closing.tips.map((t) => <li key={t}>{t}</li>)}</ul>
             </section>
             </>}
+            </>}
             <div className="doc-seal">{c.name}<span className="seal" aria-hidden>運</span></div>
           </div>
         </article>
 
+        {v2 && <div className="pdf-bar"><Button kind="gold" onClick={savePdf}>A4 PDF 로 저장하기</Button></div>}
+        {v2 && <a className="toc-fab" href="#toc">목차</a>}
         <div className="pad mt24">
           <div className="btn-row">
             <Button kind="ink" onClick={() => setShare(true)}>핵심만 공유하기</Button>
@@ -214,6 +239,45 @@ export default function ReadingPage() {
         <p style={{ fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.8, marginTop: 18 }}>“{r.chapters[0].highlight}”</p>
         <p style={{ marginTop: 18, fontSize: 16, color: 'var(--ink-3)' }}>전체 풀이는 나만의 운세 앱에서 볼 수 있어요</p>
       </ShareCard>
+    </>
+  );
+}
+
+// 장편 정통 감정서 본문 — 부(part)마다 제목, 장 번호는 처음부터 이어서
+function LongBody({ c, who }: { c: any; who: 'cheongung' | 'wolha' }) {
+  const parts = (c.parts as { title: string }[]).map((pt, i) => ({ ...pt, chapters: (c.chapters as any[]).filter((x) => x.part === i) })).filter((pt) => pt.chapters.length);
+  let n = 0, t = 0;
+  return (
+    <>
+      {c.intro && <div className="chap"><CharacterBubble who={who}>{c.intro}</CharacterBubble></div>}
+      <nav className="toc toc4" id="toc" aria-label="목차">
+        <h2>목차</h2>
+        {parts.map((pt) => (
+          <div key={pt.title}>
+            <div className="pt">{pt.title}</div>
+            <ol>{pt.chapters.map((ch) => <li key={ch.id}><a href={`#${ch.id}`}><i>{++t}</i>{ch.title}</a></li>)}</ol>
+          </div>
+        ))}
+        <div className="pt"><a href="#closing">{c.closing.title}</a></div>
+      </nav>
+      {parts.map((pt) => (
+        <div key={pt.title}>
+          <div className="part4"><small>{who === 'cheongung' ? '天宮道士' : '月下仙女'}</small><h2>{pt.title}</h2></div>
+          {pt.chapters.map((ch) => (
+            <section className="chap" id={ch.id} key={ch.id}>
+              <small>第 {++n} 章</small>
+              <h2>{ch.title}</h2>
+              {ch.say && <CharacterBubble who={who}>{ch.say}</CharacterBubble>}
+              <Body text={ch.body} highlight={ch.highlight} />
+            </section>
+          ))}
+        </div>
+      ))}
+      <section className="chap closing" id="closing">
+        <h2>{c.closing.title}</h2>
+        <Body text={c.closing.body} highlight="" />
+        {c.closing.tips?.length > 0 && <ul className="tips">{c.closing.tips.map((x: string) => <li key={x}>{x}</li>)}</ul>}
+      </section>
     </>
   );
 }

@@ -51,6 +51,8 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await expect(page.getByText('별을 읽고 있소…')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('heading', { name: '천궁도사가 풀어드린 나의 운명서' }).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('table', { name: /원국/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /대운표/ })).toBeVisible(); // 정통 분석표(대운·세운·월운)
+  await expect(page.getByRole('heading', { name: /월운표/ })).toBeVisible();
   // 결과 맨 아래 추천 부적(재물운 → 재물·사업번창)
   await expect(page.getByRole('region', { name: '추천 부적' }).getByRole('link', { name: /금전재물부적/ })).toBeVisible();
 
