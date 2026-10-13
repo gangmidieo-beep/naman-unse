@@ -5,6 +5,14 @@ import type { LongContent } from './long.ts';
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const EL: Record<string, string> = { 목: 'wood', 화: 'fire', 토: 'earth', 금: 'metal', 수: 'water' };
 const CHAR = { cheongung: { name: '천궁도사', hanja: '天宮道士', doc: '운명서' }, wolha: { name: '월하선녀', hanja: '月下仙女', doc: '인연서' } };
+// 표지 제목을 의미 단위 두 줄로: "천궁도사가 풀어드린 / 나의 운명서"
+export const titleLines = (t: string) => {
+  const w = String(t ?? '').trim().split(/\s+/);
+  if (w.length < 3) return esc(t);
+  let best = 1, diff = Infinity;
+  for (let i = 1; i < w.length; i++) { const d = Math.abs(w.slice(0, i).join(' ').length - w.slice(i).join(' ').length); if (d < diff) { diff = d; best = i; } }
+  return `<span>${esc(w.slice(0, best).join(' '))}</span> <span>${esc(w.slice(best).join(' '))}</span>`;
+};
 const paras = (t: string) => String(t ?? '').split(/\n\n+/).map((p) => `<p>${esc(p)}</p>`).join('');
 
 function reportHtml(c: LongContent, k: number) {
@@ -25,9 +33,9 @@ function reportHtml(c: LongContent, k: number) {
         <tr><th>천간</th>${cols.map((x) => cell(x, 'stem')).join('')}</tr>
         <tr><th>지지</th>${cols.map((x) => cell(x, 'branch')).join('')}</tr>
         <tr><th>십성</th>${cols.map((x) => `<td class="ss">${x.empty ? '-' : esc(x.branch.sipsin)}</td>`).join('')}</tr>
-        <tr><th>지장간</th>${cols.map((x) => `<td class="sm">${x.empty ? '-' : esc(x.hidden.join(' '))}</td>`).join('')}</tr>
+        <tr><th>지장간</th>${cols.map((x) => `<td class="sm">${x.empty ? '-' : x.hidden.map((h: string) => `<span class="nb">${esc(h)}</span>`).join(' ')}</td>`).join('')}</tr>
         <tr><th>12운성</th>${cols.map((x) => `<td>${x.empty ? '-' : esc(x.stage)}</td>`).join('')}</tr>
-        <tr><th>신살</th>${cols.map((x) => `<td class="sm">${x.empty ? '-' : esc(x.shinsal.join(' ') || '-')}</td>`).join('')}</tr>
+        <tr><th>신살</th>${cols.map((x) => `<td class="sm">${x.empty ? '-' : x.shinsal.map((h: string) => `<span class="nb">${esc(h)}</span>`).join(' ') || '-'}</td>`).join('')}</tr>
       </tbody>
     </table>
     <div class="grid2">
@@ -40,7 +48,7 @@ function reportHtml(c: LongContent, k: number) {
       <div class="box"><h3>용신 (억부 참고)</h3><p class="chips"><span class="el-${EL[r.yongsin.yong]}">용신 ${esc(r.yongsin.yong)}</span><span class="el-${EL[r.yongsin.hee]}">희신 ${esc(r.yongsin.hee)}</span><span class="gi">기신 ${esc(r.yongsin.gi)}</span></p>
         <p class="sm">행운의 색 ${esc(r.yongsin.luck.color)} · 방향 ${esc(r.yongsin.luck.dir)} · 숫자 ${esc(r.yongsin.luck.num)} · 계절 ${esc(r.yongsin.luck.season)}</p></div>
     </div>
-    <div class="box"><h3>원국의 합·충·형·파·해</h3><p class="sm">${r.relations.length ? r.relations.map(esc).join(' · ') : '두드러진 합·충이 없는 안정된 원국'}${r.special.length ? ` · ${r.special.map(esc).join(' · ')}` : ''}</p></div>
+    <div class="box"><h3>원국의 합·충·형·파·해</h3><p class="sm">${r.relations.length ? r.relations.map((h: string) => `<span class="nb">${esc(h)}</span>`).join(' · ') : '두드러진 합·충이 없는 안정된 원국'}${r.special.length ? ` · ${r.special.map((h: string) => `<span class="nb">${esc(h)}</span>`).join(' · ')}` : ''}</p></div>
   </section>
   <section class="rep">
     <h2 class="sec">대운표 <small>${r.daewoonStart ?? ''}세부터 10년마다 · ${r.daewoonDirection === 'forward' ? '순행' : '역행'}</small></h2>
@@ -63,11 +71,17 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(opts.resultTitle)}</title><style>
   @page { size: A4; margin: 20mm 17mm 18mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 10.6pt; line-height: 1.78; color: #241d14; }
+  body { margin: 0; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 10.6pt; line-height: 1.78; color: #241d14;
+    word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+  /* 줄바꿈: 한글은 낱말(어절) 단위로만 끊고, 제목은 줄 길이를 고르게, 본문은 마지막 줄에 한두 글자만 남지 않게 */
+  h1, h2, h3, .pt, .say, .hl, .who, .part h2 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+  .nb { white-space: nowrap; }
   .sans, table, .box, .sm, small { font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif; }
   .cover { height: 257mm; border: 2.5px solid #a8823e; outline: 1px solid #a8823e; outline-offset: -8px; background: #faf5ea; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; page-break-after: always; padding: 20mm; }
   .cover .hj { letter-spacing: .5em; color: #a8823e; font-size: 13pt; }
-  .cover h1 { font-size: 30pt; line-height: 1.35; margin: 14mm 0 6mm; font-weight: 900; }
+  .cover h1 { font-size: 30pt; line-height: 1.38; margin: 14mm 0 6mm; font-weight: 900; max-width: 150mm; }
+  .cover h1 span { display: inline-block; }
   .cover .pt { font-size: 15pt; color: #8a6a2c; font-weight: 700; }
   .cover .who { margin-top: 18mm; font-size: 12pt; line-height: 1.9; }
   .cover .seal { margin-top: 16mm; width: 18mm; height: 18mm; border: 2px solid #c8312a; color: #c8312a; font-size: 18pt; font-weight: 900; display: flex; align-items: center; justify-content: center; border-radius: 3px; }
@@ -102,7 +116,7 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   .list td, .list th { font-size: 8pt; padding: .7mm .8mm; line-height: 1.45; }
   .toc h2 { font-size: 16pt; margin: 0 0 2mm; } .toc .cols { columns: 2; column-gap: 8mm; } .toc .pt { break-after: avoid; }
   .toc .pt { font-weight: 900; margin: 3mm 0 1mm; font-size: 10.5pt; color: #6b4f1a; }
-  .toc ol { margin: 0; padding-left: 0; list-style: none; columns: 1; font-size: 9.5pt; line-height: 1.6; } .toc li span { color: #a8823e; display: inline-block; width: 9mm; }
+  .toc ol { margin: 0; padding-left: 0; list-style: none; columns: 1; font-size: 9.5pt; line-height: 1.6; } .toc li { padding-left: 9mm; text-indent: -9mm; break-inside: avoid; } .toc li span { color: #a8823e; display: inline-block; width: 9mm; text-indent: 0; }
   .intro { margin-top: 6mm; font-size: 11pt; background: #faf5ea; border-left: 3px solid #a8823e; padding: 4mm 5mm; margin-bottom: 6mm; }
   .part { page-break-before: always; text-align: center; padding: 18mm 0 10mm; margin-bottom: 8mm; border-bottom: 1px solid #dccfb4; }
   .part small { letter-spacing: .4em; color: #a8823e; } .part h2 { font-size: 22pt; margin: 4mm 0; }
@@ -110,7 +124,7 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   .chap .no { font-size: 9pt; color: #a8823e; letter-spacing: .2em; font-family: 'Noto Sans CJK KR', sans-serif; }
   .chap h3 { font-size: 14pt; margin: .5mm 0 2mm; break-after: avoid; }
   .chap .say { font-size: 10pt; color: #6b4f1a; background: #faf5ea; padding: 2mm 3mm; border-radius: 1.5mm; margin: 0 0 3mm; break-inside: avoid; }
-  .chap p { margin: 0 0 2.6mm; text-align: justify; orphans: 2; widows: 2; }
+  .chap p, .intro p, .closing p { margin: 0 0 2.6mm; text-align: left; orphans: 2; widows: 2; }
   .hl { border-top: 1px dashed #d8c49a; padding-top: 2mm; font-weight: 700; color: #6b4f1a; font-size: 10pt; }
   .closing { page-break-before: always; border: 1.5px solid #a8823e; padding: 6mm 7mm; background: #fffdf7; }
   .closing ul { padding-left: 5mm; } .closing li { margin: 1.5mm 0; font-weight: 700; }
@@ -119,9 +133,9 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   </style></head><body>
   <section class="cover">
     <div class="hj">${esc(ch.hanja)}</div>
-    <h1>${esc(opts.resultTitle)}</h1>
+    <h1>${titleLines(opts.resultTitle)}</h1>
     <div class="pt">${esc(opts.productTitle)}</div>
-    <div class="who">${c.people.map((p) => `${esc(p.name)} 님 · ${esc(p.birth)}`).join('<br>')}</div>
+    <div class="who">${c.people.map((p) => `<span class="nb">${esc(p.name)} 님</span> · <span class="nb">${esc(p.birth)}</span>`).join('<br>')}</div>
     <div class="seal">運</div>
     <div class="dt">${today} · 나만의 운세</div>
   </section>

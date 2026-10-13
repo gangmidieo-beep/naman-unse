@@ -2,6 +2,8 @@
 // 서버 감정서(content.reports)가 있으면 그것을, 없으면(예시) 화면에서 같은 엔진으로 계산한 값을 보여 준다.
 import type { SajuReport } from '@naman/engine';
 
+// 한 덩어리(예: "계(겁재)", "시주·일주 천간합(정임)")는 중간에서 줄이 바뀌지 않게
+const nbJoin = (xs: string[], sep: string) => xs.map((x, i) => <span key={i}>{i > 0 && sep}<span className="nb">{x}</span></span>);
 const EL: Record<string, string> = { 목: 'wood', 화: 'fire', 토: 'earth', 금: 'metal', 수: 'water' };
 
 export function ReportTables({ r, name, birth }: { r: SajuReport; name: string; birth?: string }) {
@@ -23,9 +25,9 @@ export function ReportTables({ r, name, birth }: { r: SajuReport; name: string; 
             <tr><th>천간</th>{rows.map((x) => hz(x, 'stem'))}</tr>
             <tr><th>지지</th>{rows.map((x) => hz(x, 'branch'))}</tr>
             <tr><th>십성</th>{rows.map((x) => <td key={x.key} className="ss">{x.empty ? '-' : x.branch.sipsin}</td>)}</tr>
-            <tr><th>지장간</th>{rows.map((x) => <td key={x.key} className="sm">{x.empty ? '-' : x.hidden.join(' ')}</td>)}</tr>
+            <tr><th>지장간</th>{rows.map((x) => <td key={x.key} className="sm">{x.empty ? '-' : nbJoin(x.hidden, ' ')}</td>)}</tr>
             <tr><th>12운성</th>{rows.map((x) => <td key={x.key}>{x.empty ? '-' : x.stage}</td>)}</tr>
-            <tr><th>신살</th>{rows.map((x) => <td key={x.key} className="sm">{x.empty ? '-' : x.shinsal.join(' ') || '-'}</td>)}</tr>
+            <tr><th>신살</th>{rows.map((x) => <td key={x.key} className="sm">{x.empty || !x.shinsal.length ? '-' : nbJoin(x.shinsal, ' ')}</td>)}</tr>
           </tbody>
         </table>
       </div>
@@ -53,7 +55,7 @@ export function ReportTables({ r, name, birth }: { r: SajuReport; name: string; 
           <p className="sm">행운의 색 {r.yongsin.luck.color} · 방향 {r.yongsin.luck.dir} · 숫자 {r.yongsin.luck.num}</p>
         </div>
       </div>
-      <div className="rbox"><h3>원국의 합·충·형·파·해</h3><p className="sm">{r.relations.length ? r.relations.join(' · ') : '두드러진 합·충이 없는 안정된 원국'}{r.special.length > 0 && ` · ${r.special.join(' · ')}`}</p></div>
+      <div className="rbox"><h3>원국의 합·충·형·파·해</h3><p className="sm">{r.relations.length ? nbJoin(r.relations, ' · ') : '두드러진 합·충이 없는 안정된 원국'}{r.special.length > 0 && <> · {nbJoin(r.special, ' · ')}</>}</p></div>
 
       <h2 className="rh">대운표<small>{r.daewoonStart ?? ''}세부터 10년마다 · {r.daewoonDirection === 'forward' ? '순행' : '역행'}</small></h2>
       <div className="tscroll">

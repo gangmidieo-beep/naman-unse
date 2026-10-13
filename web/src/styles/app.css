@@ -13,7 +13,14 @@ body {
   -webkit-tap-highlight-color: transparent;
   word-break: keep-all;
   overflow-wrap: anywhere;
+  line-break: strict;
 }
+/* 줄바꿈 — 한글은 어절 단위(keep-all), 제목은 줄 길이를 고르게, 본문은 마지막 줄에 한두 글자만 남지 않게 */
+h1, h2, h3, h4, .rh, .bubble, .hl { text-wrap: balance; }
+p, li, dd, blockquote { text-wrap: pretty; }
+.doc, .rep4, .chap, .toc4 { overflow-wrap: break-word; }
+.tl { display: inline-block; }
+.nb { white-space: nowrap; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; }
 a { color: inherit; text-decoration: none; }

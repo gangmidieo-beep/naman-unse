@@ -186,12 +186,12 @@ export default function ReadingPage() {
             <div className="doc-cover">
               <Img k={c.banner} eager alt="" />
               <div className="shade" />
-              <div className="tx"><small>{c.hanja}</small><h1>{resultTitle(p)}</h1></div>
+              <div className="tx"><small>{c.hanja}</small><h1>{titleLines(resultTitle(p))}</h1></div>
             </div>
             <div className="doc-meta">
               <div className="nm">{title}</div>
-              <p>{person.name}님 · {birthLabel(person)} · {hourLabel(person.hour)}</p>
-              {partner && <p>{partner.name}님 · {birthLabel(partner)}</p>}
+              <p><span className="nb">{person.name}님</span> · <span className="nb">{birthLabel(person)}</span> · <span className="nb">{hourLabel(person.hour)}</span></p>
+              {partner && <p><span className="nb">{partner.name}님</span> · <span className="nb">{birthLabel(partner)}</span></p>}
             </div>
             {isTarot(p) ? <TarotReading p={p} orderId={order.orderId} /> : isPhoto(p) ? <PhotoReading p={p} orderId={order.orderId} /> : <>
             {p.id === 'tojeong' && <Gwae p={person} />}
@@ -292,4 +292,13 @@ function TalismanRecommend({ p }: { p: Product }) {
       {list.map((t) => <ProductCard key={t.id} c={toCardItem(t)} mode="list" talisman={t} />)}
     </section>
   );
+}
+
+// 제목을 의미 단위 두 줄로 — "천궁도사가 풀어드린 / 나의 운명서" (낱말 중간에서 끊기지 않게)
+function titleLines(t: string) {
+  const w = t.trim().split(/\s+/);
+  if (w.length < 3) return t;
+  let best = 1, diff = Infinity;
+  for (let i = 1; i < w.length; i++) { const d = Math.abs(w.slice(0, i).join(' ').length - w.slice(i).join(' ').length); if (d < diff) { diff = d; best = i; } }
+  return <><span className="tl">{w.slice(0, best).join(' ')}</span> <span className="tl">{w.slice(best).join(' ')}</span></>;
 }
