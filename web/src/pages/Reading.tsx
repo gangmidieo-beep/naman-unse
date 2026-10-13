@@ -38,17 +38,37 @@ function Body({ text, highlight }: { text: string; highlight: string }) {
   );
 }
 
+// 오행 색(대표님 요청 2026-10-13): 목 초록 · 화 빨강 · 토 노랑 · 금 흰색 · 수 검정. 일주(나)는 빨간 테두리로 구분
+const EL: Record<string, 'wood' | 'fire' | 'earth' | 'metal' | 'water'> = {
+  甲: 'wood', 乙: 'wood', 寅: 'wood', 卯: 'wood',
+  丙: 'fire', 丁: 'fire', 巳: 'fire', 午: 'fire',
+  戊: 'earth', 己: 'earth', 辰: 'earth', 戌: 'earth', 丑: 'earth', 未: 'earth',
+  庚: 'metal', 辛: 'metal', 申: 'metal', 酉: 'metal',
+  壬: 'water', 癸: 'water', 亥: 'water', 子: 'water',
+};
+const EL_KO = { wood: '목', fire: '화', earth: '토', metal: '금', water: '수' } as const;
 function PillarTable({ p }: { p: Profile }) {
   const s = useMemo(() => sajuOf(p), [p]);
   const cols = [['시주', s.pillars.hour], ['일주', s.pillars.day], ['월주', s.pillars.month], ['연주', s.pillars.year]] as const;
+  const chars = cols.flatMap(([, v]) => (v ? [v.hanja[0], v.hanja[1]] : []));
+  const count = (Object.keys(EL_KO) as (keyof typeof EL_KO)[]).map((k) => [k, chars.filter((c) => EL[c] === k).length] as const);
+  const cell = (k: string, ch?: string) => {
+    const e = ch ? EL[ch] : undefined;
+    return <td key={k} className={`hz${e ? ` el-${e}` : ''}${k === '일주' ? ' me' : ''}`} title={e ? `${EL_KO[e]}(${ch})` : undefined}>{ch ?? '?'}{e && <small>{EL_KO[e]}</small>}</td>;
+  };
   return (
-    <table className="pillars" aria-label="사주 원국 여덟 글자">
-      <thead><tr>{cols.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
-      <tbody>
-        <tr>{cols.map(([k, v]) => <td key={k} className="hz">{v ? v.hanja[0] : '?'}</td>)}</tr>
-        <tr>{cols.map(([k, v]) => <td key={k} className="hz">{v ? v.hanja[1] : '?'}</td>)}</tr>
-      </tbody>
-    </table>
+    <>
+      <table className="pillars" aria-label="사주 원국 여덟 글자">
+        <thead><tr>{cols.map(([k]) => <th key={k} className={k === '일주' ? 'me' : ''}>{k}{k === '일주' && <small>나</small>}</th>)}</tr></thead>
+        <tbody>
+          <tr>{cols.map(([k, v]) => cell(k, v?.hanja[0]))}</tr>
+          <tr>{cols.map(([k, v]) => cell(k, v?.hanja[1]))}</tr>
+        </tbody>
+      </table>
+      <p className="el-legend" aria-label="오행 분포">
+        {count.map(([k, n]) => <span key={k} className={n ? '' : 'none'}><i className={`el-${k}`} />{EL_KO[k]} {n}</span>)}
+      </p>
+    </>
   );
 }
 
