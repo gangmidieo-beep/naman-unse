@@ -52,31 +52,82 @@ function Line({ rows, keys }: { rows: Record<string, any>[]; keys: { k: string; 
 const isSuper = () => session()?.role === 'super';
 
 /* ---------- 1 대시보드 ---------- */
+// 사이트 분류와 같은 6개 매출 구분 · 구독 · 유입 경로(방문→가입→결제) · 웹/앱 · 인기 상품
+export const BUCKET_KO: [string, string, string][] = [
+  ['fate', '운명·사주', '#223056'], ['love', '연애·궁합', '#9E3A55'], ['photo', '사진운세', '#5B7F6A'],
+  ['tarot', '타로', '#5A4A8A'], ['talisman', '부적', '#B8892E'], ['subscription', '프리미엄 구독', '#8A6A3A'],
+];
+const SRC_KO: Record<string, string> = {
+  direct: '직접 방문', share: '공유 링크', kakao: '카카오', naver: '네이버', google: '구글', instagram: '인스타그램',
+  facebook: '페이스북', youtube: '유튜브', daum: '다음', band: '밴드', threads: '스레드', etc: '기타 사이트',
+};
+const pct = (a: number, b: number) => (b > 0 ? `${((a / b) * 100).toFixed(1)}%` : '-');
 export function Dashboard() {
   const { qs, ui } = usePeriod('7d');
   const { data, err } = useLoad(() => adminApi<any>(`/dashboard?${qs}`), [qs]);
   const k = data?.byKind ?? {};
+  const total = BUCKET_KO.reduce((t, [key]) => t + (k[key]?.revenue ?? 0), 0);
+  const c = data?.cards;
+  const plat = Object.fromEntries((data?.platform ?? []).map((p: any) => [p.platform, p.visitors]));
+  const ch = Object.fromEntries((data?.channel ?? []).map((x: any) => [x.channel, x]));
   return (
     <>
       <Head title="대시보드">{ui}<button className="ad-btn line" onClick={() => download(`/dashboard?${qs}&format=csv`, 'dashboard.csv')}>CSV 받기</button></Head>
       {err && <p className="ad-err">{err}</p>}
       {data && (
         <>
-          <div className="ad-cards">
-            <Card label="방문자" value={data.cards.visitors.toLocaleString('ko-KR')} />
-            <Card label="신규가입" value={data.cards.signups.toLocaleString('ko-KR')} />
-            <Card label="프리미엄 회원(현재)" value={data.cards.premium.toLocaleString('ko-KR')} />
-            <Card label="결제건수" value={data.cards.orders.toLocaleString('ko-KR')} />
-            <Card label="결제매출" value={won(data.cards.revenue)} />
+          <div className="ad-cards six">
+            <Card label="방문자" value={c.visitors.toLocaleString('ko-KR')} sub={`로그인 없이 이용 ${c.guests.toLocaleString('ko-KR')}`} />
+            <Card label="회원가입" value={c.signups.toLocaleString('ko-KR')} sub={`가입률 ${pct(c.signups, c.visitors)}`} />
+            <Card label="결제 회원" value={c.payers.toLocaleString('ko-KR')} sub={`구매 전환 ${pct(c.payers, c.visitors)}`} />
+            <Card label="결제건수" value={c.orders.toLocaleString('ko-KR')} />
+            <Card label="결제매출" value={won(c.revenue)} />
+            <Card label="객단가" value={won(c.payers ? Math.round(c.revenue / c.payers) : 0)} sub="결제 회원 1명당" />
           </div>
-          <div className="ad-cards four">
-            {[['fate', '운명서(천궁도사)'], ['love', '인연서(월하선녀)'], ['talisman', '부적'], ['subscription', '구독']].map(([key, l]) => (
-              <Card key={key} label={l} value={won(k[key]?.revenue ?? 0)} sub={`${k[key]?.n ?? 0}건`} />
-            ))}
+
+          <section className="ad-box"><h3>카테고리별 매출</h3>
+            <div className="ad-share" aria-hidden>{BUCKET_KO.map(([key, , color]) => (k[key]?.revenue ? <i key={key} style={{ flex: k[key].revenue, background: color }} /> : null))}</div>
+            <div className="ad-cards six">
+              {BUCKET_KO.map(([key, l, color]) => (
+                <div key={key} className="ad-card"><small><i className="dot" style={{ background: color }} />{l}</small><b>{won(k[key]?.revenue ?? 0)}</b><span>{k[key]?.n ?? 0}건 · {pct(k[key]?.revenue ?? 0, total)}</span></div>
+              ))}
+            </div>
+          </section>
+
+          <div className="ad-grid">
+            <section className="ad-box"><h3>프리미엄 구독</h3>
+              <div className="ad-cards three">
+                <Card label="월간 이용 중" value={data.subs.monthly} sub="월 6,900원" />
+                <Card label="연간 이용 중" value={data.subs.yearly} sub="연 59,000원" />
+                <Card label="월 환산 매출" value={won(data.subs.mrr)} sub={`자동결제 ${data.subs.auto_renew}명`} />
+                <Card label="기간 중 신규" value={data.subs.new} />
+                <Card label="기간 중 해지" value={data.subs.canceled} />
+                <Card label="기간 중 갱신" value={data.subs.renewed} />
+              </div>
+            </section>
+            <section className="ad-box"><h3>웹 · 앱</h3>
+              <table className="ad-table"><thead><tr><th>구분</th><th>방문자</th><th>결제</th><th>매출</th></tr></thead>
+                <tbody>
+                  <tr><td>웹 (PayApp)</td><td>{(plat.web ?? 0).toLocaleString('ko-KR')}</td><td>{ch.pg?.n ?? 0}건</td><td>{won(ch.pg?.revenue ?? 0)}</td></tr>
+                  <tr><td>앱 (Google Play)</td><td>{(plat.android ?? 0).toLocaleString('ko-KR')}</td><td>{ch.google?.n ?? 0}건</td><td>{won(ch.google?.revenue ?? 0)}</td></tr>
+                </tbody></table>
+              <h4>인기 상품 TOP 5</h4>
+              <ol className="ad-rank">{data.top.map((t: any) => <li key={t.product_id}>{t.title ?? t.product_id} <span className="ad-muted">{BUCKET_KO.find(([b]) => b === t.bucket)?.[1]}</span><b>{won(t.revenue)} · {t.n}건</b></li>)}</ol>
+              {!data.top.length && <p className="ad-muted">기간 중 결제가 없어요.</p>}
+            </section>
           </div>
+
+          <section className="ad-box"><h3>유입 경로별 성과 <small className="ad-muted">첫 방문 경로 기준 · 방문 → 가입 → 결제</small></h3>
+            <table className="ad-table"><thead><tr><th>유입 경로</th><th>방문자</th><th>회원가입</th><th>가입률</th><th>결제 회원</th><th>구매 전환</th><th>매출</th></tr></thead>
+              <tbody>{data.sources.map((s: any) => (
+                <tr key={s.src}><td>{SRC_KO[s.src] ?? s.src}</td><td>{s.visitors.toLocaleString('ko-KR')}</td><td>{s.signups}</td><td>{pct(s.signups, s.visitors)}</td><td>{s.payers}</td><td>{pct(s.payers, s.visitors)}</td><td>{won(s.revenue)}</td></tr>
+              ))}</tbody></table>
+            <p className="ad-muted">광고 링크에 <code>?utm_source=이름</code>을 붙이면 그 이름으로 따로 집계돼요. (예: myunse365.com/?utm_source=insta_ad)</p>
+          </section>
+
           <section className="ad-box"><h3>일별 흐름 ({data.range.from} ~ {data.range.to})</h3>
-            <Line rows={data.daily} keys={[{ k: 'visitors', label: '방문자', color: '#223056' }, { k: 'signups', label: '신규가입', color: '#9E3A55' }, { k: 'revenue', label: '매출', color: '#B8892E' }]} />
-            <table className="ad-table"><thead><tr><th>날짜</th><th>방문자</th><th>신규가입</th><th>결제건수</th><th>매출</th></tr></thead>
+            <Line rows={data.daily} keys={[{ k: 'visitors', label: '방문자', color: '#223056' }, { k: 'signups', label: '회원가입', color: '#9E3A55' }, { k: 'revenue', label: '매출', color: '#B8892E' }]} />
+            <table className="ad-table"><thead><tr><th>날짜</th><th>방문자</th><th>회원가입</th><th>결제건수</th><th>매출</th></tr></thead>
               <tbody>{data.daily.slice().reverse().map((r: any) => <tr key={r.date}><td>{r.date}</td><td>{r.visitors}</td><td>{r.signups}</td><td>{r.orders}</td><td>{won(r.revenue)}</td></tr>)}</tbody></table>
           </section>
         </>
@@ -259,7 +310,7 @@ export function Banners() {
 }
 
 /* ---------- 5 결제·구독 ---------- */
-const PAY_TABS = [['', '전체 결제'], ['fate', '운명서'], ['love', '인연서'], ['talisman', '부적'], ['subscription', '프리미엄 구독']] as const;
+const PAY_TABS = [['', '전체 결제'], ['fate', '운명·사주'], ['love', '연애·궁합'], ['photo', '사진운세'], ['tarot', '타로'], ['talisman', '부적'], ['subscription', '프리미엄 구독']] as const;
 export function Payments() {
   const [kind, setKind] = useState('');
   const { data, err, reload } = useLoad(() => adminApi<any[]>(`/payments?limit=300&kind=${kind}`), [kind]);

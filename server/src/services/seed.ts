@@ -124,7 +124,7 @@ export async function seedDemo(db: Db, days = 30) {
   const DAY = 86400000;
   const now = Date.now();
   const names = ['김순자', '박철수', '이영희', '최민수', '정미경', '강동원', '윤정숙', '한상철', '오미란', '서재훈'];
-  const readings = [...brand.fate, ...brand.love];
+  const readings = [...brand.fate, ...brand.love, ...brand.tarot, ...brand.photo];
   const users: any[] = [], profiles: any[] = [], orders: any[] = [], subs: any[] = [], evs: any[] = [], tals: any[] = [];
   const channels = [['share', 'kakao'], ['google', 'cpc'], ['naver', 'blog'], [null, null], [null, null], ['facebook', 'social'], ['band', 'social']];
   for (let d = days; d >= 0; d--) {

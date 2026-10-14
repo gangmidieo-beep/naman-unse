@@ -19,30 +19,106 @@ export function range(period: string, from?: string, to?: string) {
 const inRange = (col: ReturnType<typeof sql>, r: { from: string; to: string }) =>
   sql`(${col} at time zone ${KST})::date between ${r.from}::date and ${r.to}::date`;
 
-// 주문 매출 구분: 운명서(천궁도사) / 인연서(월하선녀) / 부적 / 구독
-const BUCKET = sql`case when o.kind = 'subscription' then 'subscription' when o.kind = 'talisman' then 'talisman' when p.character = 'wolha' then 'love' else 'fate' end`;
+// 주문 매출 구분 — 사이트 분류와 같게: 운명·사주(천궁도사) / 연애·궁합(월하선녀) / 사진운세 / 타로 / 부적 / 구독
+// (타로·사진 주문도 orders.kind 는 'reading' 이라 상품 종류(p.kind)로 먼저 가른다)
+const BUCKET = sql`case when o.kind = 'subscription' or p.kind = 'subscription' then 'subscription'
+  when o.kind = 'talisman' or p.kind = 'talisman' then 'talisman'
+  when p.kind = 'tarot' then 'tarot' when p.kind = 'photo' then 'photo'
+  when p.character = 'wolha' then 'love' else 'fate' end`;
+export const BUCKETS = ['fate', 'love', 'photo', 'tarot', 'talisman', 'subscription'] as const;
+
+// 유입 경로 — 첫 방문 때 붙은 utm_source, 없으면 referrer 주소로 가른다
+const SRC = sql`case
+  when e.utm_source = 'share' then 'share'
+  when coalesce(e.utm_source, '') <> '' then lower(e.utm_source)
+  when e.referrer ilike '%kakao%' then 'kakao'
+  when e.referrer ilike '%naver%' then 'naver'
+  when e.referrer ilike '%google%' then 'google'
+  when e.referrer ilike '%instagram%' then 'instagram'
+  when e.referrer ilike '%facebook%' then 'facebook'
+  when e.referrer ilike '%youtube%' then 'youtube'
+  when e.referrer ilike '%daum%' then 'daum'
+  when coalesce(e.referrer, '') = '' or e.referrer ilike '%myunse365%' then 'direct'
+  else 'etc' end`;
 
 export async function dashboard(db: Db, r: { from: string; to: string }) {
   const [cards] = await rows<any>(db, sql`
     select
       (select count(distinct coalesce(user_id, session_id)) from events e where e.name = 'page_view' and ${inRange(sql`e.created_at`, r)})::int as visitors,
-      (select count(*) from users u where ${inRange(sql`u.created_at`, r)})::int as signups,
+      (select count(*) from users u where u.provider is not null and ${inRange(sql`u.created_at`, r)})::int as signups,
+      (select count(*) from users u where u.provider is null and ${inRange(sql`u.created_at`, r)})::int as guests,
       (select count(*) from subscriptions s where s.status in ('active','grace') and s.expires_at > now())::int as premium,
       (select count(*) from orders o where o.status = 'paid' and ${inRange(sql`o.created_at`, r)})::int as orders,
+      (select count(distinct o.user_id) from orders o where o.status = 'paid' and ${inRange(sql`o.created_at`, r)})::int as payers,
       (select coalesce(sum(case when o.refund_status = 'done' then 0 else o.amount end), 0) from orders o where o.status = 'paid' and ${inRange(sql`o.created_at`, r)})::int as revenue`);
   const byKind = await rows<{ bucket: string; n: number; revenue: number }>(db, sql`
-    select ${BUCKET} as bucket, count(*)::int as n, coalesce(sum(o.amount), 0)::int as revenue
+    select ${BUCKET} as bucket, count(*)::int as n, coalesce(sum(case when o.refund_status = 'done' then 0 else o.amount end), 0)::int as revenue
     from orders o left join products p on p.id = o.product_id
     where o.status = 'paid' and ${inRange(sql`o.created_at`, r)} group by 1`);
+  // 일별 표는 최근 366일까지만(기간을 아주 길게 골라도 느려지지 않게)
+  const dFrom = Date.parse(r.to) - Date.parse(r.from) > 365 * 86400000 ? new Date(Date.parse(r.to) - 365 * 86400000).toISOString().slice(0, 10) : r.from;
   const daily = await rows<any>(db, sql`
-    with days as (select generate_series(${r.from}::date, ${r.to}::date, interval '1 day')::date as d)
+    with days as (select generate_series(${dFrom}::date, ${r.to}::date, interval '1 day')::date as d)
     select to_char(d, 'YYYY-MM-DD') as date,
       (select count(distinct coalesce(user_id, session_id)) from events e where e.name = 'page_view' and (e.created_at at time zone ${KST})::date = d)::int as visitors,
-      (select count(*) from users u where (u.created_at at time zone ${KST})::date = d)::int as signups,
+      (select count(*) from users u where u.provider is not null and (u.created_at at time zone ${KST})::date = d)::int as signups,
       (select count(*) from orders o where o.status = 'paid' and (o.created_at at time zone ${KST})::date = d)::int as orders,
       (select coalesce(sum(o.amount), 0) from orders o where o.status = 'paid' and (o.created_at at time zone ${KST})::date = d)::int as revenue
     from days order by d`);
-  return { range: r, cards, byKind: Object.fromEntries(byKind.map((k) => [k.bucket, { n: k.n, revenue: k.revenue }])), daily };
+
+  // 구독 — 지금 이용 중(월간·연간) + 기간 중 신규·해지·갱신 + 월 환산 매출(연간은 12로 나눔)
+  const [subs] = await rows<any>(db, sql`
+    select
+      count(*) filter (where status in ('active','grace') and expires_at > now() and plan = 'monthly')::int as monthly,
+      count(*) filter (where status in ('active','grace') and expires_at > now() and plan = 'yearly')::int as yearly,
+      count(*) filter (where status in ('active','grace') and expires_at > now() and auto_renew)::int as auto_renew,
+      count(*) filter (where ${inRange(sql`started_at`, r)})::int as new,
+      count(*) filter (where canceled_at is not null and ${inRange(sql`canceled_at`, r)})::int as canceled,
+      count(*) filter (where renewed_at is not null and ${inRange(sql`renewed_at`, r)})::int as renewed,
+      coalesce(sum(case when plan = 'yearly' then amount / 12.0 else amount end) filter (where status in ('active','grace') and expires_at > now()), 0)::int as mrr
+    from subscriptions`);
+
+  // 유입 경로별 방문 → 가입 → 결제 (첫 방문 경로 기준)
+  const first = sql`
+    select distinct on (vid) vid, uid, src from (
+      select coalesce(e.user_id, e.session_id) as vid, e.user_id as uid, ${SRC} as src, e.created_at
+      from events e where e.name = 'page_view' and coalesce(e.user_id, e.session_id) is not null) x
+    order by vid, created_at`;
+  const ufirst = sql`
+    select distinct on (uid) uid, src from (
+      select e.user_id as uid, ${SRC} as src, e.created_at from events e where e.user_id is not null and e.name = 'page_view') y
+    order by uid, created_at`;
+  const visits = await rows<{ src: string; visitors: number }>(db, sql`
+    with f as (${first}), v as (select distinct coalesce(user_id, session_id) as vid from events where name = 'page_view' and ${inRange(sql`created_at`, r)})
+    select f.src, count(*)::int as visitors from f join v on v.vid = f.vid group by 1`);
+  const joins = await rows<{ src: string; signups: number }>(db, sql`
+    with uf as (${ufirst})
+    select coalesce(uf.src, 'direct') as src, count(*)::int as signups
+    from users u left join uf on uf.uid = u.id where u.provider is not null and ${inRange(sql`u.created_at`, r)} group by 1`);
+  const pays = await rows<{ src: string; payers: number; revenue: number }>(db, sql`
+    with uf as (${ufirst})
+    select coalesce(uf.src, 'direct') as src, count(distinct o.user_id)::int as payers, coalesce(sum(case when o.refund_status = 'done' then 0 else o.amount end), 0)::int as revenue
+    from orders o left join uf on uf.uid = o.user_id where o.status = 'paid' and ${inRange(sql`o.created_at`, r)} group by 1`);
+  const src: Record<string, { src: string; visitors: number; signups: number; payers: number; revenue: number }> = {};
+  const at = (k: string) => (src[k] ??= { src: k, visitors: 0, signups: 0, payers: 0, revenue: 0 });
+  for (const v of visits) at(v.src).visitors = v.visitors;
+  for (const j of joins) at(j.src).signups = j.signups;
+  for (const p of pays) Object.assign(at(p.src), { payers: p.payers, revenue: p.revenue });
+  const sources = Object.values(src).sort((a, b) => b.visitors - a.visitors || b.revenue - a.revenue);
+
+  // 웹·앱 — 방문자는 이벤트 플랫폼, 매출은 결제 경로(웹 PayApp · 앱 Google Play)
+  const platform = await rows<any>(db, sql`
+    select coalesce(platform, 'web') as platform, count(distinct coalesce(user_id, session_id))::int as visitors
+    from events where name = 'page_view' and ${inRange(sql`created_at`, r)} group by 1`);
+  const channel = await rows<any>(db, sql`
+    select o.channel, count(*)::int as n, coalesce(sum(case when o.refund_status = 'done' then 0 else o.amount end), 0)::int as revenue
+    from orders o where o.status = 'paid' and ${inRange(sql`o.created_at`, r)} group by 1`);
+  const top = await rows<any>(db, sql`
+    select o.product_id, p.title, ${BUCKET} as bucket, count(*)::int as n, coalesce(sum(case when o.refund_status = 'done' then 0 else o.amount end), 0)::int as revenue
+    from orders o left join products p on p.id = o.product_id
+    where o.status = 'paid' and o.kind <> 'subscription' and ${inRange(sql`o.created_at`, r)} group by 1, 2, 3 order by 5 desc limit 5`);
+
+  return { range: r, cards, byKind: Object.fromEntries(byKind.map((k) => [k.bucket, { n: k.n, revenue: k.revenue }])), daily, subs, sources, platform, channel, top };
 }
 
 export async function members(db: Db, q: { search?: string; tier?: string; limit?: number; offset?: number }) {
@@ -71,9 +147,7 @@ export async function memberDetail(db: Db, id: string) {
 
 export async function payments(db: Db, q: { kind?: string; status?: string; from?: string; to?: string; limit?: number }) {
   const r = q.from && q.to ? { from: q.from, to: q.to } : null;
-  const kindCond = q.kind === 'fate' ? sql`and o.kind = 'reading' and p.character = 'cheongung'`
-    : q.kind === 'love' ? sql`and o.kind = 'reading' and p.character = 'wolha'`
-    : q.kind === 'talisman' ? sql`and o.kind = 'talisman'` : q.kind === 'subscription' ? sql`and o.kind = 'subscription'` : sql``;
+  const kindCond = q.kind && (BUCKETS as readonly string[]).includes(q.kind) ? sql`and ${BUCKET} = ${q.kind}` : sql``;
   return rows<any>(db, sql`
     select o.id, o.created_at, o.user_id, u.name as user_name, o.product_id, p.title, o.amount, o.discount, o.method, o.channel, o.status, o.refund_status, ${BUCKET} as bucket
     from orders o left join products p on p.id = o.product_id left join users u on u.id = o.user_id

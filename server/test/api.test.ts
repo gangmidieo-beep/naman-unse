@@ -110,11 +110,22 @@ describe('관리자 API', () => {
     expect(boss && staff).toBeTruthy();
     expect((await app.inject({ url: '/admin/api/dashboard' })).statusCode).toBe(401);
   });
-  it('대시보드·회원·결제·구독·통계', async () => {
+  it('대시보드·회원·결제·구독·통계', { timeout: 30000 }, async () => {
     const d = (await app.inject({ url: '/admin/api/dashboard?period=month', headers: auth(staff) })).json();
     expect(d.cards.signups).toBeGreaterThan(0);
     expect(d.daily.length).toBeGreaterThan(0);
     expect(Object.keys(d.byKind).length).toBeGreaterThan(1);
+    // 사이트 분류와 같은 6구분 — 타로·사진운세가 운명서·인연서에 섞이지 않는다
+    expect(Object.keys(d.byKind).every((k) => ['fate', 'love', 'photo', 'tarot', 'talisman', 'subscription'].includes(k))).toBe(true);
+    const ago = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10), today = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const m = (await app.inject({ url: `/admin/api/dashboard?period=custom&from=${ago}&to=${today}`, headers: auth(staff) })).json();
+    expect(m.byKind.tarot?.n).toBeGreaterThan(0);
+    expect(m.byKind.photo?.n).toBeGreaterThan(0);
+    expect(m.subs).toHaveProperty('mrr');
+    expect(m.sources.map((s: any) => s.src)).toEqual(expect.arrayContaining(['share', 'google', 'direct']));
+    expect(m.sources.reduce((t: number, s: any) => t + s.revenue, 0)).toBe(m.cards.revenue);
+    expect(m.top.length).toBeGreaterThan(0);
+    expect(((await app.inject({ url: '/admin/api/payments?kind=tarot', headers: auth(staff) })).json() as any[]).every((p) => p.bucket === 'tarot')).toBe(true);
     expect((await app.inject({ url: '/admin/api/dashboard?period=7d&format=csv', headers: auth(staff) })).body).toContain('date,visitors');
     expect(((await app.inject({ url: '/admin/api/members?limit=5', headers: auth(staff) })).json() as any[]).length).toBe(5);
     expect(((await app.inject({ url: '/admin/api/payments?kind=talisman', headers: auth(staff) })).json() as any[]).every((p) => p.bucket === 'talisman')).toBe(true);

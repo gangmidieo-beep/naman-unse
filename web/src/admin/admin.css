@@ -28,6 +28,11 @@
 .ad-cards.four { grid-template-columns: repeat(4, 1fr); }
 .ad-cards.two { grid-template-columns: repeat(2, 1fr); }
 .ad-cards.three { grid-template-columns: repeat(3, 1fr); }
+.ad-cards.six { grid-template-columns: repeat(6, 1fr); }
+.ad-card small .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.ad-share { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); margin-bottom: 12px; }
+.ad-share i { display: block; min-width: 3px; }
+.ad-box h3 small { font-family: inherit; font-weight: 400; font-size: 12px; margin-left: 6px; }
 .ad-card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
 .ad-card small { display: block; color: var(--ink-4); font-size: 13px; font-weight: 700; }
 .ad-card b { display: block; font-family: var(--serif); font-weight: 900; font-size: 24px; margin-top: 2px; }
@@ -87,11 +92,13 @@
 .ad-login h1 { font-family: var(--brush); font-weight: 400; font-size: 26px; display: flex; gap: 8px; align-items: center; }
 .ad-login label { display: grid; gap: 4px; font-weight: 700; font-size: 14px; }
 .ad-login input { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; background: #FFFDF8; }
+@media (max-width: 1280px) { .ad-cards.six { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) {
   .adm { grid-template-columns: 1fr; }
   .adm aside { position: static; height: auto; }
   .adm nav { grid-template-columns: repeat(4, 1fr); }
   .ad-grid, .ad-split, .ad-cards.four, .ad-cards.two { grid-template-columns: 1fr; }
+  .ad-cards.six, .ad-cards.three { grid-template-columns: repeat(2, 1fr); }
   .adm main { padding: 16px; overflow-x: auto; }
 }
 .ad-row1 { display: grid; gap: 4px; font-size: 13px; margin-top: 8px; } .ad-row1 input { padding: 6px 8px; }
