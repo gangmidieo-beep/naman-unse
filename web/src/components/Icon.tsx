@@ -1,5 +1,5 @@
 // 단색 아이콘(lucide, ISC 라이선스) — 데이터(json)에는 이름만 적고 여기서 그림으로 바꾼다. 한자 아이콘 대신(대표님 2차 요청).
-import { Anchor, Award, Baby, Bell, Bird, BookOpen, Brain, Briefcase, Calendar, CalendarCheck, CalendarHeart, CalendarRange, Camera, Car, Check, ChevronRight, CircleDot, Clock, CloudRain, Clover, Coins, Compass, Crown, DoorOpen, Download, Droplets, Eye, Feather, FileText, Flag, Flame, Flower, Footprints, Gem, Gift, GitBranch, GraduationCap, Hand, HandHeart, Handshake, Heart, HeartHandshake, HeartPulse, History, Image, Infinity, Key, Layers, LayoutGrid, Leaf, Lock, Mail, MapPin, MessageCircle, Milestone, Moon, Mountain, Pencil, PiggyBank, Puzzle, RefreshCw, Rocket, Ruler, Scale, ScanFace, Scissors, ScrollText, Search, Settings, Share2, Shield, ShieldCheck, Shuffle, Smile, Sparkles, Star, Store, Sun, Sunrise, Target, TrendingUp, Truck, Umbrella, Unlink, Upload, User, Users, Volume2, VolumeX, Wallet, WandSparkles, Waves, X, House, LockOpen, FilePenLine, CreditCard, Landmark, Flower2, HandHelping, ListFilter, Wine, Sword, Pentagon } from 'lucide-react';
+import { Anchor, Award, Baby, Bell, Bird, BookOpen, Brain, Briefcase, Calendar, CalendarCheck, CalendarHeart, CalendarRange, Camera, Car, Check, ChevronRight, CircleDot, Clock, CloudRain, Clover, Coins, Compass, Crown, DoorOpen, Download, Droplets, Eye, Feather, FileText, Flag, Flame, Flower, Footprints, Gem, Gift, GitBranch, GraduationCap, Hand, HandHeart, Handshake, Heart, HeartHandshake, HeartPulse, History, Image, Infinity, Key, Layers, LayoutGrid, Leaf, Lock, Mail, MapPin, MessageCircle, Milestone, Moon, Mountain, Pencil, PiggyBank, Puzzle, RefreshCw, Rocket, Ruler, Scale, ScanFace, Scissors, ScrollText, Search, Settings, Share2, Shield, ShieldCheck, Shuffle, Smile, Sparkles, Star, Store, Sun, Sunrise, Target, TrendingUp, Truck, Umbrella, Unlink, Upload, User, Users, Volume2, VolumeX, Music, Wallet, WandSparkles, Waves, X, House, LockOpen, FilePenLine, CreditCard, Landmark, Flower2, HandHelping, ListFilter, Wine, Sword, Pentagon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 const MAP: Record<string, LucideIcon> = {
@@ -103,6 +103,7 @@ const MAP: Record<string, LucideIcon> = {
   'users': Users,
   'volume-2': Volume2,
   'volume-x': VolumeX,
+  'music': Music,
   'wallet': Wallet,
   'wand-sparkles': WandSparkles,
   'waves': Waves,

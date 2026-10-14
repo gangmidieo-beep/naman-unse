@@ -13,7 +13,7 @@ import { TAROTS, BRAND, displayTitle, productById, type TarotProduct } from '../
 import { isUnlockedToday, useApp, useMainProfile, usePremium } from '../store/app';
 import { koDate } from '../lib/dates';
 import { track } from '../lib/track';
-import { sfx, setSoundOff, soundOff } from '../lib/sound';
+import { music, musicOff, setMusicOff, setSoundOff, sfx, soundOff } from '../lib/sound';
 import { ShareBlock, useShare } from './Fun';
 
 export type Drawn = { card: TarotCard; reversed: boolean };
@@ -65,10 +65,16 @@ export function TarotFace({ d }: { d: Drawn }) {
 
 function SoundToggle() {
   const [off, setOff] = useState(soundOff());
+  const [mOff, setMOff] = useState(musicOff());
   return (
-    <button className="tsound" onClick={() => { setSoundOff(!off); setOff(!off); }} aria-label={off ? '효과음 켜기' : '효과음 끄기'} aria-pressed={!off}>
-      <Icon name={off ? 'volume-x' : 'volume-2'} size={20} />
-    </button>
+    <div className="tsound-box">
+      <button className={`tsound${mOff ? ' off' : ''}`} onClick={() => { setMusicOff(!mOff); setMOff(!mOff); }} aria-label={mOff ? '배경음악 켜기' : '배경음악 끄기'} aria-pressed={!mOff}>
+        <Icon name="music" size={19} />
+      </button>
+      <button className="tsound" onClick={() => { setSoundOff(!off); setOff(!off); }} aria-label={off ? '효과음 켜기' : '효과음 끄기'} aria-pressed={!off}>
+        <Icon name={off ? 'volume-x' : 'volume-2'} size={20} />
+      </button>
+    </div>
   );
 }
 
@@ -79,10 +85,13 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const [picked, setPicked] = useState<number[]>([]); // 부채꼴 안의 위치
   const [open, setOpen] = useState(0);
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 배경음악: 테이블이 있는 동안만. 카드 섞기(첫 손짓)에 시작, 테이블을 떠나면 서서히 꺼짐
+  useEffect(() => { music.acquire(); return () => music.release(); }, []);
   const shuffle = () => {
     setPhase('shuffle');
+    music.start();
     sfx.shuffle();
-    setTimeout(() => setPhase('spread'), reduce ? 50 : 1500);
+    setTimeout(() => { setPhase('spread'); sfx.spread(FAN); }, reduce ? 50 : 1500);
   };
   const pickedRef = useRef<number[]>([]); // 빠르게 여러 번 눌러도 최신 값으로 센다
   const pick = (i: number) => {
@@ -98,7 +107,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const flip = (k: number) => {
     if (k !== openRef.current) return;
     openRef.current = k + 1;
-    sfx.flip();
+    sfx.flip(cards[k]?.reversed);
     onFlip?.(k);
     const n = k + 1;
     setOpen(n);
@@ -107,7 +116,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const flipAll = () => {
     for (let k = openRef.current; k < need; k++) onFlip?.(k);
     openRef.current = need;
-    sfx.flip();
+    sfx.flip(false);
     setOpen(need);
     setTimeout(() => { sfx.finale(); onDone(); }, 700);
   };
