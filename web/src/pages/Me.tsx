@@ -4,7 +4,8 @@ import { ExpiryNotice } from '../components/ExpiryNotice';
 import { Link, useNavigate } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { Icon } from '../components/Icon';
-import { CardBack } from './Tarot';
+import { tarotSpread } from '@naman/content';
+import { CardBack, tarotArt } from './Tarot';
 import { v4 } from '../assets/images';
 import type { ReactNode } from 'react';
 import { BottomSheet, Button, ProductThumb, TalismanPaper, useToast } from '../components/ui';
@@ -106,7 +107,7 @@ export default function Box() {
           {tarot.length ? (
             <div className="lib-tarot">
               {tarot.map(({ o, p }) => (
-                <Link key={o.orderId} to={`/reading/${o.orderId}`}><div className="cd"><CardBack /></div><b>{p!.title}</b><span>{dot(o.createdAt)}</span></Link>
+                <Link key={o.orderId} to={`/reading/${o.orderId}`}><div className="cd">{(() => { const d = tarotSpread(`${o.orderId}:${p!.id}`, (p as any).cards ?? 1)[0]; const src = d && tarotArt(d.card.id); return src ? <img src={src} alt="" className={d.reversed ? 'rev' : ''} loading="lazy" /> : <CardBack />; })()}</div><b>{p!.title}</b><span>{dot(o.createdAt)}</span></Link>
               ))}
             </div>
           ) : <Empty icon="layers" to="/tarot" text={<>아직 타로 기록이 없어요.<br />나만의 타로를 받아보세요.</>} />}
