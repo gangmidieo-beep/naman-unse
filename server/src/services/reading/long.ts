@@ -124,7 +124,7 @@ function factLines(keys: string[], s: Section, people: Person[], sajus: SajuResu
 }
 
 // 결과지 말투(대표님 3차 요청): 캐릭터(천궁도사·월하선녀) 말투·사극체 없이, 차분하고 신뢰감 있는 정통 운세식 존댓말로 통일
-function systemPrompt(_character: 'cheongung' | 'wolha') {
+function systemPrompt() {
   return `당신은 경력 많은 명리학 상담가다. 지금 쓰는 글은 A4 40~50장 분량의 "정통 사주 감정서"의 일부다.
 말투: 차분하고 신뢰감 있는 존댓말 "~합니다 / ~입니다 / ~해 보세요 / ~하시면 좋겠습니다"로 통일한다. "~해요·~예요" 같은 해요체, "~하오·~구려·~하시게" 같은 사극체, 캐릭터 이름(천궁도사·월하선녀)은 절대 쓰지 않는다.
 - 명리학의 정통 용어(일간·월령·십성·지장간·12운성·합충형파해·신강신약·용신·희신·기신·대운·세운·월운·신살)를 정확히 쓰되, 용어가 처음 나오면 바로 뒤에 일반인이 알 수 있게 쉬운 말로 풀어 준다. 독자는 30~60대.
@@ -243,7 +243,7 @@ export async function generateLong(
   let intro = opts.prev?.intro ?? '';
   let tips: string[] = opts.prev?.closing?.tips ?? [];
   let tokensIn = 0, tokensOut = 0;
-  const system = systemPrompt(character);
+  const system = systemPrompt();
 
   const snapshot = (): LongContent => {
     const chapters = plan.sections.filter((s) => s.id !== finalId && done.has(s.id)).map((s) => ({ ...done.get(s.id)!, title: s.title, part: s.part }));
