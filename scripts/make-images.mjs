@@ -87,8 +87,13 @@ for (const file of files) {
     thumbs[name.slice(6)] = `/img/thumb/${name}.webp`;
   } else if (name.startsWith('tarot_')) {
     const d = out('tarot');
-    await sharp(src).resize(300, 488, { fit: 'cover' }).webp({ quality: 82 }).toFile(join(d, `${name}.webp`));
-    manifest[name] = { src: `/img/tarot/${name}.webp`, w: 300, h: 488 };
+    await sharp(src).resize(400, 660, { fit: 'cover' }).webp({ quality: 80 }).toFile(join(d, `${name}.webp`));
+    manifest[name] = { src: `/img/tarot/${name}.webp`, w: 400, h: 660 };
+  } else if (name.startsWith('talisman_')) {
+    // 대표님 부적 그림 — 비율 그대로(세로 최대 900), 부적 목록·상세·의식·부적함에서 그 그림을 쓴다
+    const d = out('talisman');
+    const info = await sharp(src).resize(560, 900, { fit: 'inside' }).webp({ quality: 84 }).toFile(join(d, `${name}.webp`));
+    manifest[name] = { src: `/img/talisman/${name}.webp`, w: info.width, h: info.height };
   } else if (name.startsWith('hero_')) {
     const d = out('banner');
     await sharp(src).resize(1200, 800, { fit: 'cover' }).webp({ quality: 78 }).toFile(join(d, `${name}.webp`));

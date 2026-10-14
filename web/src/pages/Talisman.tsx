@@ -11,6 +11,8 @@ import { ShareSheet } from '../components/ShareSheet';
 import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, won, type Talisman } from '../lib/catalog';
 import { newId, useApp, useMainProfile, usePremium } from '../store/app';
 import { saveImage } from '../lib/share';
+import { music, sfx } from '../lib/sound';
+import { SoundToggle } from '../components/SoundToggle';
 import { birthLabel } from './ProfileNew';
 
 type Eff = { effects: { icon: string; title: string; desc: string }[]; targets?: string[]; wishExamples: string[] };
@@ -106,9 +108,7 @@ export function TalismanDetail() {
   );
 }
 
-const STEPS = ['소원을 담는 중..', '좋은 기운을 새기는 중..', '부적을 완성하는 중..'];
 // 붓글씨 획(SVG stroke-dashoffset 로 그려지는 연출) — 부적 글자 모양을 흉내 낸 추상 획
-const STROKES = ['M20 30 C40 20 60 20 80 30', 'M50 18 L50 150', 'M22 70 C40 62 62 62 78 70', 'M28 110 C40 128 60 128 72 110', 'M35 160 C45 150 55 150 65 160'];
 
 export function TalismanMake() {
   const { id = '' } = useParams();
@@ -121,21 +121,14 @@ export function TalismanMake() {
   const done = talismans.find((x) => x.orderId === orderId);
   const [wish, setWish] = useState('');
   const [phase, setPhase] = useState<'wish' | 'writing' | 'done'>(done ? 'done' : 'wish');
-  const [step, setStep] = useState(0);
   const [share, setShare] = useState(false);
   const paperRef = useRef<HTMLDivElement>(null);
   const paid = purchases.some((p) => p.orderId === orderId && p.productId === id);
 
-  useEffect(() => {
-    if (phase !== 'writing') return;
-    if (step >= STEPS.length) {
-      addTalisman({ id: newId(), talismanId: id, orderId, name: profile.name, birth: birthLabel(profile), wish: wish.trim(), issuedAt: new Date().toISOString().slice(0, 10) });
-      setPhase('done');
-      return;
-    }
-    const tm = setTimeout(() => setStep((s) => s + 1), 1600);
-    return () => clearTimeout(tm);
-  }, [phase, step]);
+  const finish = () => {
+    addTalisman({ id: newId(), talismanId: id, orderId, name: profile.name, birth: birthLabel(profile), wish: wish.trim(), issuedAt: new Date().toISOString().slice(0, 10) });
+    setPhase('done');
+  };
 
   if (!t || !isTalisman(t)) return <Navigate to="/talisman" replace />;
   if (!paid && !done) return <Navigate to={`/talisman/${id}`} replace />;
@@ -159,18 +152,7 @@ export function TalismanMake() {
     );
 
   if (phase === 'writing')
-    return (
-      <main className="make" aria-live="polite">
-        <Img k={who.face} className="face" eager alt={who.name} />
-        <h1>{profile.name}님의 마음을 담아<br />소원부적을 작성합니다</h1>
-        <div className="paper">
-          <svg className="brushsvg" viewBox="0 0 100 180" width={150} height={236} style={{ background: 'linear-gradient(170deg,#F0D27A,#E2B94F 60%,#D6A93E)', border: '3px solid var(--seal)', borderRadius: 4 }} aria-hidden>
-            {STROKES.map((d, i) => <path key={i} d={d} />)}
-          </svg>
-        </div>
-        <p className="step">{STEPS[Math.min(step, STEPS.length - 1)]}</p>
-      </main>
-    );
+    return <TalismanRitual t={t} name={profile.name} birth={birthLabel(profile)} wish={wish.trim()} onDone={finish} />;
 
   return (
     <main className="make">
@@ -187,6 +169,78 @@ export function TalismanMake() {
         <Link to="/box#talismans" className="textlink" style={{ color: 'var(--gold-light)', display: 'inline-flex', alignItems: 'center', marginTop: 10 }}>나의 부적함에서 보기 ›</Link>
       </div>
       <ShareSheet open={share} onClose={() => setShare(false)} title={`${mine?.name}님이 ${t.title}을 선물했어요`} text={`마음을 담아 ${t.title}을 보내요 — “${mine?.wish}”`} path={`/talisman/${t.id}`} contentId={t.id} onDone={(m) => m && toast(m)} />
+    </main>
+  );
+}
+
+// 부적 의식(결제 후) — 타로 테이블처럼 손으로 하나씩: 향 피우기 → 붓으로 부적 그리기 → 이름·소원 새기기 → 인장 찍기 → 기운 봉인
+// 효과음·배경음악(끄기 버튼 따로). 부적 그림은 대표님 그림(talisman_<id>)이 있으면 그 그림이 붓질로 드러난다.
+type Rite = 'incense' | 'lit' | 'brush' | 'write' | 'seal' | 'sealed' | 'bless';
+const RITE_ORDER: Rite[] = ['incense', 'lit', 'brush', 'write', 'seal', 'sealed', 'bless'];
+const RITE_TEXT: Record<Rite, string> = {
+  incense: '향을 피워 마음을 맑게 합니다',
+  lit: '향 연기가 오르며 자리가 정갈해졌습니다',
+  brush: '붓에 기운을 담아 부적을 그립니다',
+  write: '이름과 소원을 새기는 중입니다',
+  seal: '마지막으로 인장을 찍어 주세요',
+  sealed: '인장이 찍혔습니다',
+  bless: '부적에 좋은 기운을 불어넣는 중입니다',
+};
+const RITE_DOTS: [Rite, string][] = [['incense', '향'], ['brush', '붓'], ['write', '새김'], ['seal', '인장'], ['bless', '봉인']];
+function TalismanRitual({ t, name, birth, wish, onDone }: { t: Talisman; name: string; birth: string; wish: string; onDone: () => void }) {
+  const [r, setR] = useState<Rite>('incense');
+  const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const timers = useRef<number[]>([]);
+  const later = (fn: () => void, n: number) => { timers.current.push(window.setTimeout(fn, reduce ? 150 : n)); };
+  useEffect(() => { music.acquire(); return () => { music.release(); timers.current.forEach(clearTimeout); }; }, []);
+  const light = () => { music.start(); sfx.incense(); setR('lit'); later(() => setR('brush'), 1800); };
+  const draw = () => {
+    sfx.brush(3.2);
+    setR('write');
+    later(() => sfx.write(), 3300);
+    later(() => setR('seal'), 4600);
+  };
+  const stamp = () => {
+    sfx.stamp();
+    setR('sealed');
+    later(() => { sfx.bless(); setR('bless'); }, 900);
+    later(onDone, 3800);
+  };
+  const cur = RITE_ORDER.indexOf(r);
+  const drawn = cur >= RITE_ORDER.indexOf('write');
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <main className={`make rite r-${r}`} aria-live="polite">
+      <SoundToggle />
+      <h1>{name}님의 {t.title}</h1>
+      <p className="rite-step">{RITE_TEXT[r]}</p>
+      <div className="altar">
+        <div className="rite-paper">
+          <div className="blank" aria-hidden />
+          <div className={`ink${drawn ? ' go' : ''}`}><TalismanPaper t={t} size={2.6} name={cur >= RITE_ORDER.indexOf('seal') ? name : undefined} birth={birth} wish={wish} issued={today} /></div>
+          {r === 'write' && <span className="brush" aria-hidden />}
+          {cur >= RITE_ORDER.indexOf('sealed') && <span className="seal-mark" aria-hidden>符<br />印</span>}
+          {r === 'bless' && <span className="glow" aria-hidden />}
+          {r === 'bless' && <span className="sparks" aria-hidden>{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ ['--i' as string]: i }} />)}</span>}
+        </div>
+        <div className={`burner${r === 'incense' ? '' : ' on'}`} aria-hidden>
+          <span className="smoke" /><span className="smoke s2" /><span className="smoke s3" />
+          <span className="stick" /><span className="stick" /><span className="stick" />
+          <span className="bowl" />
+        </div>
+      </div>
+      <div className="rite-act">
+        {r === 'incense' && <Button kind="gold" onClick={light}>향 피우기</Button>}
+        {r === 'brush' && <Button kind="gold" onClick={draw}>붓 들어 부적 그리기</Button>}
+        {r === 'seal' && <button type="button" className="seal-btn" onClick={stamp}><span aria-hidden>印</span>인장 찍기</button>}
+      </div>
+      <ol className="rite-dots" aria-label="부적 의식 순서">
+        {RITE_DOTS.map(([x, label]) => {
+          const at = RITE_ORDER.indexOf(x);
+          const on = cur === at || (x === 'incense' && r === 'lit') || (x === 'seal' && r === 'sealed');
+          return <li key={x} className={on ? 'on' : cur > at ? 'done' : ''}>{label}</li>;
+        })}
+      </ol>
     </main>
   );
 }

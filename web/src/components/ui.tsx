@@ -3,7 +3,7 @@ import { hideBanner, showBanner } from '../platform/native';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Img } from './Img';
-import type { ImgKey } from '../assets/images';
+import { optionalImg, type ImgKey } from '../assets/images';
 import { usePremium } from '../store/app';
 import { adProvider, adSlots, isNativeApp, loadAdSense } from '../lib/ads';
 import { CHAR, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
@@ -257,8 +257,18 @@ export function ProductRow({ p, owned }: { p: Product; owned?: boolean }) {
 /* ---------- 부적 ---------- */
 export const talismanTone = (t: Talisman) => ({ '재물·성공': 'w', '사랑·인연': 'l', '소원·성취': 's', '평안·보호': 'p' } as Record<string, string>)[t.group] ?? 'w';
 // 코드로 그리는 노란 한지 부적: 붉은 테두리 + 세로 한자. hanjaPhrase 4글자 중 앞 2~3글자를 크게, 전체를 작은 머리글로.
+// 대표님 부적 그림(_incoming/talisman_<id>)이 있으면 그 그림을 쓰고, 이름·소원·발급일은 아래 띠에 새긴다.
+export const talismanImg = (id: string) => optionalImg(`talisman_${id}`);
 export function TalismanPaper({ t, size = 1, name, birth, wish, issued }: { t: Talisman; size?: number; name?: string; birth?: string; wish?: string; issued?: string }) {
   const phrase = (t as any).hanjaPhrase as string;
+  const pic = talismanImg(t.id);
+  if (pic)
+    return (
+      <div className="bj pic" style={{ width: 64 * size, height: 100 * size }} role="img" aria-label={t.title}>
+        <img src={pic.src} alt="" width={pic.w} height={pic.h} loading="lazy" draggable={false} />
+        {name && <span className="bjname" style={{ fontSize: 5.4 * size, padding: `${2 * size}px ${3 * size}px` }}>{name} · {birth}<br />{wish}<br />{issued}</span>}
+      </div>
+    );
   const chars = [...phrase].slice(0, size >= 2 && !name ? 3 : 2);
   const w = 64 * size, h = 100 * size;
   return (

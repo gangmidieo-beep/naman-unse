@@ -110,6 +110,51 @@ export const sfx = {
     const t = c.currentTime;
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(c, t + i * 0.14, f, 2.0 - i * 0.2, 0.045));
   },
+
+  /* ---- 부적 의식 ---- */
+  // 향 피우기: 성냥 긋는 소리(치익) + 불 붙는 소리 + 낮은 징
+  incense() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    noise(c, t, 0.18, 3800, 0.2, 0.8);
+    noise(c, t + 0.15, 0.5, 900, 0.08, 0.5);
+    bell(c, t + 0.5, 196, 3.2, 0.06);
+    bell(c, t + 0.5, 293.66, 2.6, 0.025);
+  },
+  // 붓질: 한지 위를 붓이 사각사각 지나가는 소리(dur 초 동안 획 여러 개)
+  brush(dur = 3) {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    let at = 0;
+    while (at < dur) {
+      const len = 0.25 + Math.random() * 0.35;
+      noise(c, t + at, len, 2600 + Math.random() * 1600, 0.09, 0.7);
+      noise(c, t + at, len * 0.6, 1100, 0.04, 0.6);
+      at += len + 0.06 + Math.random() * 0.1;
+    }
+  },
+  // 이름·소원 새기기: 작은 종 세 번
+  write() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    [880, 1046.5, 1318.5].forEach((f, i) => bell(c, t + i * 0.32, f, 1.1, 0.03));
+  },
+  // 인장 찍기: 쿵(나무 인장) + 종이 눌리는 소리 + 낮은 북 울림
+  stamp() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    noise(c, t, 0.12, 220, 0.5, 0.7);
+    tone(c, t, 70, 0.6, 0.22, 'sine');
+    noise(c, t + 0.02, 0.15, 1500, 0.12, 0.8);
+    bell(c, t + 0.25, 146.83, 2.6, 0.05);
+  },
+  // 기운 봉인: 금빛 화음이 솟아오름
+  bless() {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime;
+    [392, 493.88, 587.33, 783.99, 987.77, 1174.66].forEach((f, i) => bell(c, t + i * 0.12, f, 2.6 - i * 0.2, 0.04));
+    noise(c, t, 1.6, 5200, 0.03, 0.4); // 반짝이는 공기
+  },
 };
 
 // 배경음악 — 앰비언트 드론(라 단조 계열 화음 4개가 천천히 바뀜) + 가끔 맑은 종 + 아주 옅은 바람 소리

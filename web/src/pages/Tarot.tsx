@@ -13,7 +13,8 @@ import { TAROTS, BRAND, displayTitle, productById, type TarotProduct } from '../
 import { isUnlockedToday, useApp, useMainProfile, usePremium } from '../store/app';
 import { koDate } from '../lib/dates';
 import { track } from '../lib/track';
-import { music, musicOff, setMusicOff, setSoundOff, sfx, soundOff } from '../lib/sound';
+import { music, sfx } from '../lib/sound';
+import { SoundToggle } from '../components/SoundToggle';
 import { ShareBlock, useShare } from './Fun';
 
 export type Drawn = { card: TarotCard; reversed: boolean };
@@ -46,10 +47,13 @@ export function CardBack() {
     </svg>
   );
 }
-// 카드 앞면 — 이미지(_incoming/tarot_<id>)가 있으면 이미지, 없으면 금테 + 번호 + 상징 아이콘 + 이름(한자 없음)
+// 카드 앞면 — 1909 라이더-웨이트-스미스 원판 그림(퍼블릭 도메인, 78장 /img/tarot/tarot_<id>.webp).
+// _incoming/tarot_<id> 로 다른 그림을 넣으면 그 그림이 우선. 그림이 없을 때만 금테 + 번호 + 상징 아이콘 + 이름.
+export const TAROT_ART = true;
+export const tarotArt = (id: string) => optionalImg(`tarot_${id}`)?.src ?? (TAROT_ART ? `/img/tarot/tarot_${id}.webp` : null);
 export function TarotFace({ d }: { d: Drawn }) {
-  const img = optionalImg(`tarot_${d.card.id}`);
-  if (img) return <img src={img.src} alt="" className={`tface${d.reversed ? ' rev' : ''}`} />;
+  const src = tarotArt(d.card.id);
+  if (src) return <img src={src} alt={`${d.card.nameEn} ${d.card.nameKo}${d.reversed ? ' 역방향' : ''}`} className={`tface${d.reversed ? ' rev' : ''}`} width={400} height={660} />;
   const c = d.card as TarotCard & { arcana: string; suit: keyof typeof SUIT | null };
   const icon = c.suit ? SUIT[c.suit].icon : MAJOR_ICON[c.id] ?? 'sparkles';
   const num = c.suit ? c.nameKo.replace(/^\S+\s/, '') : ROMAN[+c.id.slice(-2)] ?? '';
@@ -59,21 +63,6 @@ export function TarotFace({ d }: { d: Drawn }) {
       <span className="sym"><Icon name={icon} size={34} stroke={1.3} /></span>
       <b>{c.nameKo}</b>
       <small>{c.nameEn}</small>
-    </div>
-  );
-}
-
-function SoundToggle() {
-  const [off, setOff] = useState(soundOff());
-  const [mOff, setMOff] = useState(musicOff());
-  return (
-    <div className="tsound-box">
-      <button className={`tsound${mOff ? ' off' : ''}`} onClick={() => { setMusicOff(!mOff); setMOff(!mOff); }} aria-label={mOff ? '배경음악 켜기' : '배경음악 끄기'} aria-pressed={!mOff}>
-        <Icon name="music" size={19} />
-      </button>
-      <button className="tsound" onClick={() => { setSoundOff(!off); setOff(!off); }} aria-label={off ? '효과음 켜기' : '효과음 끄기'} aria-pressed={!off}>
-        <Icon name={off ? 'volume-x' : 'volume-2'} size={20} />
-      </button>
     </div>
   );
 }
@@ -208,7 +197,7 @@ function TodayTarot() {
       ) : (
         <div className="tslots n1 done"><div className="slot open"><div className="flipper"><div className="front"><TarotFace d={c!} /></div></div></div></div>
       )}
-      {c && side && <p className="tname">{c.card.nameKo}<small>{c.card.nameEn} · {c.reversed ? '역방향' : '정방향'}</small></p>}
+      {c && side && <p className="tname">{c.card.nameEn}<small>{c.card.nameKo} · {c.reversed ? '역방향' : '정방향'}</small></p>}
       {c && side && !read && (
         <div className="pad mt14">
           <button className="tgold" onClick={() => run(() => unlock(`${dayKey}:read`), 'tarot')}>✦ 카드의 이야기 듣기</button>
@@ -311,7 +300,7 @@ export function TarotReading({ p, orderId }: { p: TarotProduct; orderId: string 
         const s = tarotSide(d);
         return (
           <section className="tread" key={i}>
-            <small>{i + 1}. {p.positions[i]} · {d.card.nameKo} {d.reversed ? '역방향' : '정방향'}</small>
+            <small>{i + 1}. {p.positions[i]} · {d.card.nameEn} ({d.card.nameKo}) {d.reversed ? '역방향' : '정방향'}</small>
             <b>{s.title}</b>
             <p>{topic ? s[topic] : s.message.join(' ')}</p>
             {topic && <p>{s.message[0]}</p>}
