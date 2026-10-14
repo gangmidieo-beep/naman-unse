@@ -109,3 +109,47 @@ describe('v3 타로 스프레드 · 스몰사주 · 한줄사주', () => {
     for (let i = 0; i < 10; i++) expect(oneLineSaju(me, 'p1', new Date(D.getTime() + i * 86400000)).line).toBeTruthy();
   });
 });
+
+// 3차 요청(2026-10-14) 무료 운세 보강 — 모든 조합에 빈 문구가 없는지
+import { zodiacToday, mbtiToday, mbtiNick, factbombToday } from '../src/index';
+describe('무료 운세 3차 보강', () => {
+  const days = Array.from({ length: 40 }, (_, i) => new Date(Date.UTC(2026, 9, 1 + i, 3)));
+  it('띠: 해별 ① 흐름 ② 주의·기회 ③ 행동 + 포인트, 행운 색·숫자·방향·키워드', () => {
+    for (let b = 0; b < 12; b++) for (const d of days) {
+      const z = zodiacToday(b, d);
+      expect(z.head && z.sub && z.lucky.color && z.lucky.direction).toBeTruthy();
+      expect(z.keywords).toHaveLength(3);
+      for (const y of z.years) expect(y.flow && y.care && y.act && y.point.kw && y.age > 0).toBeTruthy();
+    }
+  });
+  it('혈액형: 오늘 기질이 오늘 흐름(십신 묶음)에 따라 바뀌고 키워드·행운·분야별 별점이 있다', () => {
+    const groups = new Set<string>();
+    for (const t of BLOOD_TYPES) for (const d of days) {
+      const r = bloodToday(t, me, d, 'p1');
+      groups.add(r.group);
+      expect(r.todayTrait.length).toBeGreaterThanOrEqual(3);
+      expect(r.keywords).toHaveLength(3);
+      expect(r.lucky.item && r.lucky.why && r.quote && r.love.line && r.money.line && r.work.line).toBeTruthy();
+    }
+    expect(groups.size).toBe(5);
+  });
+  it('MBTI: 16유형 별명(시안)·오늘 풀이·사주 기질 설명', () => {
+    expect(mbtiNick('ISFJ')).toBe('따뜻한 수호자');
+    for (const t of MBTI_TYPES) {
+      const r = mbtiResult(t, me)!;
+      const x = mbtiToday(t, D, 'p1');
+      expect(r.nick && r.elementSaju && x.head && x.sub && x.keywords && x.item && x.color).toBeTruthy();
+    }
+  });
+  it('팩폭: 찰떡 궁합을 쉬운 말(○○형)로, 연애·돈·일 팩폭과 오늘의 처방', () => {
+    const r = factbomb(me, 'p1');
+    expect(r.buddyType.name).toMatch(/형$/);
+    expect(r.merits).toHaveLength(2);
+    expect(r.love && r.money && r.work && r.tiredType.line).toBeTruthy();
+    expect(factbombToday('p1', D)).toBeTruthy();
+  });
+  it('스몰·한줄: 기질 이름, 오늘의 기운·키워드', () => {
+    expect(smallSaju(me, 'p1', D).persona.name).toBeTruthy();
+    for (const d of days) { const o = oneLineSaju(me, 'p1', d); expect(o.sub).toBeTruthy(); expect(o.keywords.length).toBeGreaterThanOrEqual(2); }
+  });
+});

@@ -103,3 +103,36 @@ test('재미로 보는 운세 7종 + 타로 탭이 열린다', async ({ page }) 
   await expect(page.getByText('연애', { exact: true })).toBeVisible(); // 프리미엄은 광고 없이 상세 해석
   expect(errors).toEqual([]);
 });
+
+// 3차 요청(2026-10-14): 무료 운세 화면 — 띠 그림·해별 2~3줄, MBTI 별명·사주 기질 버튼(보상형 광고 뒤)
+test('무료 운세 3차: 띠 그림·해별 풀이, 혈액형 오늘 기질, MBTI 사주 기질', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem('naman-unse', JSON.stringify({ state: { introSeen: true, profiles: [{ id: 'p1', name: '테스트', gender: 'M', year: 1975, month: 11, day: 30, calendar: 'solar', leap: false, hour: 14 }], mainId: 'p1', purchases: [], talismans: [] }, version: 2 })));
+  const openAd = async (name: RegExp) => {
+    await page.getByRole('button', { name }).click();
+    const ad = page.getByRole('button', { name: '풀이 열기' });
+    if (await page.getByRole('dialog', { name: '광고' }).isVisible()) await ad.click({ timeout: 6000 });
+  };
+  await page.goto('/zodiac');
+  await expect(page.locator('.zgrid img')).toHaveCount(12);
+  await page.getByRole('link', { name: '토끼띠 운세' }).first().click();
+  await openAd(/토끼띠 오늘 운세 보기/);
+  await expect(page.getByRole('heading', { name: '출생연도별 오늘의 운세' })).toBeVisible();
+  await expect(page.locator('.zyears li')).toHaveCount(5);
+  await expect(page.locator('.zyears li.me')).toContainText('1975년생');
+  await expect(page.locator('.zlucky')).toContainText('행운의 방향');
+  await page.goto('/fun/blood');
+  await page.getByRole('button', { name: 'A형' }).click();
+  await openAd(/A형 오늘 운세 보기/);
+  await expect(page.getByRole('heading', { name: /A형의 오늘 기질/ })).toBeVisible();
+  await expect(page.locator('.bpoints')).toContainText('오늘의 키워드');
+  await page.goto('/fun/mbti');
+  await expect(page.getByRole('button', { name: /ISFJ 따뜻한 수호자/ })).toBeVisible();
+  await page.getByRole('button', { name: /ISFJ 따뜻한 수호자/ }).click();
+  await openAd(/ISFJ 오늘 운세 보기/);
+  await expect(page.getByText(/× .* 일간/)).toHaveCount(0);
+  await openAd(/ISFJ의 사주 기질은/);
+  await expect(page.getByRole('heading', { name: 'ISFJ의 사주 기질' })).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -10,6 +10,8 @@ import dream1 from '../data/dream/part1.json';
 import dream2 from '../data/dream/part2.json';
 import smallDb from '../data/smallsaju.json';
 import onelineDb from '../data/onelinesaju.json';
+import fun2 from '../data/fun2.json';
+import { luckyOf } from './zodiac';
 
 type Band = '1' | '2' | '3' | '4' | '5';
 const ymd = (d: Date) => { const k = kstParts(d); return `${k.year}${String(k.month).padStart(2, '0')}${String(k.day).padStart(2, '0')}`; };
@@ -75,7 +77,7 @@ export function starToday(sign: StarId, date: Date, profileId: string) {
     band, stars: +band, total: bandTotal(+band, seed),
     oneLine: pick((starDb.oneLine as Record<Band, string[]>)[band], `${seed}:1`),
     love: pick(F.love[fb('love')], `${seed}:l`), money: pick(F.money[fb('money')], `${seed}:m`), work: pick(F.work[fb('work')], `${seed}:w`),
-    item: pick(starDb.items, `${seed}:i`), time: LUCKY_TIME[me],
+    item: pick(starDb.items, `${seed}:i`), time: LUCKY_TIME[me], color: luckyOf(seed).color,
   };
 }
 
@@ -105,6 +107,27 @@ export function bloodToday(t: Blood, saju: SajuResult, date: Date, profileId: st
     tip: pick((bloodDb.relationTip as Record<Band, string[]>)[band], `${seed}:${t}:tip`),
     caution: pick(bloodDb.caution, `${seed}:${t}:c`),
     best, match: m?.line ?? '',
+    ...bloodExtra(t, saju, date, `${seed}:${t}`, +band),
+  };
+}
+// 3차 요청: 오늘의 키워드·행운 포인트·주의할 점 + "오늘 기질"을 오늘 흐름(일진 십신)과 연결
+const B2 = fun2.blood as unknown as {
+  tags: Record<string, string[]>; about: Record<string, string>; group: Record<string, string>; quote: Record<string, Record<string, string>>;
+  today: Record<string, Record<string, string[]>>; keywords: Record<string, string[][]>; items: { item: string; why: string }[];
+};
+export const TEN_GROUP: Record<string, string> = { 비견: '비겁', 겁재: '비겁', 식신: '식상', 상관: '식상', 편재: '재성', 정재: '재성', 편관: '관성', 정관: '관성', 편인: '인성', 정인: '인성' };
+const fieldOf = (seed: string, base: number, f: 'love' | 'money' | 'work') => {
+  const b = clampBand(base + ((hash(`${seed}:${f}`) % 3) - 1));
+  return { stars: +b, line: pick((starDb.field as Record<string, Record<Band, string[]>>)[f][b], `${seed}:${f}:l`) };
+};
+function bloodExtra(t: Blood, saju: SajuResult, date: Date, seed: string, band: number) {
+  const tg = sipsinOfStem(saju.dayMaster.stem, dailyPillar(date).stem) as string;
+  const g = TEN_GROUP[tg] ?? '비겁';
+  const lk = luckyOf(seed);
+  return {
+    group: g, groupLabel: B2.group[g], todayTrait: B2.today[t][g], quote: B2.quote[t][g], tags: B2.tags[t], about: B2.about[t],
+    keywords: pick(B2.keywords[g], `${seed}:kw`), lucky: { ...pick(B2.items, `${seed}:it`), time: lk.time, color: lk.color },
+    love: fieldOf(seed, band, 'love'), money: fieldOf(seed, band, 'money'), work: fieldOf(seed, band, 'work'),
   };
 }
 
@@ -173,8 +196,19 @@ export function factbomb(saju: SajuResult, profileId: string) {
     hashtags: pickN((factDb.hashtags as Record<string, string[]>)[strongest], 3, `${seed}:h`),
     stemName: STEM_KO[stem], season, strongest,
     buddy: STEM_KO[(stem + 5) % 10], // 천간합: 갑기·을경·병신·정임·무계
+    // 3차 요청: 읽을거리 보강 + 찰떡 궁합을 쉬운 말로(예: 든든한 리더형)
+    me: F2.persona[stem],
+    buddyType: { ...F2.persona[(stem + 5) % 10], stem: STEM_KO[(stem + 5) % 10] },
+    tiredType: { name: F2.persona[(stem + 4) % 10].name, line: F2.tiredLine[(stem + 4) % 10], stem: STEM_KO[(stem + 4) % 10] }, // 나를 극하는 천간(갑←경)
+    merits: pickN((factDb.merit as Record<string, string[]>)[stem], 2, `${seed}:m2`),
+    love: pick(F2.love[strongest], `${seed}:love`), money: pick(F2.money[strongest], `${seed}:money`), work: pick(F2.work[strongest], `${seed}:work`),
+    tags4: pickN((factDb.hashtags as Record<string, string[]>)[strongest], 4, `${seed}:h`),
   };
 }
+const F2 = fun2.factbomb as unknown as { persona: { name: string; desc: string }[]; tiredLine: string[]; love: Record<string, string[]>; money: Record<string, string[]>; work: Record<string, string[]>; prescription: string[] };
+export const STEM_PERSONA = F2.persona;
+// 오늘의 처방(날마다 바뀜)
+export const factbombToday = (profileId: string, date: Date) => pick(F2.prescription, `${ymd(date)}:${profileId}:rx`);
 
 /* ---------------- MBTI 사주 ---------------- */
 export const MBTI_TYPES = Object.keys(mbtiDb) as string[];
@@ -182,7 +216,16 @@ export function mbtiResult(type: string, saju: SajuResult) {
   const m = (mbtiDb as Record<string, { nick: string; traits: string[]; strength: string; caution: string; withSaju: Record<string, string> }>)[type];
   if (!m) return null;
   const el = EL_KEY[STEM_ELEMENT[saju.dayMaster.stem]];
-  return { type, ...m, element: el, elementKo: ELEMENTS[STEM_ELEMENT[saju.dayMaster.stem]] as string, saju: m.withSaju[el] };
+  return { type, ...m, nick: M2.nick[type] ?? m.nick, element: el, elementKo: ELEMENTS[STEM_ELEMENT[saju.dayMaster.stem]] as string, saju: m.withSaju[el], elementSaju: M2.elementSaju[el] };
+}
+const M2 = fun2.mbti as unknown as { nick: Record<string, string>; today: Record<string, string[][]>; keywords: Record<string, string[]>; elementSaju: Record<string, string> };
+export const mbtiNick = (t: string) => M2.nick[t] ?? '';
+// MBTI 오늘의 운세(날마다): 제목·설명·키워드·행운 아이템/시간/컬러
+export function mbtiToday(type: string, date: Date, profileId: string) {
+  const seed = `${ymd(date)}:${profileId}:mbti:${type}`;
+  const [head, sub] = pick(M2.today[type] ?? [['', '']], `${seed}:t`);
+  const lk = luckyOf(seed);
+  return { head, sub, keywords: pick(M2.keywords[type] ?? [''], `${seed}:k`), item: pick(fun2.blood.items, `${seed}:i`).item, time: lk.time, color: lk.color };
 }
 
 /* ---------------- 스몰사주 · 한줄사주 (v3) ---------------- */
@@ -198,10 +241,13 @@ export function smallSaju(saju: SajuResult, profileId: string, date: Date) {
     strongLine: pick(SMALL.strong[strong], `${profileId}:small:s`),
     weakLine: pick(SMALL.weak[weak], `${profileId}:small:w`),
     tip: pick(SMALL.luckyTip, `${ymd(date)}:${profileId}:small`),
+    persona: F2.persona[saju.dayMaster.stem], stem: saju.dayMaster.stem,
   };
 }
 // 한줄사주: 오늘 일진 천간이 내 일간에게 무엇(십신)인지로 한 줄 — 공유용
 export function oneLineSaju(saju: SajuResult, profileId: string, date: Date) {
   const tg = sipsinOfStem(saju.dayMaster.stem, dailyPillar(date).stem) as string;
-  return { tenGod: tg, line: pick((onelineDb.byTenGod as Record<string, string[]>)[tg], `${ymd(date)}:${profileId}:oneline`) };
+  const sd = `${ymd(date)}:${profileId}:oneline`;
+  const O2 = fun2.oneline as unknown as { sub: Record<string, string[]>; keywords: Record<string, string[][]> };
+  return { tenGod: tg, line: pick((onelineDb.byTenGod as Record<string, string[]>)[tg], sd), sub: pick(O2.sub[tg], `${sd}:s`), keywords: pick(O2.keywords[tg], `${sd}:k`) };
 }
