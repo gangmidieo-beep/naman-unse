@@ -65,7 +65,7 @@ describe('공개 API', () => {
     expect(e.premium).toBe(true);
     expect(e.owned.map((x: any) => x.productId)).toContain('wealth');
     const o2 = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 't_wealth' } });
-    expect(o2.json().amount).toBe(13410);
+    expect(o2.json().amount).toBe(13400);
     expect((await app.inject({ method: 'POST', url: '/profiles', headers: auth(token), payload: profile('자녀') })).statusCode).toBe(200);
   });
   it('로그인(mock 카카오) → 게스트 기록 합치기', async () => {

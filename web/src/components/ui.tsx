@@ -189,14 +189,17 @@ export function toCardItem(p: Product, owned = false): CardItem {
 const badgeCls = (b: string) => `badge${b === 'BEST' ? ' best' : b === 'NEW' ? ' new' : b === '인기' ? ' pop' : ''}`;
 function PriceLine({ c }: { c: CardItem }) {
   if (c.free || !c.price) return <div className="pc-price"><span className="free-tag">무료</span></div>;
-  if (c.member) return <div className="pc-price bjp"><b>{won(c.price.strike || c.price.final)}</b><small>회원가 {won(c.member)}</small></div>;
+  if (c.member) return <div className="pc-price bjp"><b>{won(c.price.strike || c.price.final)}</b><small>{won(c.member)} (프리미엄 회원가)</small></div>;
   const p = c.price;
   return (
-    <div className="pc-price">
-      {p.rate > 0 && <span className="rate">{p.rate}%</span>}
-      {p.rate > 0 && <s>{p.strike.toLocaleString('ko-KR')}</s>}
-      <b>{won(p.final)}</b>{p.label && <small>{p.label}</small>}
-    </div>
+    p.label === '프리미엄 회원가'
+      // 정가를 먼저, 프리미엄 회원가는 따로(대표님 3차): 29,000원 / 26,000원 프리미엄 회원가 10%
+      ? <div className="pc-price two"><b>{won(p.strike)}</b><small className="mem"><strong>{won(p.final)}</strong> 프리미엄 회원가{p.rate > 0 && <span className="rate">{p.rate}%</span>}</small></div>
+      : <div className="pc-price">
+        {p.rate > 0 && <span className="rate">{p.rate}%</span>}
+        {p.rate > 0 && <s>{p.strike.toLocaleString('ko-KR')}</s>}
+        <b>{won(p.final)}</b>{p.label && <small>{p.label}</small>}
+      </div>
   );
 }
 // 부적 썸네일 — 촛불 탁자 배경 위에 부적별 글자를 새긴 노란 부적
@@ -319,7 +322,7 @@ export function StickyBuyBar({ p, premium, label, onBuy, disabled }: { p: Produc
     <div className="sticky">
       <div className="pp">
         {premium ? <><s>{won(p.price)}</s><b>{won(m)}</b><em>프리미엄 회원가</em></>
-          : <>{list && list > p.price && <><span className="rate">{Math.round(((list - p.price) / list) * 100)}%</span><s>{won(list)}</s></>}<b>{won(p.price)}</b><em>· 회원 {won(m)}</em></>}
+          : <>{list && list > p.price && <><span className="rate">{Math.round(((list - p.price) / list) * 100)}%</span><s>{won(list)}</s></>}<b>{won(p.price)}</b><em>· {won(m)} 프리미엄 회원가</em></>}
       </div>
       <Button kind="gold" onClick={onBuy} disabled={disabled}>{label}</Button>
     </div>

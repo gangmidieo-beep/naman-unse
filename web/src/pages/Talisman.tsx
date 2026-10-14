@@ -1,4 +1,5 @@
 // 나만의 부적 — 목록(분류 4) / 상세(부적 설명서·효험 3·사용 방법·구매) / 작성 연출(결제 후) → 부적함 보관·저장·공유(선물)
+import { PremiumButton } from '../components/PremiumPopup';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import effectsDb from '@naman/content/data/talisman-effects.json';
@@ -37,6 +38,7 @@ export function TalismanList() {
           <img src={v4('home_talisman')} alt="" />
           <div className="tx"><small>WISH TALISMAN</small><h2>나만의 <b>부적</b></h2><p>좋은 기운이 함께하는<br />행복한 하루가 되시길 바랍니다.</p></div>
         </div>
+        <PremiumButton />
         <div className="bjtabs" role="tablist" aria-label="부적 분류">
           {groups.map((x) => (
             <button key={x} role="tab" aria-selected={x === g} className={x === g ? 'on' : ''} onClick={() => setSp(x === '전체' ? {} : { g: x }, { replace: true })}>
@@ -100,7 +102,7 @@ export function TalismanDetail() {
       <div className="buy4 bjbuy">
         <div className="pp">
           {premium ? <><s>{won(t.price)}</s><b>{won(m)}</b><em>프리미엄 회원가</em></>
-            : <><span className="lbl">정가</span><b className="list">{won(t.price)}</b><span className="mem">회원가 <strong>{won(m)}</strong> · 10% 할인</span></>}
+            : <><span className="lbl">정가</span><b className="list">{won(t.price)}</b><span className="mem"><strong>{won(m)}</strong> 프리미엄 회원가</span></>}
         </div>
         <button className="go" onClick={() => nav(`/checkout/${t.id}`)}>{buyLabel(t).replace(/\s*[–-]\s*[\d,]+원$/, '')} ›</button>
       </div>

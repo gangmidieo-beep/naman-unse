@@ -248,7 +248,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [p] = await db.select().from(S.products).where(eq(S.products.id, String(b.productId)));
     if (!p || !p.visible) return rep.code(404).send({ error: '없는 상품이에요' });
     const premium = await isPremium(userId);
-    const amount = p.kind !== 'subscription' && premium ? p.memberPrice ?? Math.round((p.price * 0.9) / 10) * 10 : p.price;
+    const amount = p.kind !== 'subscription' && premium ? p.memberPrice ?? Math.floor((p.price * 0.9) / 100) * 100 : p.price;
     const kind = p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading';
     const channel = MOCK ? 'mock' : b.channel === 'google' ? 'google' : 'pg';
     const base = { id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind, amount, discount: p.price - amount, method: b.method ?? (channel === 'google' ? 'google' : 'card'), channel, status: 'pending' as const };
@@ -418,7 +418,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const member = playId.endsWith('_m');
     const [p] = await db.select().from(S.products).where(eq(S.products.id, member ? playId.slice(0, -2) : playId));
     if (!p || (member && p.kind === 'subscription')) return rep.code(404).send({ error: '없는 상품이에요' });
-    const amount = member ? p.memberPrice ?? Math.round((p.price * 0.9) / 10) * 10 : p.price;
+    const amount = member ? p.memberPrice ?? Math.floor((p.price * 0.9) / 100) * 100 : p.price;
     const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount, discount: p.price - amount, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
     try {
       if (p.kind === 'subscription') {

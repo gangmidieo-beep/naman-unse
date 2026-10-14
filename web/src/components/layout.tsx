@@ -42,10 +42,10 @@ export function AppHeader() {
   );
 }
 
-export function SubHeader({ title, sub, back = true, right }: { title: string; sub?: string; back?: boolean; right?: ReactNode }) {
+export function SubHeader({ title, sub, back = true, right, big }: { title: string; sub?: string; back?: boolean; right?: ReactNode; big?: boolean }) {
   const nav = useNavigate();
   return (
-    <header className="sub">
+    <header className={`sub${big ? ' big' : ''}`}>
       {back ? (
         <button className="bk" onClick={() => (history.length > 1 ? nav(-1) : nav('/'))} aria-label="뒤로">‹</button>
       ) : <span className="r" />}

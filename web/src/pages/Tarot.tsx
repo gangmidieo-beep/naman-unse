@@ -1,6 +1,7 @@
 // 타로 탭 /tarot v4 (대표님 2차 수정) — 깊은 밤하늘 + 금 선. 머리 그림 → 오늘의 타로(무료, 실전 타로 테이블) → 주제별 타로·스프레드(그림 썸네일, 3,000원 / 켈틱 4,900원) → 나의 타로 기록
 // 실전 타로 테이블(TarotTable): 카드 섞기(효과음) → 테이블 위에 부채꼴로 펼침 → 직접 고르기 → 한 장씩 뒤집으며 해석 → 마지막 종합 메시지. 음소거 버튼.
 // 뽑히는 카드는 주문 번호(유료)·날짜+사주(오늘의 타로)로 미리 정해져 있어 다시 열어도 같다 — 사용자가 고른 순서대로 그 카드가 드러난다.
+import { PremiumButton } from '../components/PremiumPopup';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { tarotDraw, tarotSpread, tarotSide, type TarotCard } from '@naman/content';
@@ -261,6 +262,7 @@ export default function TarotTab() {
       <div className="stars" aria-hidden />
       <header className="thero"><img src={v4('tarot_header')} alt="" /><h1 className="sr-only">타로 — 별빛 아래, 카드가 전하는 이야기</h1></header>
       <TodayTarot />
+      <PremiumButton />
       {BRAND.groups.tarot.map((g) => (
         <section className="tsec" key={g}>
           <h2 className="thead"><small>{g === '스프레드' ? 'SPREAD' : 'TOPIC'}</small>{g}</h2>

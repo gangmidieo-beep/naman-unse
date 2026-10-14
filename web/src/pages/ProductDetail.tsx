@@ -17,12 +17,12 @@ type Detail = { subtitle: string; about?: string; contents: { title: string; des
 function stepsOf(p: Product): { icon: string; title: string; desc: string }[] {
   const two = isTwoPerson(p.id);
   if (p.id === 'baby') return [
-    { icon: 'credit-card', title: '결제하기', desc: '회원가로 원하는 상품을 결제해 주세요.' },
+    { icon: 'credit-card', title: '결제하기', desc: '원하는 상품을 결제해 주세요. 프리미엄 회원은 프리미엄 회원가로 결제돼요.' },
     { icon: 'camera', title: '두 사람 사진 올리기', desc: '정면 얼굴 사진 두 장을 올려 주세요.' },
     { icon: 'baby', title: '아들·딸 얼굴 확인', desc: 'AI가 그린 두 아이의 얼굴을 확인하세요.' },
   ];
   if (isPhoto(p)) return [
-    { icon: 'credit-card', title: '결제하기', desc: '회원가로 원하는 상품을 결제해 주세요.' },
+    { icon: 'credit-card', title: '결제하기', desc: '원하는 상품을 결제해 주세요. 프리미엄 회원은 프리미엄 회원가로 결제돼요.' },
     { icon: 'camera', title: '사진 올리기', desc: `${p.id === 'palm' ? '손바닥' : '얼굴'} 사진 한 장을 찍거나 골라 주세요.` },
     { icon: 'scroll-text', title: '상세풀이 확인', desc: '풀이는 운세함에 보관돼요. 사진은 저장하지 않아요.' },
   ];
@@ -34,7 +34,7 @@ function stepsOf(p: Product): { icon: string; title: string; desc: string }[] {
   const c = CHAR[charOf(p)];
   return [
     { icon: 'pencil', title: '정보 입력', desc: two ? '두 사람의 생년월일·태어난 시·성별을 입력해 주세요.' : '생년월일, 태어난 시, 성별을 입력해 주세요.' },
-    { icon: 'credit-card', title: '결제하기', desc: `회원가로 원하는 ${p.title}를 결제해 주세요.` },
+    { icon: 'credit-card', title: '결제하기', desc: `${p.title}을(를) 결제해 주세요. 프리미엄 회원은 프리미엄 회원가로 결제돼요.` },
     { icon: 'scroll-text', title: '상세풀이 확인', desc: `${c.name}의 ${p.title} 상세풀이를 확인하세요.` },
   ];
 }
@@ -126,7 +126,7 @@ export default function ProductDetail() {
         <div className="pp">
           {premium
             ? <><s>{won(p.price)}</s><span className="rate">10%</span><b>{won(m)}</b><em>프리미엄 회원가</em></>
-            : <><span className="lbl">정가</span><b className="list">{won(p.price)}</b><span className="mem">회원가 <strong>{won(m)}</strong></span></>}
+            : <><span className="lbl">정가</span><b className="list">{won(p.price)}</b><span className="mem"><strong>{won(m)}</strong> 프리미엄 회원가</span></>}
         </div>
         <button className="go" onClick={() => nav(`/checkout/${p.id}`)}>내 {title} 상세풀이 보기 ›</button>
         <span className="sr-only">결제 금액 {won(pay)}</span>

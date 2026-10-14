@@ -1,6 +1,7 @@
 // 운세 탭 /unse v4 (대표님 2차 수정) — 아이콘 + 이름 라운드 탭 4개(전체·운명·사주·연애·궁합·사진운세), 유료 상품만.
 // 목록: 넓은 그림 썸네일 + 이름·한 줄·할인가·회원가 (캐릭터 반복 표시 없음). 2027 신년운세·토정비결이 맨 위. PC 에서는 3~4열 카드.
 // 주소: /unse?cat=fate  (옛 /fate · /love 는 여기로, ?cat=fun 은 /fun 으로)
+import { PremiumButton } from '../components/PremiumPopup';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { ProductCard, toCardItem } from '../components/ui';
@@ -51,8 +52,9 @@ export function UnseTab() {
   const set = (c: Cat) => { setSp(c === 'all' ? {} : { cat: c }, { replace: true }); scrollTo(0, 0); };
   return (
     <>
-      <SubHeader title="운세" sub="사주와 인연, 사진으로 보는 나만의 운세" back={false} />
+      <SubHeader title="운 세" sub="사주와 인연, 사진으로 보는 나만의 운세" back={false} big />
       <main className="screen unse4">
+        <PremiumButton />
         <CatTabs value={cat} onChange={set} />
         {cat === 'all'
           ? (['fate', 'love', 'photo'] as const).map((c) => <CatSection key={c} cat={c} more={() => set(c)} />)
@@ -68,6 +70,7 @@ export function FunList() {
     <>
       <SubHeader title="재미로 보는 운세" sub="가볍게 즐기고, 새롭게 발견하는 나의 이야기" />
       <main className="screen">
+        <PremiumButton />
         <div className="funcards mt14">
           {BRAND.fun.map((x) => (
             <Link key={x.id} to={x.link} className="funcard">

@@ -31,8 +31,9 @@ export const CHAR = {
 };
 
 export const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
-// 회원가 = 정가에서 memberDiscountRate 할인, 10원 단위 반올림 (카탈로그 memberPrice 가 있으면 그 값)
-export const memberPrice = (p: Product) => (p as any).memberPrice ?? Math.round((p.price * (1 - brand.subscription.memberDiscountRate)) / 10) * 10;
+// 프리미엄 회원가 = 카탈로그 memberPrice(대표님 3차 가격표: 29,000→26,000 · 19,000→17,000 · 14,900→13,400 · 9,900→8,900 · 4,900→4,400),
+// 없으면 정가에서 memberDiscountRate 할인 후 100원 미만 절삭
+export const memberPrice = (p: Product) => (p as any).memberPrice ?? Math.floor((p.price * (1 - brand.subscription.memberDiscountRate)) / 100) * 100;
 export const payPrice = (p: Product, premium: boolean) => (premium ? memberPrice(p) : p.price);
 // 카드 가격 표시(결정필요 D25): 정가(listPrice)가 있으면 "할인율% 정가(취소선) 판매가", 없으면 "10% 판매가(취소선) 회원가"
 export function priceView(p: Product) {
@@ -40,7 +41,7 @@ export function priceView(p: Product) {
   const list = (p as any).listPrice as number | undefined;
   if (list && list > p.price) return { rate: Math.round(((list - p.price) / list) * 100), strike: list, final: p.price, label: '' };
   const m = memberPrice(p);
-  return { rate: Math.round(((p.price - m) / p.price) * 100), strike: p.price, final: m, label: '회원' };
+  return { rate: Math.floor(((p.price - m) / p.price) * 100), strike: p.price, final: m, label: '프리미엄 회원가' };
 }
 
 // 신년운세·토정비결은 대상 해를 자동으로(9월부터 다음 해)

@@ -3,7 +3,7 @@ import { applyServerProducts, buyLabel, priceView, productById, recommendFor, TA
 
 describe('관리자 값 반영(서버 products 덮어쓰기)', () => {
   it('정가·할인 표시·버튼·추천 부적이 앱에 반영된다', () => {
-    expect(priceView(productById('career')!).label).toBe('회원');
+    expect(priceView(productById('career')!)).toMatchObject({ label: '프리미엄 회원가', strike: 14900, final: 13400, rate: 10 }); // 3차 가격표
     applyServerProducts([{ id: 'career', listPrice: 25000, price: 19000, buttonLabel: '지금 풀이 받기', recommend: ['t_pass'] }]);
     const p = productById('career')!;
     expect(priceView(p)).toMatchObject({ rate: 24, strike: 25000, final: 19000 });

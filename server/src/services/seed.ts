@@ -51,6 +51,18 @@ export async function seedBase(db: Db) {
     { id: 'today', kind: 'today', character: 'cheongung', group: '오늘의 운세', title: '오늘의 운세', cardCopy: '오늘 / 이번 주 / 이번 달', detail: null, price: 0, memberPrice: null, thumbHanja: '今', badge: null, visible: true, sort: 0, googleProductId: null, meta: null } as any,
   );
   await db.insert(S.products).values(rows).onConflictDoNothing();
+  // 3차 가격표(2026-10-14): 예전 기본 회원가(정가×0.9, 10원 단위)이거나 비어 있으면 새 회원가로, 손금·관상은 정가 4,900원으로 한 번 맞춘다.
+  // 관리자가 직접 바꾼 값(예전 기본값과 다른 값)은 건드리지 않는다.
+  for (const r of rows) {
+    const [cur] = await db.select({ price: S.products.price, memberPrice: S.products.memberPrice }).from(S.products).where(eq(S.products.id, r.id));
+    if (!cur) continue;
+    const patch: Record<string, number> = {};
+    if ((r.id === 'palm' || r.id === 'face') && cur.price === 9900) patch.price = r.price;
+    const oldDefault = Math.round((cur.price * 0.9) / 10) * 10;
+    const price = patch.price ?? cur.price;
+    if (r.memberPrice != null && price === r.price && (cur.memberPrice == null || cur.memberPrice === oldDefault) && cur.memberPrice !== r.memberPrice) patch.memberPrice = r.memberPrice;
+    if (Object.keys(patch).length) await db.update(S.products).set(patch as any).where(eq(S.products.id, r.id));
+  }
   if (needV2) await syncCatalogV2(db, rows);
   // v3 이전에 만든 DB: 새 칸이 비어 있는 상품만 채운다(관리자가 고친 값은 보존)
   for (const r of rows) if (r.tab) await db.update(S.products).set({ tab: r.tab, category: r.category, buttonLabel: r.buttonLabel, resultTitle: r.resultTitle, recommend: r.recommend, detailCopy: r.detailCopy }).where(and(eq(S.products.id, r.id), isNull(S.products.tab)));

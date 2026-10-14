@@ -177,7 +177,7 @@ describe('PayApp 웹 결제', () => {
     const full = (await app.inject({ url: '/products' })).json().find((p: any) => p.id === 'jeongtong').price;
     const o = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'jeongtong', phone: '01077778888' } })).json();
     expect(o.amount).toBeLessThan(full);
-    expect(o.amount).toBe(Math.round((full * 0.9) / 10) * 10);
+    expect(o.amount).toBe(({ 29000: 26000, 19000: 17000, 14900: 13400, 9900: 8900, 4900: 4400, 3000: 2700 } as Record<number, number>)[full] ?? Math.floor((full * 0.9) / 100) * 100); // 3차 프리미엄 회원가표
   });
   it('PayApp 취소 요청 형식(관리자 환불에서 사용)', async () => {
     const before = calls.length;

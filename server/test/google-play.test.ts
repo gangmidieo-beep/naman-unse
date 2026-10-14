@@ -45,7 +45,7 @@ describe('Google Play 검증', () => {
   it('회원가 상품(<id>_m): 같은 상품으로 기록, 금액은 회원가, Google 에는 _m 으로 조회', async () => {
     const t = await guest('gp-3');
     const r = await verify(t, 'jeongtong_m', 'tok-2');
-    expect(r.json()).toMatchObject({ status: 'paid', productId: 'jeongtong', amount: 26100, discount: 2900 });
+    expect(r.json()).toMatchObject({ status: 'paid', productId: 'jeongtong', amount: 26000, discount: 3000 });
     expect(seen.some((x) => x.includes('/purchases/products/jeongtong_m/tokens/tok-2'))).toBe(true);
     expect((await verify(t, 'premium_monthly_m', 'tok-3')).statusCode).toBe(404);
   });
