@@ -77,7 +77,7 @@ export default function ProductDetail() {
         {about && (
           <section className="pd-about">
             {t.src && <img src={t.src} alt="" />}
-            <div><h2><Icon name="heart" size={18} />{title}{p.id === 'baby' ? '란?' : '란?'}</h2><p>{about}</p></div>
+            <div><h2><Icon name="heart" size={18} />{title}{iran(title)}</h2><p>{about}</p></div>
           </section>
         )}
 
@@ -133,4 +133,12 @@ export default function ProductDetail() {
       </div>
     </>
   );
+}
+
+// "OO란?" 맞춤법 — 마지막 글자에 받침이 있으면 "이란?", 없으면 "란?" (정통궁합이란? · 연애 타로란?)
+export function iran(word: string) {
+  const ch = word.trim().slice(-1);
+  const code = ch.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return '이란?';
+  return code % 28 ? '이란?' : '란?';
 }

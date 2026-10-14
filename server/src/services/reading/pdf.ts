@@ -70,8 +70,9 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   let tn = 0;
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(opts.resultTitle)}</title><style>
   @page { size: A4; margin: 20mm 17mm 18mm; }
+  html { background: #fbf6ea; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 10.6pt; line-height: 1.78; color: #241d14;
+  body { margin: 0; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 11pt; line-height: 1.8; color: #241d14;
     word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
   /* 줄바꿈: 한글은 낱말(어절) 단위로만 끊고, 제목은 줄 길이를 고르게, 본문은 마지막 줄에 한두 글자만 남지 않게 */
   h1, h2, h3, .pt, .say, .hl, .who, .part h2 { text-wrap: balance; }
@@ -123,7 +124,14 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   .chap { margin-bottom: 7mm; }
   .chap .no { font-size: 9pt; color: #a8823e; letter-spacing: .2em; font-family: 'Noto Sans CJK KR', sans-serif; }
   .chap h3 { font-size: 14pt; margin: .5mm 0 2mm; break-after: avoid; }
-  .chap .say { font-size: 10pt; color: #6b4f1a; background: #faf5ea; padding: 2mm 3mm; border-radius: 1.5mm; margin: 0 0 3mm; break-inside: avoid; }
+  .chap .say { font-size: 10.6pt; font-weight: 700; color: #241d14; background: #f7eed8; border: 1px solid #e3d2a8; padding: 2.4mm 3.5mm; border-radius: 1.8mm; margin: 0 0 3.5mm; break-inside: avoid; }
+  .chap .say b, .chap .pts b, .chap .ca b { display: block; font-family: 'Noto Sans CJK KR', sans-serif; font-size: 8pt; font-weight: 800; color: #8a6526; letter-spacing: .05em; margin-bottom: .8mm; }
+  .chap .pts { margin: 1mm 0 3mm; break-inside: avoid; } .chap .pts ul { margin: 0; padding-left: 5mm; } .chap .pts li { margin: .6mm 0; }
+  .chap .ca { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 0 0 3mm; break-inside: avoid; }
+  .chap .ca > div { border-radius: 1.8mm; padding: 2.4mm 3mm; font-size: 10pt; line-height: 1.7; }
+  .chap .ca .c { background: #fbeeea; border: 1px solid #efcfc6; } .chap .ca .c b { color: #a23a2a; }
+  .chap .ca .a { background: #eef4ec; border: 1px solid #cfe0c9; } .chap .ca .a b { color: #3e7a4e; }
+  .hl span { display: inline-block; margin-right: 2mm; font-family: 'Noto Sans CJK KR', sans-serif; font-size: 7.5pt; font-weight: 800; color: #fff; background: #b8913f; border-radius: 3mm; padding: .2mm 2mm; }
   .chap p, .intro p, .closing p { margin: 0 0 2.6mm; text-align: left; orphans: 2; widows: 2; }
   .hl { border-top: 1px dashed #d8c49a; padding-top: 2mm; font-weight: 700; color: #6b4f1a; font-size: 10pt; }
   .closing { page-break-before: always; border: 1.5px solid #a8823e; padding: 6mm 7mm; background: #fffdf7; }
@@ -143,8 +151,8 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   ${c.tojeong ? `<section class="box"><h3>${c.tojeong.year}년 토정비결 괘</h3><p>괘 번호 <b>${c.tojeong.number}</b> · 상괘 ${c.tojeong.upper} · 중괘 ${c.tojeong.middle} · 하괘 ${c.tojeong.lower}</p></section>` : ''}
   <section class="toc"><h2 class="sec">목차</h2><div class="cols">${byPart.map((p) => `<div class="pt">${esc(p.title)}</div><ol>${p.chapters.map((x) => `<li><span>${++tn}</span>${esc(x.title)}</li>`).join('')}</ol>`).join('')}<div class="pt">${esc(c.closing.title)}</div></div></section>
   ${c.intro ? `<div class="intro">${paras(c.intro)}</div>` : ''}
-  ${byPart.map((p) => `<section class="part"><small>${esc(ch.hanja)}</small><h2>${esc(p.title)}</h2></section>${p.chapters.map((x) => `<section class="chap"><div class="no">제 ${++n} 장</div><h3>${esc(x.title)}</h3>${x.say ? `<p class="say">${esc(ch.name)} · ${esc(x.say)}</p>` : ''}${paras(x.body)}${x.highlight ? `<p class="hl">“${esc(x.highlight)}”</p>` : ''}</section>`).join('')}`).join('')}
-  <section class="closing"><h2 class="sec">${esc(c.closing.title)}</h2>${paras(c.closing.body)}${c.closing.tips?.length ? `<ul>${c.closing.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}<div class="end">${esc(ch.name)}<span>運</span></div>
+  ${byPart.map((p) => `<section class="part"><small>${esc(ch.doc === '인연서' ? '因緣鑑定' : '運命鑑定')}</small><h2>${esc(p.title)}</h2></section>${p.chapters.map((x) => `<section class="chap"><div class="no">제 ${++n} 장</div><h3>${esc(x.title)}</h3>${x.say ? `<div class="say"><b>핵심 요약</b>${esc(x.say)}</div>` : ''}${paras(x.body)}${x.points?.length ? `<div class="pts"><b>장점·포인트</b><ul>${x.points.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}${x.caution || x.advice ? `<div class="ca">${x.caution ? `<div class="c"><b>주의할 점</b>${esc(x.caution)}</div>` : ''}${x.advice ? `<div class="a"><b>이렇게 해 보세요</b>${esc(x.advice)}</div>` : ''}</div>` : ''}${x.highlight ? `<p class="hl"><span>한 줄 정리</span>${esc(x.highlight)}</p>` : ''}</section>`).join('')}`).join('')}
+  <section class="closing"><h2 class="sec">${esc(c.closing.title)}</h2>${paras(c.closing.body)}${c.closing.tips?.length ? `<ul>${c.closing.tips.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}<div class="end">나만의 운세 감정실<span>運</span></div>
     <p class="note">이 감정서는 명리학의 원리로 타고난 기운과 흐름을 풀이한 참고 자료이며, 의료·법률·투자 판단을 대신하지 않습니다.</p></section>
   </body></html>`;
 }

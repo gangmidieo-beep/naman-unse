@@ -1,7 +1,7 @@
 // 공통 컴포넌트 v2 — 시안 v2 기준. /dev/components 에 전부 나열.
 import { hideBanner, showBanner } from '../platform/native';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Img } from './Img';
 import { optionalImg, type ImgKey } from '../assets/images';
 import { usePremium } from '../store/app';
@@ -107,14 +107,24 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
   const hold = useRef(false);
   const start = useRef<{ x: number; dx: number; moved: boolean } | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  const nav = useNavigate();
   const go = useCallback((to: number) => { setAnim(true); setPos(to); }, []);
+  // 안전장치: 화면이 가려졌다 돌아오는 등으로 transitionend 를 놓치면 복제 슬라이드(빈 칸)에 머물거나 범위를 벗어나므로 바로잡는다
+  useEffect(() => {
+    if (pos >= 1 && pos <= n) return;
+    const fix = () => { setAnim(false); setPos(pos <= 0 ? n : 1); };
+    if (pos < 0 || pos > n + 1) { fix(); return; }
+    const t = setTimeout(fix, 600);
+    return () => clearTimeout(t);
+  }, [pos, n]);
   useEffect(() => {
     if (n < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => { if (!hold.current && !start.current) go(pos + 1); }, interval);
+    const t = setInterval(() => { if (!hold.current && !start.current && !document.hidden) go(Math.min(pos + 1, n + 1)); }, interval);
     return () => clearInterval(t);
   }, [pos, n, interval, go]);
   // 복제 슬라이드에 도착하면 애니메이션 없이 진짜 슬라이드로 순간 이동(무한 루프)
-  const onEnd = () => {
+  const onEnd = (e: React.TransitionEvent) => {
+    if (e.target !== e.currentTarget) return; // 안쪽 그림의 전환 끝 신호는 무시
     if (pos === 0) { setAnim(false); setPos(n); }
     else if (pos === n + 1) { setAnim(false); setPos(1); }
   };
@@ -136,6 +146,8 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
     setDrag(0);
     // 드래그였으면 링크 클릭 막기
     if (moved) wrap.current?.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); }, { capture: true, once: true });
+    // 눌렀다 뗀 것(드래그 아님)이면 지금 보이는 배너의 상품 페이지로 이동 — 포인터 캡처 때문에 링크 클릭이 전달되지 않던 문제
+    else { const link = items[((pos - 1 + n) % n)]?.link; if (link) nav(link); }
     start.current = null;
   };
   if (!n) return null;

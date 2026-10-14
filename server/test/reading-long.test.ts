@@ -13,7 +13,7 @@ const NOW = new Date('2026-10-13T10:00:00+09:00');
 // 가짜 AI: 프롬프트의 "id "..." · 목표 N자" 를 읽어 그 분량만큼 서로 다른 문장으로 채운다
 const write = (id: string, len: number, name: string) => {
   let t = '', i = 0;
-  while (t.length < len) t += `${name} 님의 ${id} 장 ${i++}번째 문장은 원국의 근거를 들어 새롭게 풀이한 내용이오. `;
+  while (t.length < len) t += `${name} 님의 ${id} 장 ${i++}번째 문장은 원국의 근거를 들어 새롭게 풀이한 내용입니다. `;
   return t;
 };
 function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: string[] } = {}) {
@@ -27,8 +27,8 @@ function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: stri
     opts.log?.push(items.map((x) => x.id).join(','));
     if (items.some((x) => opts.failIds?.includes(x.id))) return new Response('{}', { status: 500 });
     const name = u.match(/사람: ([^(]+)\(/)?.[1] ?? '';
-    const json: any = { sections: items.map((x) => ({ id: x.id, say: '한 줄', body: write(x.id, x.len, name), highlight: '핵심' })) };
-    if (u.includes('"intro"')) json.intro = `${name} 님, 반갑소.`;
+    const json: any = { sections: items.map((x) => ({ id: x.id, summary: '핵심 요약', body: write(x.id, x.len, name), points: ['장점 하나', '장점 둘'], caution: '주의점입니다.', advice: '조언입니다.', line: '한 줄 정리' })) };
+    if (u.includes('"intro"')) json.intro = `${name} 님, 반갑습니다.`;
     if (u.includes('"tips"')) json.tips = ['하나', '둘', '셋'];
     return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(json) }], usage: { input_tokens: 3000, output_tokens: 5000 }, stop_reason: 'end_turn' }));
   }) as unknown as typeof fetch;
@@ -59,8 +59,8 @@ describe('목차: 유료 26종 모두 A4 40~50장 분량', () => {
       const plan = buildPlan(p, g, g === 'pair' ? [ME, YOU] : [ME], NOW);
       const sum = plan.sections.reduce((a, s) => a + s.len, 0);
       expect(plan.sections.length, p.id).toBeGreaterThanOrEqual(30);
-      expect(sum, p.id).toBeGreaterThanOrEqual(44000);
-      expect(sum, p.id).toBeLessThanOrEqual(62000);
+      expect(sum, p.id).toBeGreaterThanOrEqual(29000);
+      expect(sum, p.id).toBeLessThanOrEqual(42000);
       expect(new Set(plan.sections.map((s) => s.id)).size, p.id).toBe(plan.sections.length);
       expect(new Set(plan.sections.map((s) => s.title)).size, p.id).toBe(plan.sections.length);
       expect(JSON.stringify(plan.sections), p.id).not.toMatch(/\{(theme|year|dm|name|name1|name2|order|text)\}/);
@@ -93,9 +93,10 @@ describe('장편 생성', () => {
     expect(g.content.reports[0].daewoon.length).toBeGreaterThanOrEqual(8);
     expect(progress.at(-1)).toBe(g.plan.sections.length);
     expect(g.content.issues).toEqual([]);
+    expect(g.content.chapters[0]).toMatchObject({ say: '핵심 요약', highlight: '한 줄 정리', points: ['장점 하나', '장점 둘'], caution: '주의점입니다.', advice: '조언입니다.' }); // 장 구성: 요약 → 본문 → 포인트 → 주의·조언 → 한 줄
     expect(g.costKrw).toBeGreaterThan(0);
     const chars = g.content.chapters.reduce((a, c) => a + c.body.length, 0);
-    expect(chars).toBeGreaterThan(44000);
+    expect(chars).toBeGreaterThan(30000);
   });
 
   it('궁합: 두 사람 명식·두 사람 이름', async () => {

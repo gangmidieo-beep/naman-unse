@@ -249,7 +249,7 @@ function LongBody({ c, who }: { c: any; who: 'cheongung' | 'wolha' }) {
   let n = 0, t = 0;
   return (
     <>
-      {c.intro && <div className="chap"><CharacterBubble who={who}>{c.intro}</CharacterBubble></div>}
+      {c.intro && <div className="chap"><div className="lintro">{c.intro}</div></div>}
       <nav className="toc toc4" id="toc" aria-label="목차">
         <h2>목차</h2>
         {parts.map((pt) => (
@@ -262,13 +262,21 @@ function LongBody({ c, who }: { c: any; who: 'cheongung' | 'wolha' }) {
       </nav>
       {parts.map((pt) => (
         <div key={pt.title}>
-          <div className="part4"><small>{who === 'cheongung' ? '天宮道士' : '月下仙女'}</small><h2>{pt.title}</h2></div>
+          <div className="part4"><small>{who === 'cheongung' ? '運命鑑定' : '因緣鑑定'}</small><h2>{pt.title}</h2></div>
           {pt.chapters.map((ch) => (
             <section className="chap" id={ch.id} key={ch.id}>
               <small>第 {++n} 章</small>
               <h2>{ch.title}</h2>
-              {ch.say && <CharacterBubble who={who}>{ch.say}</CharacterBubble>}
-              <Body text={ch.body} highlight={ch.highlight} />
+              {ch.say && <div className="lsum"><b>핵심 요약</b><p>{ch.say}</p></div>}
+              <Body text={ch.body} highlight="" />
+              {ch.points?.length > 0 && <div className="lpts"><b>장점·포인트</b><ul>{ch.points.map((x: string) => <li key={x}>{x}</li>)}</ul></div>}
+              {(ch.caution || ch.advice) && (
+                <div className="lca">
+                  {ch.caution && <div className="c"><b>주의할 점</b><p>{ch.caution}</p></div>}
+                  {ch.advice && <div className="a"><b>이렇게 해 보세요</b><p>{ch.advice}</p></div>}
+                </div>
+              )}
+              {ch.highlight && <p className="lline"><span>한 줄 정리</span>{ch.highlight}</p>}
             </section>
           ))}
         </div>

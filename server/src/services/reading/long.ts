@@ -7,7 +7,8 @@ import { analyzeSaju, calcSaju, solarToLunar, tojeong, STEMS, BRANCHES, type Saj
 import longOutline from '../../../../packages/content/data/reading-outline-long.json' with { type: 'json' };
 
 export type Person = { name: string; gender: 'M' | 'F'; year: number; month: number; day: number; calendar: 'solar' | 'lunar'; leap?: boolean; hour?: number | null };
-export type LongChapter = { id: string; title: string; say: string; body: string; highlight: string; part: number };
+// say = 핵심 요약(박스), body = 상세 해석 → 생활 속 모습, points = 장점·포인트 2~3개, caution = 주의점, advice = 현실 조언, highlight = 한 줄 정리
+export type LongChapter = { id: string; title: string; say: string; body: string; highlight: string; part: number; points?: string[]; caution?: string; advice?: string };
 export type LongContent = {
   version: 2; productId: string; title: string; character: 'cheongung' | 'wolha'; generatedBy: 'ai' | 'sample';
   intro: string; parts: { title: string }[]; chapters: LongChapter[]; closing: { title: string; body: string; tips: string[] };
@@ -35,7 +36,8 @@ export function buildPlan(product: { id: string; title: string }, group: string,
   const curAge = r0.targetYear - people[0].year + 1;
   const parts: { title: string }[] = [];
   const sections: Section[] = [];
-  const k = +(process.env.READING_LEN_SCALE ?? 1); // 전체 분량 조절(1.0 = 목차 그대로, A4 약 43~47장). 실제 글이 짧거나 길게 나오면 이 값으로 맞춤
+  const GK: Record<string, number> = { theme: 0.86, love: 0.86, tojeong: 1.04 }; // 장 수가 많은 묶음은 상자가 많아 본문을 조금 줄임
+  const k = +(process.env.READING_LEN_SCALE ?? 0.66) * (GK[group] ?? 1); // 전체 분량 조절(기본 0.66 = 장마다 요약·포인트·주의·조언 상자를 더한 뒤 A4 약 43~49장). 실제 글이 짧거나 길게 나오면 이 값으로 맞춤
   for (const part of L.groups[group] ?? L.groups.life) {
     const pi = parts.push({ title: fill(part.title, vars) }) - 1;
     const add = (o: OutlineSection, extra: Partial<Section> = {}, v: Record<string, string | number> = {}) =>
@@ -121,19 +123,19 @@ function factLines(keys: string[], s: Section, people: Person[], sajus: SajuResu
   return [...new Set(out)];
 }
 
-function systemPrompt(character: 'cheongung' | 'wolha') {
-  const voice = character === 'wolha'
-    ? '당신은 "월하선녀"다. 다정하지만 품위 있는 해요체(~해요, ~예요)로 쓴다.'
-    : '당신은 "천궁도사"다. 점잖은 하오체(~하오, ~구려, ~하시게)로 쓴다.';
-  return `${voice}
-지금 쓰는 글은 A4 40~50장 분량의 "정통 사주 감정서"의 일부다. 명리학의 정통 용어(일간·월령·십성·지장간·12운성·합충형파해·신강신약·용신·희신·기신·대운·세운·월운·신살)를 정확히 쓰되, 용어가 처음 나오면 괄호나 한 문장으로 쉽게 풀어 준다. 독자는 30~60대.
-- 모든 장에서 "어느 기둥의 어느 글자·어느 십성·어느 관계 때문에"라는 근거를 들고, 그 근거에서 생활 속 장면(일·돈·사람·건강)으로 이어지게 쓴다.
+// 결과지 말투(대표님 3차 요청): 캐릭터(천궁도사·월하선녀) 말투·사극체 없이, 차분하고 신뢰감 있는 정통 운세식 존댓말로 통일
+function systemPrompt(_character: 'cheongung' | 'wolha') {
+  return `당신은 경력 많은 명리학 상담가다. 지금 쓰는 글은 A4 40~50장 분량의 "정통 사주 감정서"의 일부다.
+말투: 차분하고 신뢰감 있는 존댓말 "~합니다 / ~입니다 / ~해 보세요 / ~하시면 좋겠습니다"로 통일한다. "~해요·~예요" 같은 해요체, "~하오·~구려·~하시게" 같은 사극체, 캐릭터 이름(천궁도사·월하선녀)은 절대 쓰지 않는다.
+- 명리학의 정통 용어(일간·월령·십성·지장간·12운성·합충형파해·신강신약·용신·희신·기신·대운·세운·월운·신살)를 정확히 쓰되, 용어가 처음 나오면 바로 뒤에 일반인이 알 수 있게 쉬운 말로 풀어 준다. 독자는 30~60대.
+- 누구에게나 맞는 일반론 대신 이 사람의 실제 원국 근거("어느 기둥의 어느 글자·어느 십성·어느 관계 때문에")를 들어 개인화해서 쓴다.
+- 장마다 순서: 핵심 요약(summary) → 상세 해석과 실제 생활에서 나타나는 모습(body) → 장점·포인트(points) → 주의점(caution) → 현실적인 조언(advice) → 한 줄 정리(line).
 - 이 장의 brief 에 적힌 범위만 다룬다. 전체 목차에 다른 장으로 잡힌 주제는 쓰지 않는다. 원국 소개·일간 설명을 장마다 다시 하지 않는다.
-- 같은 문장·같은 비유·같은 맺음말을 되풀이하지 않는다. 장마다 첫 문장을 다르게 시작한다. "결론적으로" "요약하자면" 같은 상투어 금지.
-- 문단은 3~5문장, 문단 사이는 \\n\\n. 목표 분량(공백 포함 글자 수)을 지킨다(±15%).
+- 같은 문장·같은 비유·같은 좋은 말을 되풀이하지 않는다. 장마다 첫 문장을 다르게 시작한다. "결론적으로" "요약하자면" 같은 상투어 금지.
+- body 의 문단은 3~5문장, 문단 사이는 \\n\\n. body 는 목표 분량(공백 포함 글자 수)을 지킨다(±15%).
 - 단정·공포 금지(죽음·이혼 확정·파산·큰 병 단정 금지), 의료 진단·투자 권유 금지, "반드시·무조건" 금지. 어려운 시기도 대처법과 함께 희망적으로 쓴다.
 - 다른 사이트·책의 문장을 흉내 내지 않고 모두 새로 쓴다. 이름은 "OOO 님".
-- 출력은 JSON 하나만: {"sections":[{"id":string,"say":string(한 줄 요약, 30자 안팎),"body":string,"highlight":string(공유용 한 문장)}]${'' /* intro·tips 는 필요할 때 user 가 요청 */}}`;
+- 출력은 JSON 하나만: {"sections":[{"id":string,"summary":string(핵심 요약 1~2문장, 60자 안팎),"body":string,"points":string[](장점·포인트 2~3개, 각 30자 이내),"caution":string(주의점 2~3문장),"advice":string(실천할 수 있는 조언 2~3문장),"line":string(한 줄 정리, 공유용)}]}`;
 }
 
 function userPrompt(product: { title: string }, people: Person[], all: Section[], batch: Section[], facts: string[], parts: { title: string }[], extras: string) {
@@ -200,6 +202,7 @@ export function longQuality(chapters: LongChapter[], plan: Section[], names: str
   const all = chapters.map((c) => c.body).join('\n');
   for (const n of names) if (n && !all.includes(n)) issues.push(`이름 누락: ${n}`);
   if (/사망|파산|(이혼(하게|할 수밖에|이 확정))|반드시|무조건/.test(all)) issues.push('금지 표현 포함');
+  if (/(하오|구려|하시게|이오)[.!,]|천궁도사|월하선녀/.test(all)) issues.push('사극체·캐릭터 말투 포함');
   return [...new Set(issues)].slice(0, 30);
 }
 
@@ -214,6 +217,17 @@ export function batchesOf(sections: Section[]) {
   }
   if (cur.length) out.push(cur);
   return out;
+}
+
+// AI 응답 한 장 → 감정서 장(옛 형식 say·highlight 도 받음)
+function chapterOf(s: Section, x: any): LongChapter {
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  const points = Array.isArray(x.points) ? x.points.map(str).filter(Boolean).slice(0, 3) : [];
+  return {
+    id: s.id, title: s.title, part: s.part,
+    say: str(x.summary) || str(x.say), body: String(x.body ?? ''), highlight: str(x.line) || str(x.highlight),
+    ...(points.length ? { points } : {}), ...(str(x.caution) ? { caution: str(x.caution) } : {}), ...(str(x.advice) ? { advice: str(x.advice) } : {}),
+  };
 }
 
 export async function generateLong(
@@ -247,7 +261,7 @@ export async function generateLong(
     const facts = [...new Set(batch.flatMap((s) => factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong)))];
     const wantIntro = batch[0].id === plan.sections[0].id && !intro;
     const wantTips = batch.some((s) => s.id === finalId);
-    const extras = (wantIntro ? '\n\n추가로 JSON 에 "intro"(감정서 첫머리 인사, 250~350자, 이름을 부르며 이 감정서를 어떻게 읽으면 좋은지)도 넣는다.' : '')
+    const extras = (wantIntro ? '\n\n추가로 JSON 에 "intro"(감정서 첫머리 안내, 250~350자, 이름을 부르며 이 감정서의 구성과 읽는 방법을 차분한 존댓말로)도 넣는다.' : '')
       + (wantTips ? '\n\n추가로 JSON 에 "tips"(평생 기억할 실천 조언 3개, 각 40자 안팎) 배열도 넣는다.' : '');
     const sum = batch.reduce((a, s) => a + s.len, 0);
     const maxTokens = Math.min(32000, Math.ceil(sum * 2.2) + 2000);
@@ -260,14 +274,14 @@ export async function generateLong(
     for (const s of batch) {
       const x = got.get(s.id);
       if (!x?.body || String(x.body).length < s.len * 0.5) { short.push(s); continue; }
-      done.set(s.id, { id: s.id, title: s.title, say: String(x.say ?? ''), body: String(x.body), highlight: String(x.highlight ?? ''), part: s.part });
+      done.set(s.id, chapterOf(s, x));
     }
     // 빠졌거나 많이 짧은 장은 한 장씩 한 번 더
     for (const s of short) {
       const one = await callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, ''), Math.min(16000, Math.ceil(s.len * 2.4) + 1500), http);
       tokensIn += one.tokensIn; tokensOut += one.tokensOut;
       const x = (one.json.sections ?? [])[0];
-      if (x?.body) done.set(s.id, { id: s.id, title: s.title, say: String(x.say ?? ''), body: String(x.body), highlight: String(x.highlight ?? ''), part: s.part });
+      if (x?.body) done.set(s.id, chapterOf(s, x));
     }
     await opts.onProgress?.(snapshot());
   };

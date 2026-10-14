@@ -10,7 +10,9 @@
 /* ---------- 홈 ---------- */
 .badge.pop { background: #B0263A; }
 .banner img { position: absolute; right: 0; top: 0; width: 66%; height: 100%; object-fit: cover; object-position: 50% 50%; }
-.banner .shade { background: linear-gradient(90deg, #14110D 34%, rgba(20, 17, 13, .78) 46%, rgba(20, 17, 13, 0) 70%); }
+.banner .shade { background: linear-gradient(90deg, rgba(20, 17, 13, .92) 0%, rgba(20, 17, 13, .7) 20%, rgba(20, 17, 13, 0) 40%); } /* 음영은 배너의 약 30%(대표님 3차) */
+.banner .txt b { color: var(--gold-light); }
+.banner .txt { text-shadow: 0 2px 10px rgba(0, 0, 0, .75); }
 .banner .txt { top: 50%; transform: translateY(-50%); max-width: 48%; }
 .banner b { font-size: 26px; margin: 0 0 6px; color: #F8F1E0; }
 .banner { height: 150px; background: #14110D; }
@@ -642,3 +644,23 @@
 
 .tsound.off { opacity: .55; }
 .tsound.off::after { content: ""; position: absolute; left: 9px; right: 9px; top: 50%; height: 2px; background: currentColor; transform: rotate(-45deg); border-radius: 2px; }
+
+/* 정통 감정서 장 구성(대표님 3차) — 핵심 요약 → 본문 → 장점·포인트 → 주의점·조언 → 한 줄 정리. 연한 아이보리 한지 + 명조 */
+.lintro, .lsum, .lpts, .lca > div, .lline { font-family: var(--serif); }
+.lintro { background: #fbf5e6; border-left: 3px solid var(--gold, #a8823e); border-radius: 10px; padding: 16px 18px; font-size: 18px; line-height: 1.8; color: var(--ink-2); white-space: pre-line; }
+.lsum { background: #f7eed8; border: 1px solid #e3d2a8; border-radius: 12px; padding: 12px 16px; margin: 0 0 14px; }
+.lsum b, .lpts b, .lca b { display: block; font-family: var(--sans); font-size: 13px; font-weight: 800; letter-spacing: .04em; color: #8a6526; margin-bottom: 4px; }
+.lsum p { font-size: 18px; font-weight: 700; line-height: 1.6; color: var(--ink); margin: 0; }
+.lpts { margin: 4px 0 12px; }
+.lpts ul { list-style: none; display: grid; gap: 6px; margin: 0; padding: 0; }
+.lpts li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.55; }
+.lpts li::before { content: '✦'; position: absolute; left: 2px; color: #b8913f; }
+.lca { display: grid; gap: 10px; margin: 0 0 12px; }
+@media (min-width: 720px) { .lca { grid-template-columns: 1fr 1fr; } }
+.lca > div { border-radius: 12px; padding: 12px 14px; }
+.lca .c { background: #fbeeea; border: 1px solid #efcfc6; } .lca .c b { color: #a23a2a; }
+.lca .a { background: #eef4ec; border: 1px solid #cfe0c9; } .lca .a b { color: #3e7a4e; }
+.lca p { margin: 0; font-size: 17px; line-height: 1.7; color: var(--ink-2); }
+.lline { margin: 4px 0 0; padding: 12px 0 0; border-top: 1px dashed #d8c49a; font-size: 17px; font-weight: 700; color: #6b4f1a; line-height: 1.6; }
+.lline span { display: inline-block; margin-right: 8px; font-family: var(--sans); font-size: 12px; font-weight: 800; color: #fff; background: #b8913f; border-radius: 999px; padding: 1px 8px; vertical-align: 2px; }
+.rep4 ~ .chap .rbody, .chap .rbody { font-size: 18.5px; }
