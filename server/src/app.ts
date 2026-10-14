@@ -556,6 +556,21 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const target = `${WEB()}${l.path}${l.path.includes('?') ? '&' : '?'}utm_source=share&utm_content=${encodeURIComponent(l.contentId)}`;
     const e = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     rep.type('text/html; charset=utf-8');
+    // 3차 요청: 카톡 공유 카드를 누르면 앱이 있으면 앱으로, 없으면 Play 스토어 설치 화면으로(안드로이드).
+    // Play 에 앱이 올라간 뒤 서버 변수 PLAY_STORE_LIVE=1 (+ APP_ID) 을 넣으면 켜진다. 그 전·아이폰·PC 는 지금처럼 웹으로.
+    const appId = process.env.APP_ID || 'com.namanunse.app';
+    const android = /Android/i.test(String(req.headers['user-agent'] ?? ''));
+    if (process.env.PLAY_STORE_LIVE === '1' && android) {
+      const play = `https://play.google.com/store/apps/details?id=${appId}&referrer=${encodeURIComponent(`utm_source=share&utm_content=${l.contentId}`)}`;
+      const intent = `intent://open?path=${encodeURIComponent(l.path)}#Intent;scheme=namanunse;package=${appId};S.browser_fallback_url=${encodeURIComponent(play)};end`;
+      return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(l.title)}</title>
+<meta property="og:title" content="${e(l.title)}"><meta property="og:description" content="${e(l.text)}">
+<meta property="og:image" content="${API()}/s/${l.code}/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="${API()}/s/${l.code}"><meta property="og:site_name" content="나만의 운세"><meta name="twitter:card" content="summary_large_image">
+<style>body{margin:0;font-family:sans-serif;background:#F5EFE1;color:#1C1A17;display:grid;place-items:center;min-height:100vh;text-align:center}a{display:block;margin:10px auto;padding:14px 22px;border-radius:14px;font-weight:800;text-decoration:none;max-width:260px}.a{background:#1C1A17;color:#F2D98E}.b{color:#5A5249}</style></head>
+<body><div><p>나만의 운세 앱으로 이동하고 있어요…</p><a class="a" href="${e(intent)}">앱에서 보기</a><a class="b" href="${e(target)}">웹에서 계속 보기</a></div>
+<script>location.replace(${JSON.stringify(intent)});</script></body></html>`;
+    }
     return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${e(l.title)}</title>
 <meta property="og:title" content="${e(l.title)}"><meta property="og:description" content="${e(l.text)}">
 <meta property="og:image" content="${API()}/s/${l.code}/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">

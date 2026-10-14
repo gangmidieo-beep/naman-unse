@@ -17,11 +17,16 @@ function wrap(text: string, perLine: number, maxLines: number) {
 }
 const FONT = `'Noto Serif CJK KR','Noto Serif KR','Malgun Gothic','NanumMyeongjo',serif`;
 
+// 3차 요청(2026-10-14) 공유 카드 형식: 나만의 운세 로고 → 날짜·콘텐츠 → "OOO 님의 오늘의 운세" → 점수·별 → [나만의 운세 확인하러 가기]
 export async function shareCard(o: { title: string; text: string; url: string; size: 'wide' | 'tall' }) {
-  const [W, H] = o.size === 'wide' ? [1200, 630] : [1080, 1350];
-  const pad = o.size === 'wide' ? 64 : 80;
-  const lines = wrap(o.text, o.size === 'wide' ? 26 : 18, o.size === 'wide' ? 4 : 8);
-  const fs = o.size === 'wide' ? 40 : 54;
+  const wide = o.size === 'wide';
+  const [W, H] = wide ? [1200, 630] : [1080, 1350];
+  const pad = wide ? 64 : 80;
+  const fs = wide ? 40 : 54;
+  const textLines = o.text.split('\n').flatMap((t) => wrap(t, wide ? 28 : 22, wide ? 2 : 5)).slice(0, wide ? 3 : 7);
+  const titleY = pad + fs * 2.9;
+  const bodyY = titleY + fs * 1.5;
+  const btnW = wide ? 520 : 720, btnH = wide ? 74 : 104, btnY = H - pad - btnH - (wide ? 4 : 30);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C5A16"/><stop offset=".28" stop-color="#C99A3A"/><stop offset=".5" stop-color="#F2D98E"/><stop offset=".72" stop-color="#C99A3A"/><stop offset="1" stop-color="#7C5A16"/></linearGradient>
@@ -32,10 +37,11 @@ export async function shareCard(o: { title: string; text: string; url: string; s
   <rect x="${pad - 18}" y="${pad - 18}" width="${W - 2 * pad + 36}" height="${H - 2 * pad + 36}" rx="18" fill="none" stroke="#B8892E" stroke-opacity=".45" stroke-width="2"/>
   <rect x="${pad}" y="${pad}" width="${fs * 1.1}" height="${fs * 1.1}" rx="6" fill="#A8291E"/>
   <text x="${pad + fs * 0.55}" y="${pad + fs * 0.85}" font-size="${fs * 0.72}" fill="#F8E9C8" text-anchor="middle" font-family="${FONT}">運</text>
-  <text x="${pad + fs * 1.4}" y="${pad + fs * 0.86}" font-size="${fs * 0.8}" font-weight="900" fill="#E6C877" font-family="${FONT}">${esc(o.title)}</text>
-  ${lines.map((l, i) => `<text x="${pad}" y="${pad + fs * 2.6 + i * fs * 1.55}" font-size="${fs}" fill="#F4EBD6" font-family="${FONT}">${esc(l)}</text>`).join('\n  ')}
-  <text x="${pad}" y="${H - pad}" font-size="${fs * 0.55}" fill="#CFC3A8" font-family="${FONT}">${esc(o.url.replace(/^https?:\/\//, ''))}</text>
-  <text x="${W - pad}" y="${H - pad}" font-size="${fs * 0.8}" fill="#E6C877" text-anchor="end" font-family="${FONT}">나만의 운세</text>
+  <text x="${pad + fs * 1.4}" y="${pad + fs * 0.86}" font-size="${fs * 0.8}" font-weight="900" fill="#E6C877" font-family="${FONT}">나만의 운세</text>
+  <text x="${pad}" y="${titleY}" font-size="${fs * 1.12}" font-weight="900" fill="#F8EFD9" font-family="${FONT}">${esc(o.title)}</text>
+  ${textLines.map((l, i) => `<text x="${pad}" y="${bodyY + i * fs * 1.45}" font-size="${fs * (/[★☆]/.test(l) ? 1.05 : 0.86)}" fill="${/[★☆]/.test(l) ? '#F2D98E' : '#E3D7BC'}" font-family="${FONT}">${esc(l)}</text>`).join('\n  ')}
+  <rect x="${(W - btnW) / 2}" y="${btnY}" width="${btnW}" height="${btnH}" rx="${btnH / 2}" fill="url(#g)"/>
+  <text x="${W / 2}" y="${btnY + btnH * 0.64}" font-size="${fs * 0.78}" font-weight="900" fill="#24180A" text-anchor="middle" font-family="${FONT}">나만의 운세 확인하러 가기 ›</text>
 </svg>`;
   return sharp(Buffer.from(svg)).png().toBuffer();
 }

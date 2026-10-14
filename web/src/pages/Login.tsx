@@ -27,18 +27,23 @@ export function LoginButtons({ after }: { after?: () => void }) {
     // 서버 OAuth 시작 — 끝나면 /auth/callback?token= 으로 돌아온다
     location.href = `${__API_ORIGIN__}/auth/${p}/start?redirect=${encodeURIComponent(location.href)}`;
   };
-  // 실결제 모드에선 서버에 키가 등록된 로그인만 보여줌(대표님 콘솔 등록 전엔 안내 문구)
+  // 3차 요청: 회원가입·로그인 버튼(카카오·네이버·구글)을 늘 보여 준다. 대표님이 로그인 키를 아직 등록하지 않은 곳은 눌렀을 때 안내만
   const [ready, setReady] = useState<Provider[] | null>(MOCK_MODE ? (Object.keys(LABEL) as Provider[]) : null);
+  const [msg, setMsg] = useState('');
   useEffect(() => {
     if (MOCK_MODE) return;
     fetch(`${__API_ORIGIN__}/auth/providers`).then((r) => r.json()).then((j) => setReady(j.providers ?? [])).catch(() => setReady([]));
   }, []);
-  if (ready && !ready.length) return <p className="note center" style={{ margin: '16px 18px 0' }}>간편 로그인을 준비하고 있어요. 지금은 로그인 없이 이 기기에서 그대로 이용하실 수 있어요.</p>;
+  const tap = (p: Provider) => {
+    if (ready?.includes(p)) return login(p);
+    setMsg(`${LABEL[p].t.replace('로 시작하기', '')} 로그인은 곧 열려요. 지금은 로그인 없이 이 기기에서 그대로 이용하실 수 있어요.`);
+  };
   return (
     <div className="loginbox">
-      {(ready ?? []).map((p) => (
-        <button key={p} className={`sso ${p}`} onClick={() => login(p)}><i aria-hidden>{LABEL[p].mark}</i>{LABEL[p].t}</button>
+      {(['kakao', 'naver', 'google'] as Provider[]).map((p) => (
+        <button key={p} className={`sso ${p}${ready && !ready.includes(p) ? ' soon' : ''}`} onClick={() => tap(p)}><i aria-hidden>{LABEL[p].mark}</i>{LABEL[p].t}</button>
       ))}
+      {msg && <p className="note center" role="status">{msg}</p>}
     </div>
   );
 }
@@ -48,12 +53,12 @@ export default function Login() {
   const [sp] = useSearchParams();
   return (
     <>
-      <SubHeader title="로그인" sub="유료 풀이·부적을 안전하게 보관해요" />
+      <SubHeader title="로그인 · 회원가입" sub="유료 풀이·부적을 안전하게 보관해요" />
       <main className="screen no-tab">
         <div className="mt24" />
         <CharacterBubble who="wolha">무료 운세는 로그인 없이도 볼 수 있어요. 풀이를 사면 운세함에 잘 간직해 드릴게요.</CharacterBubble>
         <LoginButtons after={() => nav(sp.get('back') || '/box', { replace: true })} />
-        <p className="note" style={{ margin: '16px 18px 0' }}>로그인하면 지금까지 이 기기에 저장한 사주 정보와 구매 내역이 계정으로 옮겨져요</p>
+        <p className="note" style={{ margin: '16px 18px 0' }}>처음이시면 버튼 한 번으로 회원가입까지 끝나요. 로그인하면 지금까지 이 기기에 저장한 사주 정보와 구매 내역이 계정으로 옮겨져요</p>
       </main>
     </>
   );

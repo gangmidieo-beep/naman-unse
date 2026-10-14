@@ -279,7 +279,7 @@ export default function TarotTab() {
 
 // 유료 타로 결과 — 처음 열면 실전 타로 테이블에서 직접 고르고 뒤집기, 다 끝나면(또는 다시 열면) 자리별 풀이 + 종합 메시지
 const TOPIC: Record<string, 'love' | 'money' | 'work'> = {
-  tarot_love: 'love', tarot_reunion: 'love', tarot_mind: 'love', tarot_contact: 'love', tarot_newlove: 'love', tarot_match: 'love',
+  tarot_love: 'love', tarot_reunion: 'love', tarot_mind: 'love', tarot_contact: 'love', tarot_newlove: 'love', tarot_match: 'love', tarot_people: 'love',
   tarot_money: 'money', tarot_work: 'work', tarot_choice: 'work', tarot_job: 'work',
 };
 // 카드를 뽑기 전에 묻는 질문(선택) — 선택의 기로는 A·B 두 선택지를 꼭 적는다. 답은 AI 풀이에 쓰이고, 이 기기에 기억(다시 열어도 같은 질문)
@@ -292,6 +292,7 @@ const ASK: Record<string, { label: string; ph: string }> = {
   tarot_choice: { label: '고민하는 상황', ph: '예) 이직 제안을 받았어요' },
   tarot_job: { label: '지금 상황', ph: '예) 회사 5년 차, 이직 준비 중이에요' },
   tarot_3month: { label: '특히 궁금한 것(연애·일·돈)', ph: '예) 일과 돈의 흐름이 궁금해요' },
+  tarot_people: { label: '어떤 관계인지·고민', ph: '예) 팀장님과 일하는 방식이 달라 자주 부딪혀요' },
 };
 type TarotIn = { question?: string; a?: string; b?: string };
 type TarotAi = { positions: { title: string; text: string }[]; summary: { title: string; text: string }; advice: string[]; keywords: string[]; answer?: string };

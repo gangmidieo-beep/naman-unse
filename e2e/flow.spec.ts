@@ -136,3 +136,26 @@ test('무료 운세 3차: 띠 그림·해별 풀이, 혈액형 오늘 기질, MB
   await expect(page.getByRole('heading', { name: 'ISFJ의 사주 기질' })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+// 3차 남은 작업(2026-10-14): 상세 목차·분량, 풀이 받을 사람 선택·추가, 회원가입·로그인 버튼, 인간관계 타로
+test('상세 결과지 목차 · 풀이 받을 사람 선택 · 로그인 버튼 3종 · 인간관계 타로', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem('naman-unse', JSON.stringify({ state: { introSeen: true, profiles: [
+    { id: 'p1', name: '나본인', gender: 'M', year: 1975, month: 11, day: 30, calendar: 'solar', leap: false, hour: 14, relation: '나' },
+    { id: 'p2', name: '어머니', gender: 'F', year: 1950, month: 3, day: 5, calendar: 'lunar', leap: false, hour: null, relation: '부모' },
+  ], mainId: 'p1', account: { provider: 'mock', id: 'm1', name: '테스트' }, purchases: [], talismans: [] }, version: 2 })));
+  await page.goto('/product/wealth');
+  await expect(page.getByRole('heading', { name: '결과지 목차' })).toBeVisible();
+  await expect(page.locator('.toc-meta')).toContainText('A4 약 40~50쪽');
+  await expect(page.locator('.toc-parts > li')).toHaveCount(6);
+  await page.goto('/checkout/wealth');
+  await expect(page.getByRole('radio', { name: /어머니/ })).toBeVisible();
+  await page.getByRole('radio', { name: /어머니/ }).check();
+  await expect(page.getByRole('link', { name: /새로운 사람 추가하기|프리미엄으로/ })).toBeVisible();
+  await page.goto('/login');
+  for (const t of ['카카오로 시작하기', '네이버로 시작하기', 'Google로 시작하기']) await expect(page.getByRole('button', { name: t })).toBeVisible();
+  await page.goto('/product/tarot_people');
+  await expect(page.getByRole('heading', { name: /인간관계 타로/ }).first()).toBeVisible();
+  expect(errors).toEqual([]);
+});

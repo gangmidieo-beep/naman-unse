@@ -16,7 +16,7 @@ import { music, sfx } from '../lib/sound';
 import { SoundToggle } from '../components/SoundToggle';
 import { birthLabel } from './ProfileNew';
 
-type Eff = { effects: { icon: string; title: string; desc: string }[]; targets?: string[]; wishExamples: string[] };
+type Eff = { intro?: string; effects: { icon: string; title: string; desc: string }[]; targets?: string[]; wishExamples: string[] };
 const EFF = effectsDb as Record<string, Eff>;
 const GROUP_ICON: Record<string, string> = { 전체: 'layout-grid', '재물·성공': 'coins', '사랑·인연': 'heart', '소원·성취': 'flower-2', '평안·보호': 'shield' };
 type Sort = 'rec' | 'low' | 'high';
@@ -80,7 +80,7 @@ export function TalismanDetail() {
           <div className="papers" aria-hidden><TalismanPaper t={t} size={1.75} /></div>
           <div className="tx"><h1>{t.title}</h1><p className="cp">{t.cardCopy}</p><p>{lead}</p></div>
         </div>
-        <section className="frame bjd-desc"><span className="lbl">부적 설명서</span><p className="body">{t.detail}</p></section>
+        <section className="frame bjd-desc"><span className="lbl">부적 설명서</span><p className="body">{eff?.intro ?? t.detail}</p></section>
         <h2 className="bjd-h">부적에 담긴 기원</h2>
         <div className="bjd-effects">
           {eff?.effects.map((e) => <div key={e.title}><span className="ic"><Icon name={e.icon} size={26} /></span><b>{e.title}</b><p>{e.desc}</p></div>)}

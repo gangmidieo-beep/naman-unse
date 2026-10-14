@@ -23,6 +23,8 @@ import { koDate } from '../lib/dates';
 const DOW = ['월', '화', '수', '목', '금', '토', '일'];
 type Tab = 'today' | 'week' | 'month';
 
+const starStr = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
+
 export default function Today() {
   const [sp, setSp] = useSearchParams();
   const tab = (sp.get('tab') as Tab) || 'today';
@@ -32,6 +34,7 @@ export default function Today() {
   const f = useTodayFortune(profile);
   const w = useWeekFortune(profile);
   const m = useMonthFortune(profile);
+  const dotDate = (() => { const d = new Date(Date.now() + 9 * 3600e3); return `${d.getUTCFullYear()}. ${d.getUTCMonth() + 1}. ${d.getUTCDate()}.`; })();
   const toast = useToast();
   const { run, modal } = useRewarded();
   const [share, setShare] = useState(false);
@@ -89,11 +92,12 @@ export default function Today() {
                     <article className="dfield" key={k} id={`f-${k}`}>
                       <div className="hd"><b>{FIELD_LABEL[k]}</b><Stars n={d.stars} /></div>
                       <div className="sm">{d.summary}</div>
-                      {(d.detailCheongung ?? d.detail).map((p, i) => <p key={i}>{p}</p>)}
+                      {/* 3차 요청: 본문은 정통 존댓말(~합니다)로 통일, 천궁도사 말투는 '오늘의 한 마디'에만 */}
+                      {d.detail.map((p, i) => <p key={i}>{p}</p>)}
                       {(CORE_FIELDS as readonly string[]).includes(k) && d.advice && (
                         <ul>
                           <li>해 보면 좋은 일 — {d.advice.do}</li>
-                          <li>오늘은 피해 가요 — {d.advice.avoid}</li>
+                          <li>오늘은 피하면 좋은 일 — {d.advice.avoid}</li>
                         </ul>
                       )}
                     </article>
@@ -112,15 +116,18 @@ export default function Today() {
         {tab === 'month' && (premium ? <MonthPanel m={m} /> : <PremiumLock label="✦ 이번 달 운세는 프리미엄 회원에게 열려요"><MonthPanel m={m} /></PremiumLock>)}
       </main>
       {modal}
-      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title="나만의 운세 · 오늘의 운세"
-        text={`${profile.name}님의 오늘 운세 ${f.total}점 — “${f.oneLine}”`} path="/today" contentId="today" onDone={(msg) => msg && toast(msg)} />
-      <ShareCard ref={cardRef} title="오늘의 운세" sub={koDate()}>
-        <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 22 }}>{profile.name}님 · {f.total}점 <Stars n={f.stars} /></p>
-        <p style={{ fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1.7, margin: '10px 0 14px' }}>“{f.oneLine}”</p>
+      {/* 3차 요청 공유 형식: 로고 · 2026. 10. 13. 오늘의 운세 · OOO 님의 오늘의 운세 · 90점 ★★★★★ · [나만의 운세 확인하러 가기] */}
+      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${profile.name} 님의 오늘의 운세`}
+        text={`${dotDate} 오늘의 운세\n${f.total}점 ${starStr(f.stars)}`} path="/today" contentId="today" onDone={(msg) => msg && toast(msg)} />
+      <ShareCard ref={cardRef} title="나만의 운세" sub={`${dotDate} 오늘의 운세`}>
+        <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 30, textAlign: 'center', marginTop: 6 }}>{profile.name} 님의 오늘의 운세</p>
+        <p style={{ textAlign: 'center', margin: '10px 0 4px' }}><b style={{ fontFamily: 'var(--serif)', fontSize: 64, color: 'var(--gold-deep)' }}>{f.total}</b><span style={{ fontSize: 24, fontWeight: 800 }}>점</span></p>
+        <p style={{ textAlign: 'center', fontSize: 30, color: '#E3B94E', letterSpacing: 4 }}>{starStr(f.stars)}</p>
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 19, lineHeight: 1.7, margin: '12px 0 14px', textAlign: 'center' }}>“{f.oneLine}”</p>
         <div className="grid6">
           {FIELDS.map((k) => <div key={k} style={{ background: 'var(--ink)', color: 'var(--on-ink)' }}><FieldName k={k} /><Stars n={f.fields[k].stars} /></div>)}
         </div>
-        <p style={{ marginTop: 14, fontSize: 17 }}>행운의 색 {f.lucky.color} · 숫자 {f.lucky.number} · 방향 {f.lucky.direction}</p>
+        <p style={{ margin: '18px auto 0', width: 'fit-content', padding: '12px 26px', borderRadius: 999, background: 'var(--gold-grad)', color: '#24180A', fontWeight: 900, fontSize: 19 }}>나만의 운세 확인하러 가기 ›</p>
       </ShareCard>
     </>
   );

@@ -1,6 +1,7 @@
 // 나의 운세함 — "개인 서재": 인사말 + 내 사주정보(일반 2개 / 프리미엄 무제한) · 나의 운명서 · 나의 인연서 · 나의 부적함 · 결제 내역 · 알림 설정 · 설정
 import { useEffect, useState } from 'react';
 import { ExpiryNotice } from '../components/ExpiryNotice';
+import { LoginButtons } from './Login';
 import { Link, useNavigate } from 'react-router-dom';
 import { SubHeader } from '../components/layout';
 import { Icon } from '../components/Icon';
@@ -94,6 +95,13 @@ export default function Box() {
           </div>
         )}
         <ExpiryNotice />
+        {!s.account && (
+          <section className="lib-login">
+            <b>회원가입 · 로그인</b>
+            <p>간편 로그인하면 구매한 풀이와 부적을 휴대폰을 바꿔도 그대로 볼 수 있어요.</p>
+            <LoginButtons />
+          </section>
+        )}
 
         <LibSec en="DESTINY" title={<>나의 <em>운명서</em></>}>
           {fate.length ? fate.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)

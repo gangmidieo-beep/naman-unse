@@ -21,6 +21,13 @@ export async function initNative(nav: (to: string) => void) {
     else if (!home) nav('/');
     else window.dispatchEvent(new CustomEvent('naman:exit'));
   });
+  // 공유 링크(namanunse://open?path=/today)로 앱이 열리면 그 화면으로
+  App.addListener('appUrlOpen', ({ url }) => {
+    try {
+      const path = new URL(url).searchParams.get('path');
+      if (path && path.startsWith('/')) nav(path);
+    } catch { /* 모르는 주소는 무시 */ }
+  });
   // 알림을 눌러 들어오면 해당 화면으로
   import('@capacitor/push-notifications').then(({ PushNotifications }) => {
     PushNotifications.addListener('pushNotificationActionPerformed', (a) => {

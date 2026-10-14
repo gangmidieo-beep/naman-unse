@@ -38,9 +38,9 @@ describe('공개 API', () => {
     expect(list.filter((p) => p.kind === 'subscription')).toHaveLength(2);
     expect((await app.inject({ url: '/banners?slot=home' })).json()).toHaveLength(10);
   });
-  it('v3: 타로 13·사진 3 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
+  it('v3: 타로 14·사진 3 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
     const list = (await app.inject({ url: '/products' })).json() as any[];
-    expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(13);
+    expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(14);
     expect(list.filter((p) => p.kind === 'photo')).toHaveLength(3);
     const wealth = list.find((p) => p.id === 'wealth');
     expect(wealth).toMatchObject({ tab: 'unse', category: 'fate', buttonLabel: '천궁도사의 상세풀이 받기', resultTitle: '천궁도사가 풀어드린 나의 운명서', recommend: ['t_wealth', 't_biz'] });
@@ -88,6 +88,17 @@ describe('공개 API', () => {
     const png = await app.inject({ url: `/s/${s.code}/card.png` });
     expect(png.headers['content-type']).toBe('image/png');
     expect(png.rawPayload.subarray(1, 4).toString()).toBe('PNG');
+    // 3차: Play 등록 뒤(PLAY_STORE_LIVE=1) 안드로이드에서는 앱이 있으면 앱, 없으면 Play 설치 화면으로
+    const android = { 'user-agent': 'Mozilla/5.0 (Linux; Android 14; SM-S918N) KAKAOTALK' };
+    expect((await app.inject({ url: `/s/${s.code}`, headers: android })).body).not.toContain('intent://'); // 등록 전엔 웹으로
+    process.env.PLAY_STORE_LIVE = '1';
+    try {
+      const a = (await app.inject({ url: `/s/${s.code}`, headers: android })).body;
+      expect(a).toContain('intent://open?path=%2Ftoday#Intent;scheme=namanunse;package=com.namanunse.app');
+      expect(a).toContain(encodeURIComponent('https://play.google.com/store/apps/details?id=com.namanunse.app'));
+      expect(a).toContain('og:image');
+      expect((await app.inject({ url: `/s/${s.code}`, headers: { 'user-agent': 'Mozilla/5.0 (iPhone)' } })).body).not.toContain('intent://');
+    } finally { delete process.env.PLAY_STORE_LIVE; }
   });
 });
 

@@ -29,7 +29,7 @@ export function AppHeader() {
           <img src={banner.src} srcSet={banner.srcset} sizes="(min-width: 520px) 480px, 100vw" width={banner.w} height={banner.h} alt="나만의 운세" fetchPriority="high" />
         </Link>
         <span className="chip-h on-banner l" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
-        <Link to={account ? '/box' : '/login'} className="chip-h on-banner r">{account ? '내 계정' : '로그인'}</Link>
+        <Link to={account ? '/box' : '/login'} className="chip-h on-banner r">{account ? '내 계정' : '로그인·가입'}</Link>
       </header>
     );
   }
@@ -37,7 +37,7 @@ export function AppHeader() {
     <header className="hdr">
       <span className="chip-h" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
       <Link to="/" className="logo" aria-label="나만의 운세 홈"><BrandLogo /></Link>
-      <Link to={account ? '/box' : '/login'} className="chip-h">{account ? '내 계정' : '로그인'}</Link>
+      <Link to={account ? '/box' : '/login'} className="chip-h">{account ? '내 계정' : '로그인·가입'}</Link>
     </header>
   );
 }

@@ -70,8 +70,9 @@ export async function kakaoShare(o: { title: string; text: string; url: string; 
   const K = await loadKakao(key);
   K.Share.sendDefault({
     objectType: 'feed',
-    content: { title: o.title, description: o.text, imageUrl: o.imageUrl ?? `${location.origin}/img/share-default.png`, link: { mobileWebUrl: o.url, webUrl: o.url } },
-    buttons: [{ title: '나도 보러 가기', link: { mobileWebUrl: o.url, webUrl: o.url } }],
+    // 짧은 공유 링크(/s/:code)면 서버가 그린 카드(로고·날짜·점수·버튼)를 미리보기 그림으로
+    content: { title: o.title, description: o.text, imageUrl: o.imageUrl ?? (/\/s\/[\w-]+$/.test(o.url) ? `${o.url}/card.png` : `${location.origin}/img/share-default.png`), link: { mobileWebUrl: o.url, webUrl: o.url } },
+    buttons: [{ title: '나만의 운세 확인하러 가기', link: { mobileWebUrl: o.url, webUrl: o.url } }],
   });
   return 'shared';
 }

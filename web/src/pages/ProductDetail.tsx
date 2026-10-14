@@ -12,6 +12,7 @@ import { usePremium } from '../store/app';
 import { track } from '../lib/track';
 import { optionalImg, v4 } from '../assets/images';
 import { PhotoPreview } from './Photo';
+import { ReadingToc } from '../components/ReadingToc';
 
 type Detail = { subtitle: string; about?: string; contents: { title: string; desc: string; icon?: string }[]; say: string; target?: string[]; why?: string };
 
@@ -108,6 +109,7 @@ export default function ProductDetail() {
         )}
 
         {(p.id === 'palm' || p.id === 'face') && <PhotoPreview kind={p.id} />}
+        {!tarot && !isPhoto(p) && <ReadingToc productId={p.id} title={title} />}
 
         {d && (
           <section className="pd-say">

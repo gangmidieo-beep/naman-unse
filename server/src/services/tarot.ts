@@ -25,6 +25,7 @@ export const TAROT_TOPICS: Record<string, { focus: string; must: string; choice?
   tarot_match: { focus: '두 사람의 궁합', must: '서로의 마음, 끌리는 점과 부딪히는 점, 관계의 지금과 앞날' },
   tarot_choice: { focus: '두 가지 선택지 중 무엇이 나은지', must: 'A와 B 각각을 골랐을 때의 흐름과 결과를 비교하고, 어느 쪽이 나은지 분명하게 권하기', choice: true },
   tarot_job: { focus: '이직·취업·합격의 타이밍', must: '지금 자리에 머무를지 움직일지, 합격·이직 기운, 가장 좋은 시기(몇 달 단위)' },
+  tarot_people: { focus: '인간관계(직장·친구·가족)', must: '지금 두 사람 관계의 상태, 갈등의 숨은 원인, 관계를 푸는 구체적인 말과 행동, 거리를 두는 게 나을 때의 신호' },
   tarot_3month: { focus: '앞으로 석 달의 흐름', must: '첫째·둘째·셋째 달 각각의 흐름과 그달에 할 일' },
   tarot_spread3: { focus: '과거·현재·미래의 흐름', must: '지나온 일, 지금, 앞으로의 방향' },
   tarot_celtic: { focus: '한 가지 고민을 깊이 읽기', must: '고민의 핵심, 막힌 것, 숨은 원인, 가까운 미래, 최종 결과와 조언' },

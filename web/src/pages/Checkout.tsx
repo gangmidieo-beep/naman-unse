@@ -5,12 +5,32 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import { SubHeader } from '../components/layout';
 import { Button, CharacterBubble, ProductThumb, useToast } from '../components/ui';
 import { LoginButtons } from './Login';
-import { useApp, usePremium } from '../store/app';
+import { useApp, usePremium, useProfileLimit } from '../store/app';
 import { CHAR, charOf, displayTitle, isTalisman, isTwoPerson, payPrice, productById, won } from '../lib/catalog';
 import { getPayments, isNativeApp, phoneOk, savedPhone, savePhone, type PayResult } from '../platform/payments';
 import { MOCK_MODE } from '../lib/api';
 import { track } from '../lib/track';
 import { birthLabel } from './ProfileNew';
+import type { Profile } from '../store/app';
+
+function PersonPicker({ label, hint, list, value, onPick, addTo, addLabel = '+ 새로운 사람 추가하기' }: { label: string; hint?: string; list: Profile[]; value: string; onPick: (id: string) => void; addTo: string; addLabel?: string }) {
+  const { canAdd } = useProfileLimit(); // 일반 회원 저장 개수를 넘으면 프리미엄 안내
+  return (
+    <fieldset className="who-pick mt14">
+      <legend>{label}{hint && <small>{hint}</small>}</legend>
+      <div role="radiogroup" aria-label={label}>
+        {list.map((x) => (
+          <label key={x.id} className={x.id === value ? 'on' : ''}>
+            <input type="radio" name={label} value={x.id} checked={x.id === value} onChange={() => onPick(x.id)} />
+            <span className="nm">{x.name}{x.relation && <em>{x.relation}</em>}</span>
+            <span className="bd">{birthLabel(x)}</span>
+          </label>
+        ))}
+      </div>
+      {canAdd ? <Link to={addTo} className="who-add">{addLabel}</Link> : <Link to="/premium" className="who-add">✦ 프리미엄으로 더 많은 사람 저장하기</Link>}
+    </fieldset>
+  );
+}
 
 export default function Checkout() {
   const { product = '' } = useParams();
@@ -24,8 +44,11 @@ export default function Checkout() {
   const native = isNativeApp();
   const methods = native ? [{ id: 'google', label: 'Google Play 결제' }] : pay.methods();
   const [method, setMethod] = useState(methods[0].id);
-  const [target, setTarget] = useState(mainId ?? profiles[0]?.id ?? '');
-  const [partner, setPartner] = useState('');
+  // 3차 요청: 풀이 받을 사람 선택 + 새 사람 추가 — 추가하고 돌아오면(?pick=me|partner) 방금 넣은 사람을 골라 둔다
+  const pick = new URLSearchParams(loc.search).get('pick');
+  const last = profiles[profiles.length - 1]?.id ?? '';
+  const [target, setTarget] = useState(pick === 'me' && last ? last : mainId ?? profiles[0]?.id ?? '');
+  const [partner, setPartner] = useState(pick === 'partner' ? last : '');
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -101,24 +124,12 @@ export default function Checkout() {
             <div><b>{displayTitle(p)}</b><span className="muted">{p.cardCopy}</span></div>
           </div>
           {!isTalisman(p) && (
-            <div className="field mt14">
-              <label htmlFor="tg">{two ? '나' : '풀이 받을 사람'}</label>
-              <select id="tg" className="input" value={target} onChange={(e) => setTarget(e.target.value)}>
-                {profiles.map((x) => <option key={x.id} value={x.id}>{x.name} · {birthLabel(x)}</option>)}
-              </select>
-            </div>
+            <PersonPicker label={two ? '나' : '풀이 받을 사람'} hint={two ? undefined : '가족이나 지인의 사주도 볼 수 있어요'}
+              list={profiles} value={target} onPick={setTarget} addTo={`/profile/new?back=${encodeURIComponent(`${loc.pathname}?pick=me`)}`} />
           )}
           {two && (
-            <div className="field">
-              <label htmlFor="pt">상대</label>
-              {profiles.filter((x) => x.id !== target).length ? (
-                <select id="pt" className="input" value={partnerId} onChange={(e) => setPartner(e.target.value)}>
-                  {profiles.filter((x) => x.id !== target).map((x) => <option key={x.id} value={x.id}>{x.name} · {birthLabel(x)}</option>)}
-                </select>
-              ) : (
-                <Link to={`/profile/new?back=${back}&rel=상대`} className="btn line">+ 상대 정보 추가하기</Link>
-              )}
-            </div>
+            <PersonPicker label="상대" list={profiles.filter((x) => x.id !== target)} value={partnerId} onPick={setPartner}
+              addTo={`/profile/new?back=${encodeURIComponent(`${loc.pathname}?pick=partner`)}&rel=상대`} addLabel="+ 상대 정보 추가하기" />
           )}
           <dl className="summary mt14">
             <dt>금액</dt>

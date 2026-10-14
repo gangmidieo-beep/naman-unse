@@ -50,4 +50,5 @@ export const THUMBS: Partial<Record<string, string>> = {
   "tarot_choice": "/img/thumb/thumb_tarot_choice.webp",
   "tarot_job": "/img/thumb/thumb_tarot_job.webp",
   "tarot_3month": "/img/thumb/thumb_tarot_3month.webp",
+  "tarot_people": "/img/thumb/thumb_tarot_people.webp",
 };

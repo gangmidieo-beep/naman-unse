@@ -22,6 +22,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 3차 요청: 카톡 공유 링크 → 앱이 있으면 앱의 그 화면으로 (namanunse://open?path=/today) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="namanunse" android:host="open" />
+            </intent-filter>
+
         </activity>
 
         <meta-data

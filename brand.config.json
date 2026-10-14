@@ -1353,6 +1353,26 @@
       ]
     },
     {
+      "id": "tarot_people",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "인간관계 타로",
+      "cardCopy": "직장·친구·가족, 얽힌 관계의 실타래를 카드가 풀어요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "緣",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 11,
+      "cards": 3,
+      "positions": [
+        "지금 그 사람과의 관계",
+        "갈등의 숨은 원인",
+        "관계를 푸는 열쇠"
+      ]
+    },
+    {
       "id": "tarot_money",
       "kind": "tarot",
       "character": "wolha",
