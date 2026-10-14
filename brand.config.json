@@ -1166,6 +1166,111 @@
   },
   "tarot": [
     {
+      "id": "tarot_mind",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "그 사람의 속마음",
+      "cardCopy": "겉으로 보이는 마음과 진짜 속마음, 카드가 비춰요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "心",
+      "badge": "BEST",
+      "visible": true,
+      "sort": 0,
+      "cards": 3,
+      "positions": [
+        "겉으로 보이는 마음",
+        "숨겨 둔 속마음",
+        "앞으로 움직일 마음"
+      ]
+    },
+    {
+      "id": "tarot_contact",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "연락 올까요?",
+      "cardCopy": "기다리는 연락, 가능성과 시기를 카드로 봐요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "信",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 1,
+      "cards": 3,
+      "positions": [
+        "그 사람의 지금 상황",
+        "연락 가능성",
+        "연락이 오는 시기와 계기"
+      ]
+    },
+    {
+      "id": "tarot_reunion",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "재회 시기·방법",
+      "cardCopy": "다시 이어질 수 있을까, 언제 어떻게 다가갈지까지",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "再",
+      "badge": null,
+      "visible": true,
+      "sort": 2,
+      "cards": 5,
+      "positions": [
+        "헤어진 이유",
+        "지금 두 사람의 거리",
+        "그 사람의 마음",
+        "재회 가능성과 시기",
+        "재회를 위한 방법"
+      ]
+    },
+    {
+      "id": "tarot_newlove",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "새로운 인연",
+      "cardCopy": "언제, 어떤 사람이, 어디서 다가올까요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "緣",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 3,
+      "cards": 3,
+      "positions": [
+        "인연이 다가오는 시기",
+        "다가올 사람의 모습",
+        "만나게 되는 곳과 계기"
+      ]
+    },
+    {
+      "id": "tarot_match",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "궁합 타로",
+      "cardCopy": "두 사람의 마음을 나란히 놓고 읽어요",
+      "price": 4900,
+      "memberPrice": 4400,
+      "thumbHanja": "合",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 4,
+      "cards": 6,
+      "positions": [
+        "나의 마음",
+        "그 사람의 마음",
+        "서로 끌리는 점",
+        "부딪히는 점",
+        "관계의 지금",
+        "관계의 앞날"
+      ]
+    },
+    {
       "id": "tarot_love",
       "kind": "tarot",
       "character": "wolha",
@@ -1177,12 +1282,74 @@
       "thumbHanja": "戀",
       "badge": null,
       "visible": true,
-      "sort": 0,
+      "sort": 5,
       "cards": 3,
       "positions": [
         "그 사람의 마음",
         "지금 두 사람",
         "가까운 흐름"
+      ]
+    },
+    {
+      "id": "tarot_choice",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "선택의 기로",
+      "cardCopy": "A와 B 사이에서 망설일 때, 두 길을 비교해요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "岐",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 6,
+      "cards": 5,
+      "positions": [
+        "지금 나의 상황",
+        "A를 고르면",
+        "B를 고르면",
+        "A의 결과",
+        "B의 결과"
+      ]
+    },
+    {
+      "id": "tarot_job",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "이직·합격 타이밍",
+      "cardCopy": "움직일 때인가 머물 때인가, 합격의 기운까지",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "昇",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 7,
+      "cards": 3,
+      "positions": [
+        "지금 자리의 기운",
+        "이직·합격의 기운",
+        "가장 좋은 시기"
+      ]
+    },
+    {
+      "id": "tarot_3month",
+      "kind": "tarot",
+      "character": "wolha",
+      "group": "주제별 타로",
+      "title": "3개월 흐름",
+      "cardCopy": "앞으로 석 달, 달마다 한 장씩 미리 봐요",
+      "price": 3000,
+      "memberPrice": 2700,
+      "thumbHanja": "季",
+      "badge": "NEW",
+      "visible": true,
+      "sort": 8,
+      "cards": 3,
+      "positions": [
+        "첫째 달",
+        "둘째 달",
+        "셋째 달"
       ]
     },
     {
@@ -1197,7 +1364,7 @@
       "thumbHanja": "財",
       "badge": null,
       "visible": true,
-      "sort": 1,
+      "sort": 9,
       "cards": 3,
       "positions": [
         "지금 돈의 흐름",
@@ -1217,32 +1384,12 @@
       "thumbHanja": "職",
       "badge": null,
       "visible": true,
-      "sort": 2,
+      "sort": 10,
       "cards": 3,
       "positions": [
         "지금 자리",
         "기회",
         "조심할 점"
-      ]
-    },
-    {
-      "id": "tarot_reunion",
-      "kind": "tarot",
-      "character": "wolha",
-      "group": "주제별 타로",
-      "title": "재회 타로",
-      "cardCopy": "다시 이어질 수 있을까, 카드가 답해요",
-      "price": 3000,
-      "memberPrice": 2700,
-      "thumbHanja": "再",
-      "badge": null,
-      "visible": true,
-      "sort": 3,
-      "cards": 3,
-      "positions": [
-        "그 사람의 지금",
-        "남아 있는 마음",
-        "다시 만날 흐름"
       ]
     },
     {

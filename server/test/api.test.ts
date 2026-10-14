@@ -38,9 +38,9 @@ describe('공개 API', () => {
     expect(list.filter((p) => p.kind === 'subscription')).toHaveLength(2);
     expect((await app.inject({ url: '/banners?slot=home' })).json()).toHaveLength(10);
   });
-  it('v3: 타로 6·사진 3 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
+  it('v3: 타로 13·사진 3 상품, 공통 틀 필드(버튼·결과 제목·추천 부적·상세 문구), 분류', async () => {
     const list = (await app.inject({ url: '/products' })).json() as any[];
-    expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(6);
+    expect(list.filter((p) => p.kind === 'tarot')).toHaveLength(13);
     expect(list.filter((p) => p.kind === 'photo')).toHaveLength(3);
     const wealth = list.find((p) => p.id === 'wealth');
     expect(wealth).toMatchObject({ tab: 'unse', category: 'fate', buttonLabel: '천궁도사의 상세풀이 받기', resultTitle: '천궁도사가 풀어드린 나의 운명서', recommend: ['t_wealth', 't_biz'] });

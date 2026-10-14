@@ -677,3 +677,20 @@
 /* 상품 상세 제목 — 밝은 바탕에서도 또렷하게 진한 금색(대표님 3차: 2027 신년운세 상품명이 잘 안 보임) */
 .pd-title h1 { background: linear-gradient(180deg, #a87a22 0%, #7a5414 55%, #5e3f0c 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, .6)); }
 .lib-tarot .cd { overflow: hidden; } .lib-tarot .cd img { width: 100%; height: 100%; object-fit: cover; } .lib-tarot .cd img.rev { transform: rotate(180deg); }
+
+/* 유료 타로 — 질문 받기(선택의 기로는 A·B) · AI 풀이(한 줄 답·조언) */
+.task { position: relative; margin: 14px 12px 0; padding: 60px 16px 18px; border-radius: 26px; display: grid; gap: 12px; background: radial-gradient(120% 90% at 50% 0%, rgba(80, 60, 150, .5), rgba(14, 10, 32, .9)); border: 1px solid rgba(217, 180, 90, .35); }
+.task label { display: grid; gap: 6px; color: var(--gold-light); font-weight: 800; font-size: 15px; }
+.task label small { color: #b9b0d6; font-weight: 600; }
+.task .input { background: rgba(255, 255, 255, .08); color: #fff; border: 1px solid rgba(217, 180, 90, .45); border-radius: 12px; padding: 12px; font: inherit; font-size: 16px; font-weight: 500; }
+.task .input::placeholder { color: rgba(230, 222, 250, .5); }
+.task .ab { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 380px) { .task .ab { grid-template-columns: 1fr; } }
+.task .tgold { margin-top: 4px; }
+.tq { margin: 14px 22px 0; text-align: center; font-family: var(--serif); font-size: 17px; color: #E7DFFB; line-height: 1.6; }
+.tload { margin: 18px 18px 0; text-align: center; color: var(--gold-light); font-family: var(--serif); font-size: 17px; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.tsum .tans { display: inline-block; margin: 8px 0 4px; padding: 4px 14px; border-radius: 999px; background: var(--gold-light); color: #24180A; font-weight: 900; font-size: 16px; }
+.tsum .tadv { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; text-align: left; }
+.tsum .tadv li { position: relative; padding: 10px 12px 10px 34px; border-radius: 12px; background: rgba(255, 255, 255, .07); color: #F3ECFF; font-size: 16px; line-height: 1.55; }
+.tsum .tadv li::before { content: '✦'; position: absolute; left: 12px; top: 10px; color: var(--gold-light); }

@@ -20,6 +20,7 @@ import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubs
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
 import { runDailyPush, runExpiryReminders } from './services/push/daily.ts';
 import { liveAI } from './services/reading/generate.ts';
+import { generateTarot, type TarotInput } from './services/tarot.ts';
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
@@ -467,6 +468,36 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
     if (!r || r.status !== 'done' || (r.content as any)?.version !== 2) return rep.code(409).send({ error: '감정서가 완성된 뒤에 PDF 로 받을 수 있어요' });
     return { url: `${API()}/pdf?t=${await signPdf(o.id)}` }; // 경로 파라미터는 길이 제한(100자)이 있어 쿼리로
+  });
+  // 유료 타로 AI 풀이 — 처음 한 번 질문(선택지 A·B)과 함께 만들고 저장, 다시 열면 저장된 풀이. AI 가 꺼져 있으면 503(화면은 카드 기본 문장으로 대신)
+  const tarotBusy = new Set<string>();
+  app.post('/tarot/:oid/reading', { config: { rateLimit: { max: 12, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
+    if (!o || o.status !== 'paid') return rep.code(404).send({ error: '결제된 타로가 없어요' });
+    const [p] = await db.select().from(S.products).where(eq(S.products.id, o.productId));
+    const positions = ((p?.meta as any)?.positions ?? []) as string[];
+    if (!p || p.kind !== 'tarot' || !positions.length) return rep.code(404).send({ error: '타로 상품이 아니에요' });
+    const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
+    const saved = (r?.content as any)?.ai;
+    if (saved) return { ai: saved, input: (r!.content as any).input ?? {} };
+    if (!liveAI()) return rep.code(503).send({ error: 'AI 풀이 준비 중', code: 'ai_off' });
+    if (tarotBusy.has(o.id)) return rep.code(409).send({ error: '풀이를 쓰는 중이에요. 잠시 후 다시 열어 주세요' });
+    const b = (req.body ?? {}) as TarotInput;
+    const input: TarotInput = { question: String(b.question ?? '').slice(0, 200), a: String(b.a ?? '').slice(0, 60), b: String(b.b ?? '').slice(0, 60) };
+    const [pf] = o.profileId ? await db.select().from(S.profiles).where(eq(S.profiles.id, o.profileId)) : [];
+    tarotBusy.add(o.id);
+    try {
+      const g = await generateTarot({ id: p.id, title: p.title, positions }, o.id, input, pf?.name ?? '');
+      const content = { ...((r?.content as any) ?? {}), local: 'tarot', ai: g.ai, input };
+      if (r) await db.update(S.readings).set({ status: 'done', content: content as any, model: process.env.ANTHROPIC_MODEL ?? null, tokensIn: g.tokensIn, tokensOut: g.tokensOut, costKrw: g.costKrw, doneAt: new Date() }).where(eq(S.readings.id, r.id));
+      else await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: o.productId, status: 'done', content: content as any, model: process.env.ANTHROPIC_MODEL ?? null, tokensIn: g.tokensIn, tokensOut: g.tokensOut, costKrw: g.costKrw, doneAt: new Date() });
+      return { ai: g.ai, input };
+    } catch (e) {
+      req.log.warn({ err: (e as Error).message, order: o.id }, 'tarot ai failed');
+      return rep.code(502).send({ error: '풀이를 만들지 못했어요. 잠시 후 다시 열어 주세요', code: 'ai_failed' });
+    } finally { tarotBusy.delete(o.id); }
   });
   app.get('/pdf', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
     const oid = await verifyPdf(String((req.query as any).t ?? ''));

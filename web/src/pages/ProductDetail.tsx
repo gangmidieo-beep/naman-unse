@@ -77,7 +77,7 @@ export default function ProductDetail() {
         {about && (
           <section className="pd-about">
             {t.src && <img src={t.src} alt="" />}
-            <div><h2><Icon name="heart" size={18} />{title}{iran(title)}</h2><p>{about}</p></div>
+            <div><h2><Icon name="heart" size={18} />{/[?!]$/.test(title.trim()) ? <>「{title}」 타로란?</> : <>{title}{iran(title)}</>}</h2><p>{about}</p></div>
           </section>
         )}
 

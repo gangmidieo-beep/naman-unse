@@ -69,7 +69,9 @@ test('유료 타로 결과(카드 뒤집기) · 손금 사진 흐름(동의→�
   await seed(page, { purchases: [o('ord-t1', 'tarot_love'), o('ord-p1', 'palm')] });
   await page.goto('/reading/ord-t1');
   await expect(page.getByRole('heading', { name: '오늘의 카드가 전하는 이야기' }).first()).toBeVisible();
-  // 실전 타로 테이블: 섞기 → 펼친 카드에서 3장 고르기 → 뒤집기 → 종합 메시지
+  // 질문 받기(선택) → 실전 타로 테이블: 섞기 → 펼친 카드에서 3장 고르기 → 뒤집기 → 종합 메시지
+  await page.getByLabel(/마음속 질문/).fill('그 사람이 저를 어떻게 생각할까요?');
+  await page.getByRole('button', { name: /질문을 품고 카드 펼치러 가기/ }).click();
   await page.getByRole('button', { name: /카드 섞고 펼치기/ }).click();
   for (const n of [3, 8, 15]) await page.getByRole('button', { name: `${n}번째 카드 고르기`, exact: true }).dispatchEvent('click'); // 부채꼴로 겹친 카드라 해당 카드에 직접 클릭
   await page.getByRole('button', { name: /그 사람의 마음 카드 뒤집기/ }).click();

@@ -16,6 +16,8 @@ import { koDate } from '../lib/dates';
 import { track } from '../lib/track';
 import { music, sfx } from '../lib/sound';
 import { SoundToggle } from '../components/SoundToggle';
+import { apiAuth } from '../platform/payments';
+import { MOCK_MODE } from '../lib/api';
 import { ShareBlock, useShare } from './Fun';
 
 export type Drawn = { card: TarotCard; reversed: boolean };
@@ -276,40 +278,107 @@ export default function TarotTab() {
 }
 
 // 유료 타로 결과 — 처음 열면 실전 타로 테이블에서 직접 고르고 뒤집기, 다 끝나면(또는 다시 열면) 자리별 풀이 + 종합 메시지
-const TOPIC: Record<string, 'love' | 'money' | 'work'> = { tarot_love: 'love', tarot_reunion: 'love', tarot_money: 'money', tarot_work: 'work' };
+const TOPIC: Record<string, 'love' | 'money' | 'work'> = {
+  tarot_love: 'love', tarot_reunion: 'love', tarot_mind: 'love', tarot_contact: 'love', tarot_newlove: 'love', tarot_match: 'love',
+  tarot_money: 'money', tarot_work: 'work', tarot_choice: 'work', tarot_job: 'work',
+};
+// 카드를 뽑기 전에 묻는 질문(선택) — 선택의 기로는 A·B 두 선택지를 꼭 적는다. 답은 AI 풀이에 쓰이고, 이 기기에 기억(다시 열어도 같은 질문)
+const ASK: Record<string, { label: string; ph: string }> = {
+  tarot_mind: { label: '궁금한 그 사람과의 상황', ph: '예) 소개로 만난 지 두 달, 요즘 연락이 뜸해졌어요' },
+  tarot_contact: { label: '기다리는 연락에 대해', ph: '예) 2주 전 다툰 뒤로 연락이 없어요' },
+  tarot_reunion: { label: '헤어진 상황', ph: '예) 석 달 전 제가 먼저 헤어지자고 했어요' },
+  tarot_newlove: { label: '바라는 인연', ph: '예) 진지하게 만날 사람을 찾고 있어요' },
+  tarot_match: { label: '두 사람의 관계', ph: '예) 사귄 지 1년, 요즘 자주 다퉈요' },
+  tarot_choice: { label: '고민하는 상황', ph: '예) 이직 제안을 받았어요' },
+  tarot_job: { label: '지금 상황', ph: '예) 회사 5년 차, 이직 준비 중이에요' },
+  tarot_3month: { label: '특히 궁금한 것(연애·일·돈)', ph: '예) 일과 돈의 흐름이 궁금해요' },
+};
+type TarotIn = { question?: string; a?: string; b?: string };
+type TarotAi = { positions: { title: string; text: string }[]; summary: { title: string; text: string }; advice: string[]; keywords: string[]; answer?: string };
+const askKey = (o: string) => `naman-tarot-q:${o}`;
+const savedAsk = (o: string): TarotIn | null => { try { return JSON.parse(localStorage.getItem(askKey(o)) ?? 'null'); } catch { return null; } };
+function TarotAsk({ p, onStart }: { p: TarotProduct; onStart: (x: TarotIn) => void }) {
+  const ask = ASK[p.id] ?? { label: '마음속 질문', ph: '예) 지금 이 고민, 어떻게 하면 좋을까요?' };
+  const choice = p.id === 'tarot_choice';
+  const [q, setQ] = useState(''); const [a, setA] = useState(''); const [b, setB] = useState('');
+  const ok = !choice || (a.trim() && b.trim());
+  return (
+    <form className="task" onSubmit={(e) => { e.preventDefault(); if (ok) onStart({ question: q.trim(), a: a.trim(), b: b.trim() }); }}>
+      <p className="tlead">카드를 뽑기 전에 <b>마음속 질문</b>을 떠올려 주세요</p>
+      {choice && (
+        <div className="ab">
+          <label htmlFor="ta">선택지 A<input id="ta" className="input" maxLength={40} value={a} onChange={(e) => setA(e.target.value)} placeholder="예) 지금 회사에 남기" /></label>
+          <label htmlFor="tb">선택지 B<input id="tb" className="input" maxLength={40} value={b} onChange={(e) => setB(e.target.value)} placeholder="예) 제안받은 회사로 옮기기" /></label>
+        </div>
+      )}
+      <label htmlFor="tq">{ask.label} <small>(적지 않아도 돼요)</small><textarea id="tq" className="input" maxLength={200} rows={3} value={q} onChange={(e) => setQ(e.target.value)} placeholder={ask.ph} /></label>
+      <button className="tgold" type="submit" disabled={!ok}>{choice && !ok ? '선택지 A·B 를 적어 주세요' : '질문을 품고 카드 펼치러 가기 ›'}</button>
+    </form>
+  );
+}
 const doneKey = (o: string) => `naman-tarot-done:${o}`;
 const wasDone = (o: string) => { try { return localStorage.getItem(doneKey(o)) === '1'; } catch { return false; } };
 export function TarotReading({ p, orderId }: { p: TarotProduct; orderId: string }) {
   const cards = useMemo(() => tarotSpread(`${orderId}:${p.id}`, p.cards), [orderId, p]);
   const [done, setDone] = useState(() => wasDone(orderId));
   const [shown, setShown] = useState(done ? cards.length : 0);
+  const [input, setInput] = useState<TarotIn | null>(() => savedAsk(orderId) ?? (wasDone(orderId) ? {} : null));
+  const [ai, setAi] = useState<TarotAi | null>(null);
+  const [aiState, setAiState] = useState<'idle' | 'loading' | 'off'>('idle');
   const topic = TOPIC[p.id];
   useEffect(() => { if (done) try { localStorage.setItem(doneKey(orderId), '1'); } catch { /* 저장 불가 */ } }, [done, orderId]);
-  const sum = done ? summaryOf(cards, topic) : null;
+  // 질문을 받으면 바로 AI 풀이를 부탁해 둔다 — 카드를 뒤집는 동안 만들어져, 다 뒤집으면 바로 보인다(다시 열면 저장된 풀이)
+  useEffect(() => {
+    if (!input || ai || MOCK_MODE) { if (MOCK_MODE) setAiState('off'); return; }
+    let live = true;
+    setAiState('loading');
+    apiAuth<{ ai: TarotAi }>(`/tarot/${encodeURIComponent(orderId)}/reading`, { method: 'POST', body: JSON.stringify(input) })
+      .then((r) => { if (live) { setAi(r.ai); setAiState('idle'); } })
+      .catch(() => { if (live) setAiState('off'); });
+    return () => { live = false; };
+  }, [input, orderId]); // 풀이(ai)가 생기면 다시 부르지 않음
+  const start = (x: TarotIn) => { try { localStorage.setItem(askKey(orderId), JSON.stringify(x)); } catch { /* 저장 불가 */ } setInput(x); };
+  const sum = done && !ai ? summaryOf(cards, topic) : null;
   return (
     <div className="tarot-tab t4 treading">
       <div className="stars" aria-hidden />
-      {!done ? (
-        <TarotTable cards={cards} need={p.cards} positions={p.positions} onFlip={(k) => setShown((n) => Math.max(n, k + 1))} onDone={() => setDone(true)} />
-      ) : (
-        <div className={`tslots n${cards.length} done`}>
-          {cards.map((d, k) => (
-            <div key={k} className="slot open"><div className="flipper"><div className="front"><TarotFace d={d} /></div></div><em>{p.positions[k]}</em></div>
-          ))}
-        </div>
-      )}
+      {!input && !done ? <TarotAsk p={p} onStart={start} />
+        : !done ? (
+          <TarotTable cards={cards} need={p.cards} positions={p.positions.map((x) => x.replace(/^A/, input?.a ? `A(${input.a})` : 'A').replace(/^B/, input?.b ? `B(${input.b})` : 'B'))} onFlip={(k) => setShown((n) => Math.max(n, k + 1))} onDone={() => setDone(true)} />
+        ) : (
+          <div className={`tslots n${cards.length} done`}>
+            {cards.map((d, k) => (
+              <div key={k} className="slot open"><div className="flipper"><div className="front"><TarotFace d={d} /></div></div><em>{p.positions[k]}</em></div>
+            ))}
+          </div>
+        )}
+      {input?.question && <p className="tq">“{input.question}”</p>}
       {cards.slice(0, shown).map((d, i) => {
         const s = tarotSide(d);
+        const x = done ? ai?.positions[i] : undefined;
         return (
           <section className="tread" key={i}>
             <small>{i + 1}. {p.positions[i]} · {d.card.nameEn} ({d.card.nameKo}) {d.reversed ? '역방향' : '정방향'}</small>
-            <b>{s.title}</b>
-            <p>{topic ? s[topic] : s.message.join(' ')}</p>
-            {topic && <p>{s.message[0]}</p>}
+            <b>{x?.title || s.title}</b>
+            {x ? <p>{x.text}</p> : <>
+              <p>{topic ? s[topic] : s.message.join(' ')}</p>
+              {topic && <p>{s.message[0]}</p>}
+            </>}
           </section>
         );
       })}
-      {sum && (
+      {done && aiState === 'loading' && !ai && <p className="tload" aria-live="polite">월하선녀가 질문에 맞춰 카드를 읽고 있어요…</p>}
+      {done && ai && (
+        <section className="tsum">
+          <small>✦ 월하선녀의 종합 메시지 ✦</small>
+          {ai.answer && <p className="tans">{ai.answer}</p>}
+          <b>{ai.summary.title}</b>
+          <p>{ai.summary.text}</p>
+          {ai.advice.length > 0 && <ul className="tadv">{ai.advice.map((x) => <li key={x}>{x}</li>)}</ul>}
+          {ai.keywords.length > 0 && <p className="kw">{ai.keywords.map((k) => <span key={k}>#{k}</span>)}</p>}
+        </section>
+      )}
+      {sum && (aiState === 'off' || aiState === 'idle') && (
         <section className="tsum">
           <small>✦ 월하선녀의 종합 메시지 ✦</small>
           <b>{sum.title}</b>

@@ -42,5 +42,12 @@ export const THUMBS: Partial<Record<string, string>> = {
   "fun_factbomb": "/img/thumb/thumb_fun_factbomb.webp",
   "fun_dream": "/img/thumb/thumb_fun_dream.webp",
   "fun_small": "/img/thumb/thumb_fun_small.webp",
-  "fun_oneline": "/img/thumb/thumb_fun_oneline.webp"
+  "fun_oneline": "/img/thumb/thumb_fun_oneline.webp",
+  "tarot_mind": "/img/thumb/thumb_tarot_mind.webp",
+  "tarot_contact": "/img/thumb/thumb_tarot_contact.webp",
+  "tarot_newlove": "/img/thumb/thumb_tarot_newlove.webp",
+  "tarot_match": "/img/thumb/thumb_tarot_match.webp",
+  "tarot_choice": "/img/thumb/thumb_tarot_choice.webp",
+  "tarot_job": "/img/thumb/thumb_tarot_job.webp",
+  "tarot_3month": "/img/thumb/thumb_tarot_3month.webp",
 };

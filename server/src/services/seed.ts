@@ -51,6 +51,19 @@ export async function seedBase(db: Db) {
     { id: 'today', kind: 'today', character: 'cheongung', group: '오늘의 운세', title: '오늘의 운세', cardCopy: '오늘 / 이번 주 / 이번 달', detail: null, price: 0, memberPrice: null, thumbHanja: '今', badge: null, visible: true, sort: 0, googleProductId: null, meta: null } as any,
   );
   await db.insert(S.products).values(rows).onConflictDoNothing();
+  // 타로 3차(2026-10-14): 자리(positions)·장 수는 설정 파일을 따른다(재회 3장 → 5장). 예전 기본 순서·이름이면 새 순서·이름으로(관리자가 바꾼 값은 유지)
+  const OLD_TAROT: Record<string, { sort: number; title?: string; cardCopy?: string }> = { tarot_love: { sort: 0 }, tarot_money: { sort: 1 }, tarot_work: { sort: 2 }, tarot_reunion: { sort: 3, title: '재회 타로', cardCopy: '다시 이어질 수 있을까, 카드가 답해요' } };
+  for (const r of rows.filter((x) => x.kind === 'tarot')) {
+    const [cur] = await db.select({ meta: S.products.meta, sort: S.products.sort, title: S.products.title, cardCopy: S.products.cardCopy }).from(S.products).where(eq(S.products.id, r.id));
+    if (!cur) continue;
+    const patch: Record<string, unknown> = {};
+    if (JSON.stringify((cur.meta as any)?.positions) !== JSON.stringify((r.meta as any)?.positions)) patch.meta = { ...((cur.meta as any) ?? {}), ...(r.meta as any) };
+    const old = OLD_TAROT[r.id];
+    if (old && cur.sort === old.sort && r.sort !== old.sort) patch.sort = r.sort;
+    if (old?.title && cur.title === old.title) patch.title = r.title;
+    if (old?.cardCopy && cur.cardCopy === old.cardCopy) patch.cardCopy = r.cardCopy;
+    if (Object.keys(patch).length) await db.update(S.products).set(patch as any).where(eq(S.products.id, r.id));
+  }
   // 3차 가격표(2026-10-14): 예전 기본 회원가(정가×0.9, 10원 단위)이거나 비어 있으면 새 회원가로, 손금·관상은 정가 4,900원으로 한 번 맞춘다.
   // 관리자가 직접 바꾼 값(예전 기본값과 다른 값)은 건드리지 않는다.
   for (const r of rows) {
