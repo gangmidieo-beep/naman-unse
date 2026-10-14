@@ -96,7 +96,7 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 .wait-steps li.on { background: var(--ink); color: var(--gold-light); }
 .wait-steps li.done { background: var(--gold-pale); color: var(--gold-deep); }
 .doc { margin: 14px 18px 0; border-radius: 24px; padding: 3px; background: var(--gold-grad); box-shadow: var(--shadow-rare); }
-.doc > .in { border-radius: 21px; background-color: var(--paper); background-image: var(--hanji-noise); padding: 0 0 24px; overflow: hidden; }
+.doc > .in { border-radius: 21px; background-color: #F8F0DE; background-image: var(--hanji-fiber), var(--hanji-noise); padding: 0 0 24px; overflow: hidden; }
 .doc-cover { position: relative; height: 240px; background: var(--ink); }
 .doc-cover img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 16%; }
 .doc-cover .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 17, 15, .1) 20%, rgba(18, 17, 15, .92) 100%); }
@@ -340,7 +340,7 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 .rite .tsound-box { position: absolute; right: 14px; top: 14px; }
 .rite h1 { margin: 0; font-size: 20px; color: var(--gold-light); }
 .rite-step { font-family: var(--serif); font-size: 18px; color: var(--on-ink); min-height: 54px; margin: 6px 0 0; text-wrap: balance; }
-.altar { position: relative; width: 100%; max-width: 360px; height: 420px; margin: 6px auto 0; border-radius: 22px;
+.altar { position: relative; width: 100%; max-width: 360px; height: 478px; margin: 6px auto 0; border-radius: 22px;
   background: radial-gradient(120% 70% at 50% 100%, #5a1d14 0%, #3a120d 45%, #1d0a07 100%); box-shadow: inset 0 0 0 1px rgba(230, 200, 119, .28), inset 0 -40px 60px rgba(0, 0, 0, .45); overflow: hidden; }
 .altar::before { content: ''; position: absolute; left: 50%; top: 28px; width: 230px; height: 300px; margin-left: -115px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 210, 130, .16), transparent); }
 .rite-paper { position: absolute; left: 50%; top: 26px; width: 166px; height: 260px; margin-left: -83px; }
@@ -361,15 +361,16 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 @keyframes glow { from { opacity: .45; transform: scale(.92); } to { opacity: 1; transform: scale(1.06); } }
 .rite-paper .sparks i { position: absolute; bottom: 0; left: calc(8% + var(--i) * 6%); width: 5px; height: 5px; border-radius: 50%; background: #ffe7a3; box-shadow: 0 0 8px #ffd36b; animation: spark 2.2s ease-out calc(var(--i) * 90ms) infinite; }
 @keyframes spark { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-300px); opacity: 0; } }
-.burner { position: absolute; left: 50%; bottom: 18px; width: 120px; height: 100px; margin-left: -60px; }
-.burner .bowl { position: absolute; left: 10px; right: 10px; bottom: 0; height: 40px; border-radius: 0 0 60px 60px / 0 0 40px 40px; background: linear-gradient(#c9a254, #8a6526); box-shadow: inset 0 6px 0 rgba(255, 240, 200, .35), 0 6px 14px rgba(0, 0, 0, .5); }
-.burner .stick { position: absolute; bottom: 30px; left: 50%; width: 3px; height: 54px; background: #6b3f1f; border-radius: 2px; }
-.burner .stick:nth-of-type(4) { margin-left: -14px; transform: rotate(-8deg); } .burner .stick:nth-of-type(5) { margin-left: -1px; } .burner .stick:nth-of-type(6) { margin-left: 12px; transform: rotate(8deg); }
-.burner.on .stick::before { content: ''; position: absolute; top: -3px; left: -1.5px; width: 6px; height: 6px; border-radius: 50%; background: #ff7a2e; box-shadow: 0 0 8px 2px rgba(255, 130, 40, .8); animation: ember 1.2s ease-in-out infinite alternate; }
-@keyframes ember { from { opacity: .7; } to { opacity: 1; } }
-.burner .smoke { position: absolute; left: 50%; bottom: 84px; width: 16px; height: 60px; margin-left: -8px; border-radius: 50%; background: radial-gradient(closest-side, rgba(240, 236, 228, .75), rgba(240, 236, 228, 0)); filter: blur(3px); opacity: 0; }
+.burner { position: absolute; left: 50%; bottom: 4px; width: 136px; margin-left: -68px; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .6)); }
+.burner img { display: block; width: 100%; height: auto; }
+.burner .tip { position: absolute; width: 0; height: 0; }
+.burner .t0 { left: 41.7%; top: 4%; } .burner .t1 { left: 51.1%; top: 1.6%; } .burner .t2 { left: 60%; top: 3.2%; }
+.burner .ember { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #ff7a2e; box-shadow: 0 0 8px 3px rgba(255, 130, 40, .85); opacity: 0; transition: opacity .6s; }
+.burner.on .ember { opacity: 1; animation: ember 1.2s ease-in-out infinite alternate; }
+.burner .smoke { position: absolute; left: -8px; bottom: 0; width: 16px; height: 60px; border-radius: 50%; background: radial-gradient(closest-side, rgba(240, 236, 228, .7), rgba(240, 236, 228, 0)); filter: blur(3px); opacity: 0; }
 .burner.on .smoke { animation: smoke 4.2s ease-out infinite; }
-.burner.on .smoke.s2 { animation-delay: 1.4s; margin-left: -18px; } .burner.on .smoke.s3 { animation-delay: 2.8s; margin-left: 4px; }
+.burner.on .t1 .smoke { animation-delay: 1.4s; } .burner.on .t2 .smoke { animation-delay: 2.8s; } .burner.on .smoke.s2 { animation-delay: 2.1s; }
+.burner.on .t1 .smoke.s2 { animation-delay: 3.5s; } .burner.on .t2 .smoke.s2 { animation-delay: .7s; }
 @keyframes smoke { 0% { transform: translateY(0) scale(.6); opacity: 0; } 20% { opacity: .9; } 100% { transform: translate(14px, -220px) scale(2.4); opacity: 0; } }
 .rite-act { min-height: 74px; display: grid; place-items: center; margin-top: 16px; width: 100%; max-width: 360px; }
 .rite-act .btn { width: 100%; }
@@ -381,3 +382,4 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 .rite-dots li.on { color: #24180A; background: var(--gold-light); border-color: var(--gold-light); }
 .rite-dots li.past { color: var(--gold-light); border-color: rgba(230, 200, 119, .6); }
 @media (prefers-reduced-motion: reduce) { .rite-paper .brush, .rite-paper .sparks, .burner .smoke { display: none; } .rite-paper .ink.go { animation-duration: .01s; } }
+@keyframes ember { from { opacity: .7; transform: scale(.8); } to { opacity: 1; transform: scale(1.2); } }

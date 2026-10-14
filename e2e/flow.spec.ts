@@ -67,7 +67,7 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   // 부적 의식: 향 피우기 → 붓으로 그리기 → 인장 찍기 → 봉인(타로 테이블처럼 직접 누름)
   await page.getByRole('button', { name: '향 피우기' }).click();
   await page.getByRole('button', { name: /붓 들어 부적 그리기/ }).click({ timeout: 8_000 });
-  await expect(page.getByText(/이름과 소원을 새기는/)).toBeVisible();
+  await expect(page.getByText(/소원을 담아 기운을 새기는/)).toBeVisible();
   await page.getByRole('button', { name: /인장 찍기/ }).click({ timeout: 10_000 });
   await expect(page.getByRole('heading', { name: /완성되었습니다/ })).toBeVisible({ timeout: 15_000 });
   const download = page.waitForEvent('download');

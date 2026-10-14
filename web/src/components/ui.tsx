@@ -203,12 +203,12 @@ function PriceLine({ c }: { c: CardItem }) {
       </div>
   );
 }
-// 부적 썸네일 — 촛불 탁자 배경 위에 부적별 글자를 새긴 노란 부적
+// 부적 썸네일 — 촛불 탁자 배경 위에 대표님 부적 그림(10/14: 썸네일 속 부적을 더 크게)
 export function TalismanThumb({ t, size = 0.62 }: { t: Talisman; size?: number }) {
   return <div className="bjimg"><TalismanPaper t={t} size={size} /></div>;
 }
 export function ProductCard({ c, mode = 'list', talisman }: { c: CardItem; mode?: 'list' | 'grid' | 'scroll'; talisman?: Talisman }) {
-  const pic = talisman ? <TalismanThumb t={talisman} size={mode === 'list' ? 0.62 : 0.9} />
+  const pic = talisman ? <TalismanThumb t={talisman} size={mode === 'list' ? 1 : 1.3} />
     : c.img ? <img src={c.img} alt="" width={360} height={240} loading="lazy" /> : <span className="hz" aria-hidden><i>{c.hanja}</i></span>;
   const badge = (c.badge || c.owned) && <span className={c.owned ? 'badge owned' : badgeCls(c.badge!)}>{c.owned ? '보유중' : c.badge}</span>;
   if (mode === 'list')
@@ -281,8 +281,8 @@ export function TalismanPaper({ t, size = 1, name, birth, wish, issued }: { t: T
   if (pic)
     return (
       <div className="bj pic" style={{ width: 64 * size, height: 100 * size }} role="img" aria-label={t.title}>
+        {/* 대표님 10/14: 부적 그림만 — 그림 아래 이름·생년월일·소원 글씨는 넣지 않음 */}
         <img src={pic.src} alt="" width={pic.w} height={pic.h} loading="lazy" draggable={false} />
-        {name && <span className="bjname" style={{ fontSize: 5.4 * size, padding: `${2 * size}px ${3 * size}px` }}>{name} · {birth}<br />{wish}<br />{issued}</span>}
       </div>
     );
   const chars = [...phrase].slice(0, size >= 2 && !name ? 3 : 2);

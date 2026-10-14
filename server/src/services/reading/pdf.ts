@@ -69,17 +69,18 @@ export function readingHtml(c: LongContent, opts: { productTitle: string; result
   const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10).replaceAll('-', '. ');
   let tn = 0;
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(opts.resultTitle)}</title><style>
-  @page { size: A4; margin: 20mm 17mm 18mm; }
-  html { background: #fbf6ea; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4; margin: 20mm 0 18mm; } /* 좌우 여백은 body 안쪽 여백으로 — 한지 바탕이 종이 끝까지 */
+  /* 아이보리 한지 바탕: 연한 아이보리 + 한지 결(가로로 긴 섬유) + 고운 잡티 */
+  html { background-color: #f8f0de; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.006 .09' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .45 0 0 0 0 .28 0 0 0 -.55 .3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 11pt; line-height: 1.8; color: #241d14;
+  body { margin: 0; padding: 0 17mm; font-family: 'Noto Serif CJK KR', 'Noto Serif KR', serif; font-size: 11pt; line-height: 1.8; color: #241d14;
     word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
   /* 줄바꿈: 한글은 낱말(어절) 단위로만 끊고, 제목은 줄 길이를 고르게, 본문은 마지막 줄에 한두 글자만 남지 않게 */
   h1, h2, h3, .pt, .say, .hl, .who, .part h2 { text-wrap: balance; }
   p, li { text-wrap: pretty; }
   .nb { white-space: nowrap; }
   .sans, table, .box, .sm, small { font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif; }
-  .cover { height: 257mm; border: 2.5px solid #a8823e; outline: 1px solid #a8823e; outline-offset: -8px; background: #faf5ea; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; page-break-after: always; padding: 20mm; }
+  .cover { height: 257mm; border: 2.5px solid #a8823e; outline: 1px solid #a8823e; outline-offset: -8px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; page-break-after: always; padding: 20mm; }
   .cover .hj { letter-spacing: .5em; color: #a8823e; font-size: 13pt; }
   .cover h1 { font-size: 30pt; line-height: 1.38; margin: 14mm 0 6mm; font-weight: 900; max-width: 150mm; }
   .cover h1 span { display: inline-block; }
@@ -165,6 +166,7 @@ async function getBrowser() {
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox', '--disable-dev-shm-usage', '--font-render-hinting=none'] });
   return browser;
 }
+const EDGE = 'width:100%;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#f8f0de;';
 export function renderPdf(html: string, footer: string): Promise<Buffer> {
   const job = queue.then(async () => {
     if (idle) clearTimeout(idle);
@@ -173,9 +175,11 @@ export function renderPdf(html: string, footer: string): Promise<Buffer> {
     try {
       await page.setContent(html, { waitUntil: 'load', timeout: 60_000 });
       return await page.pdf({
-        format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
-        footerTemplate: `<div style="width:100%;font-size:8px;color:#9a8a6a;text-align:center;font-family:'Noto Sans CJK KR',sans-serif">${esc(footer)} · <span class="pageNumber"></span> / <span class="totalPages"></span></div>`,
-        margin: { top: '20mm', bottom: '18mm', left: '17mm', right: '17mm' },
+        // 위·아래 여백 칸도 한지 바탕색으로 채워 종이 전체가 아이보리 한지처럼 보이게(대표님 10/14)
+        format: 'A4', printBackground: true, displayHeaderFooter: true,
+        headerTemplate: `<style>html,body{margin:0!important;padding:0!important}</style><div style="${EDGE}height:21.4mm;margin-top:-6mm"></div>`,
+        footerTemplate: `<style>html,body{margin:0!important;padding:0!important}</style><div style="${EDGE}height:18.6mm;position:relative;top:5.4mm;display:flex;align-items:center;justify-content:center;font-size:8px;color:#9a8a6a;font-family:'Noto Sans CJK KR',sans-serif">${esc(footer)} · <span class="pageNumber"></span> / <span class="totalPages"></span></div>`,
+        margin: { top: '20mm', bottom: '18mm', left: '0', right: '0' },
       });
     } finally {
       await page.close().catch(() => {});

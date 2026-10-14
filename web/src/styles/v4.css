@@ -254,7 +254,7 @@
 .bjlisthead h3 { font-family: var(--serif); font-weight: 900; font-size: 22px; }
 .bjlisthead h3 small { display: block; font-family: var(--sans); font-weight: 500; font-size: 13.5px; color: var(--ink-4); }
 .bjlisthead select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); padding: 0 10px; font-size: 14px; font-weight: 700; }
-.bj4 .th4 { flex-basis: 112px; height: 96px; }
+.bj4 .th4 { flex-basis: 112px; height: 112px; }
 /* 부적 상세 */
 .bjd-hero { position: relative; height: 300px; overflow: hidden; background: #120E09; }
 .bjd-hero > img { position: absolute; left: 0; top: 0; height: 100%; width: 60%; object-fit: cover; object-position: 40% 50%; -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); }
@@ -512,7 +512,7 @@
   .th4, .bj4 .th4, .tlist .th4 { flex: none; width: 100%; height: auto; aspect-ratio: 3 / 2; }
   .tlist .th4 { aspect-ratio: 2.4 / 1; }
   .bj4 .th4 { aspect-ratio: 4 / 3; }
-  .bj4 .th4 .bj { transform: scale(1.35) rotate(-4deg); }
+  .bj4 .th4 .bj { transform: scale(1.5) rotate(-4deg); }
   .row4 .meta { padding: 0 4px; }
   .row4 .chev { display: none; }
   .bjhead { height: 240px; border-radius: 0 0 22px 22px; }

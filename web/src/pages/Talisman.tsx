@@ -162,7 +162,6 @@ export function TalismanMake() {
       <div className="paper" ref={paperRef} style={{ padding: 14, background: 'var(--ink)', borderRadius: 16 }}>
         <TalismanPaper t={t} size={2.6} name={mine?.name} birth={mine?.birth} wish={mine?.wish} issued={mine?.issuedAt} />
       </div>
-      <div className="wishbox">“{mine?.wish}”<br /><small style={{ fontSize: 14, color: 'var(--on-ink-2)' }}>{mine?.name} · 발급일 {mine?.issuedAt}</small></div>
       <div className="done">
         <div className="btn-row">
           <Button kind="gold" onClick={async () => { if (paperRef.current) { await saveImage(paperRef.current, `talisman_${t.id}.png`); toast('휴대폰에 저장했어요'); } }}>휴대폰에 저장하기</Button>
@@ -183,7 +182,7 @@ const RITE_TEXT: Record<Rite, string> = {
   incense: '향을 피워 마음을 맑게 합니다',
   lit: '향 연기가 오르며 자리가 정갈해졌습니다',
   brush: '붓에 기운을 담아 부적을 그립니다',
-  write: '이름과 소원을 새기는 중입니다',
+  write: '소원을 담아 기운을 새기는 중입니다',
   seal: '마지막으로 인장을 찍어 주세요',
   sealed: '인장이 찍혔습니다',
   bless: '부적에 좋은 기운을 불어넣는 중입니다',
@@ -225,10 +224,10 @@ function TalismanRitual({ t, name, birth, wish, onDone }: { t: Talisman; name: s
           {r === 'bless' && <span className="glow" aria-hidden />}
           {r === 'bless' && <span className="sparks" aria-hidden>{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ ['--i' as string]: i }} />)}</span>}
         </div>
+        {/* 대표님 10/14: 향로를 실사처럼 — 놋쇠 향로 사진(burner.webp, 배경 투명). 불씨·연기는 향 끝에서 */}
         <div className={`burner${r === 'incense' ? '' : ' on'}`} aria-hidden>
-          <span className="smoke" /><span className="smoke s2" /><span className="smoke s3" />
-          <span className="stick" /><span className="stick" /><span className="stick" />
-          <span className="bowl" />
+          <img src="/img/talisman/burner.webp" alt="" width={360} height={501} draggable={false} />
+          {[0, 1, 2].map((k) => <span key={k} className={`tip t${k}`}><i className="ember" /><i className="smoke" /><i className="smoke s2" /></span>)}
         </div>
       </div>
       <div className="rite-act">
