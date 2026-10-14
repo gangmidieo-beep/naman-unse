@@ -379,5 +379,5 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 .rite-dots { list-style: none; display: flex; gap: 6px; justify-content: center; margin: 14px 0 0; padding: 0; }
 .rite-dots li { flex: none; white-space: nowrap; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: var(--on-ink-2); border: 1px solid rgba(230, 200, 119, .25); }
 .rite-dots li.on { color: #24180A; background: var(--gold-light); border-color: var(--gold-light); }
-.rite-dots li.done { color: var(--gold-light); border-color: rgba(230, 200, 119, .6); }
+.rite-dots li.past { color: var(--gold-light); border-color: rgba(230, 200, 119, .6); }
 @media (prefers-reduced-motion: reduce) { .rite-paper .brush, .rite-paper .sparks, .burner .smoke { display: none; } .rite-paper .ink.go { animation-duration: .01s; } }

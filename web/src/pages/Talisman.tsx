@@ -240,7 +240,7 @@ function TalismanRitual({ t, name, birth, wish, onDone }: { t: Talisman; name: s
         {RITE_DOTS.map(([x, label]) => {
           const at = RITE_ORDER.indexOf(x);
           const on = cur === at || (x === 'incense' && r === 'lit') || (x === 'seal' && r === 'sealed');
-          return <li key={x} className={on ? 'on' : cur > at ? 'done' : ''}>{label}</li>;
+          return <li key={x} className={on ? 'on' : cur > at ? 'past' : ''}>{label}</li>;
         })}
       </ol>
     </main>

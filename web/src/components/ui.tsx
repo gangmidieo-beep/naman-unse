@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Link, useNavigate } from 'react-router-dom';
 import { Img } from './Img';
 import { optionalImg, type ImgKey } from '../assets/images';
+import { TALISMAN_ART } from '../assets/talisman-art';
 import { usePremium } from '../store/app';
 import { adProvider, adSlots, isNativeApp, loadAdSense } from '../lib/ads';
 import { CHAR, displayCopy, displayTitle, isTalisman, memberPrice, priceView, productPath, thumbOf, won, type CharId, type Product, type Talisman } from '../lib/catalog';
@@ -273,7 +274,7 @@ export function ProductRow({ p, owned }: { p: Product; owned?: boolean }) {
 export const talismanTone = (t: Talisman) => ({ '재물·성공': 'w', '사랑·인연': 'l', '소원·성취': 's', '평안·보호': 'p' } as Record<string, string>)[t.group] ?? 'w';
 // 코드로 그리는 노란 한지 부적: 붉은 테두리 + 세로 한자. hanjaPhrase 4글자 중 앞 2~3글자를 크게, 전체를 작은 머리글로.
 // 대표님 부적 그림(_incoming/talisman_<id>)이 있으면 그 그림을 쓰고, 이름·소원·발급일은 아래 띠에 새긴다.
-export const talismanImg = (id: string) => optionalImg(`talisman_${id}`);
+export const talismanImg = (id: string) => optionalImg(`talisman_${id}`) ?? (TALISMAN_ART[id] ? { src: `/img/talisman/talisman_${id}.webp`, ...TALISMAN_ART[id] } : undefined);
 export function TalismanPaper({ t, size = 1, name, birth, wish, issued }: { t: Talisman; size?: number; name?: string; birth?: string; wish?: string; issued?: string }) {
   const phrase = (t as any).hanjaPhrase as string;
   const pic = talismanImg(t.id);
