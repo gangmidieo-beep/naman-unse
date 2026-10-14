@@ -10,3 +10,6 @@
 
 ## 부적 의식 향로 사진 (web/public/img/talisman/burner.webp) — 2026-10-14
 - 대표님 요청(향로를 실사처럼)으로 사장님 Higgsfield 계정의 이미지 생성(gpt_image_2_5)으로 만든 놋쇠 향로 사진, 배경을 지워 투명 처리
+
+## 손금·관상 견본 사진 (web/public/img/photo/palm_sample.webp, face_sample.webp) — 2026-10-14
+- 사장님 Higgsfield 계정 이미지 생성(gpt_image_2_5)으로 만든 손바닥 사진·가상 인물 얼굴 사진(실존 인물 아님). 번호 색선·점은 화면에서 SVG 로 그림

@@ -86,7 +86,7 @@ test('유료 타로 결과(카드 뒤집기) · 손금 사진 흐름(동의→�
   await page.getByRole('checkbox').check();
   await page.locator('input[type=file]:not([capture])').setInputFiles('web/public/favicon.svg');
   await page.getByRole('button', { name: /풀이 시작하기/ }).click();
-  await expect(page.getByText(/손금을 살피고 있소/)).toBeVisible();
+  await expect(page.getByText(/손금을 자세히 살피고 있어요/)).toBeVisible();
   await expect(page.getByText('올려 주신 사진은 풀이 직후 삭제되었어요', { exact: false })).toBeVisible({ timeout: 8000 });
   for (const t of ['생명선', '두뇌선', '감정선', '운명선', '태양선', '결혼선', '재물선']) await expect(page.getByRole('heading', { name: new RegExp(t) })).toBeVisible();
   await expect(page.locator('img[alt="올린 사진 미리보기"]')).toHaveCount(0);

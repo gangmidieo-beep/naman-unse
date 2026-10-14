@@ -39,6 +39,15 @@ async function guestOrder(productId: string) {
 }
 
 describe('사진운세', () => {
+  it('예시 풀이도 분량 보강(항목마다 보이는 모습·풀이 220자+·조언) + 정통 존댓말', async () => {
+    const { samplePhoto } = await import('../src/services/photo.ts');
+    for (const k of ['palm', 'face'] as const) {
+      const r = samplePhoto(k);
+      expect(r.sections).toHaveLength(7);
+      for (const x of r.sections) { expect(x.feature).toBeTruthy(); expect(x.advice).toBeTruthy(); expect(x.body.length).toBeGreaterThan(220); }
+      expect(JSON.stringify(r)).not.toMatch(/하오\.|하시게|구려/);
+    }
+  });
   it('손금: 7개 선 AI 풀이 → 보관 → 같은 주문은 다시 부르지 않음', async () => {
     const { h, orderId } = await guestOrder('palm');
     const n0 = calls.length;
@@ -48,6 +57,10 @@ describe('사진운세', () => {
     expect(j.generatedBy).toBe('ai');
     expect(j.sections.map((s: any) => s.title)).toEqual(['생명선', '두뇌선', '감정선', '운명선', '태양선', '결혼선', '재물선']);
     expect(calls.length).toBe(n0 + 1);
+    // 3차(10/14) 분량 보강: AI 가 빠뜨린 칸(전체 모양·시기별 흐름·습관)은 예시로 채워 결과가 짧아지지 않게
+    expect(j.overview.title).toBe('손의 모양과 기운');
+    expect(j.timeline).toHaveLength(3);
+    expect(j.tips).toHaveLength(3);
     const again = await app.inject({ method: 'POST', url: '/photo/analyze', headers: h, payload: { kind: 'palm', image: img, orderId } });
     expect(again.json().sections[0].body).toBe(j.sections[0].body);
     expect(calls.length).toBe(n0 + 1);

@@ -11,6 +11,7 @@ import { CHAR, charOf, displayTitle, isPhoto, isTalisman, isTarot, isTwoPerson, 
 import { usePremium } from '../store/app';
 import { track } from '../lib/track';
 import { optionalImg, v4 } from '../assets/images';
+import { PhotoPreview } from './Photo';
 
 type Detail = { subtitle: string; about?: string; contents: { title: string; desc: string; icon?: string }[]; say: string; target?: string[]; why?: string };
 
@@ -105,6 +106,8 @@ export default function ProductDetail() {
             </div>
           </section>
         )}
+
+        {(p.id === 'palm' || p.id === 'face') && <PhotoPreview kind={p.id} />}
 
         {d && (
           <section className="pd-say">

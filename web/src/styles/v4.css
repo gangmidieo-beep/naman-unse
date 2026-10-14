@@ -444,6 +444,47 @@
 .ph-sec h3 { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-weight: 900; font-size: 20px; margin-bottom: 6px; }
 .ph-sec h3 .no { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 13px; font-family: var(--sans); display: grid; place-items: center; }
 .ph-sec p { font-size: 16.5px; line-height: 1.75; color: var(--ink-2); }
+/* 3차(10/14): 손금·관상 — 실제 사진 + 번호 색선, 결과·미리 보기는 아이보리 한지 바탕, 분량 보강 */
+.palmsvg.photo { display: block; width: 100%; height: auto; }
+.ph-frame .palmsvg.photo { width: 100%; }
+.ph-circle { width: min(100%, 300px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; overflow: hidden; border: 3px solid #D9B26A; box-shadow: 0 0 0 6px rgba(217, 178, 106, .18), 0 8px 20px rgba(60, 40, 10, .15); background: #F3EBDC; }
+.ph-prev { margin: 18px 14px 0; padding: 20px 16px 18px; border-radius: 22px; background-color: #F8F0DE; background-image: var(--hanji-fiber), var(--hanji-noise); border: 1.5px solid #D9B26A; }
+.ph-prev > h2 { font-family: var(--serif); font-weight: 900; font-size: 20px; line-height: 1.4; text-align: center; color: #5A3315; margin-bottom: 14px; }
+.ph-prev > h2 span { color: #C99A3A; }
+.ph-list { list-style: none; margin-top: 16px; display: grid; gap: 4px; background: rgba(255, 253, 247, .75); border: 1px solid #E3CFA0; border-radius: 18px; padding: 8px 16px; }
+.ph-list li { padding: 12px 0; border-bottom: 1px dashed #E3CFA0; }
+.ph-list li:last-child { border-bottom: 0; }
+.ph-list b { display: flex; align-items: center; gap: 8px; font-family: var(--serif); font-weight: 900; font-size: 19px; color: var(--ink); }
+.ph-list b i { width: 13px; height: 13px; border-radius: 50%; flex: 0 0 auto; }
+.ph-list small { display: block; margin: 4px 0 0 21px; font-size: 14.5px; line-height: 1.55; color: #8A6418; font-weight: 600; }
+.ph-list p { margin: 4px 0 0 21px; font-size: 16px; line-height: 1.7; color: var(--ink-2); }
+.ph-list .more { color: var(--ink-4); font-weight: 900; letter-spacing: .1em; }
+.ph-note { margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--ink-3); text-align: center; }
+.ph-res { margin: 14px 10px 0; padding: 4px 0 18px; border-radius: 22px; background-color: #F8F0DE; background-image: var(--hanji-fiber), var(--hanji-noise); border: 1px solid #E3CFA0; }
+.ph-res .photo-deleted { margin: 12px 12px 0; }
+.ph-res .ph-map { margin: 12px 12px 0; background: rgba(255, 253, 247, .7); }
+.ph-res .ph-map .ph-circle { width: 100%; }
+.ph-box { margin: 12px 12px 0; padding: 16px; border-radius: 18px; background: rgba(255, 253, 247, .8); border: 1px solid #E6D6AE; }
+.ph-box h3 { font-family: var(--serif); font-weight: 900; font-size: 20px; color: #5A3315; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1.5px solid #D9B26A; }
+.ph-box p { font-family: var(--serif); font-size: 17px; line-height: 1.8; color: var(--ink-2); }
+.ph-intro { background: #FBF3DF; border-color: #D9B26A; }
+.ph-res .ph-sec { margin: 12px 12px 0; background: rgba(255, 253, 247, .85); }
+.ph-sec h3 span[aria-hidden] { font-size: 18px; }
+.ph-sec .about { font-size: 14.5px; line-height: 1.55; color: #8A6418; font-weight: 600; margin-bottom: 8px; }
+.ph-sec .feat, .ph-sec .adv { font-size: 15.5px; line-height: 1.65; padding: 8px 12px; border-radius: 12px; }
+.ph-sec .feat { background: #F3EAD6; margin-bottom: 8px; }
+.ph-sec .adv { background: #EAF1E4; margin-top: 8px; color: #2F4A2A; }
+.ph-sec .feat b, .ph-sec .adv b { display: block; font-size: 13.5px; font-weight: 900; color: #8A6418; }
+.ph-sec .adv b { color: #3E6B34; }
+.ph-sec .body { font-family: var(--serif); font-size: 17px; line-height: 1.85; }
+.ph-tl { list-style: none; display: grid; gap: 10px; margin-top: 6px; }
+.ph-tl li { border-left: 3px solid #D9B26A; padding-left: 12px; }
+.ph-tl b { font-size: 16px; color: #8A6418; }
+.ph-tl p { font-size: 16.5px; margin-top: 2px; }
+.ph-tips2 { list-style: none; display: grid; gap: 8px; margin-top: 6px; }
+.ph-tips2 li { display: flex; gap: 8px; font-size: 16.5px; line-height: 1.55; }
+.ph-tips2 svg { color: #3E8E57; flex: 0 0 auto; margin-top: 3px; }
+.ph-close p { text-align: center; }
 .baby-up { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .baby-res { padding: 0 14px; }
 .baby-res h2 { text-align: center; font-family: var(--serif); font-weight: 900; font-size: 24px; margin: 14px 0 12px; }
