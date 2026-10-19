@@ -8,6 +8,14 @@
     <link rel="icon" href="/img/icons/app_icon_32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/img/icons/app_icon_180.png" />
+    <!-- 첫 화면 글자 번쩍임 막기(2026-10-19): 검색용 사전 렌더 글(.prerender)은 화면에 안 보이게 가리고, 앱이 뜰 때까지
+         한지색 바탕 + 로고를 보여 준다. 처음 방문(인트로 영상 차례)이면 영상과 같은 남색 바탕. 글 자체는 그대로 있어 검색에는 읽힌다. -->
+    <style>
+      html, body { margin: 0; background: #F8F0DE; }
+      .prerender::after { content: ""; position: fixed; inset: 0; z-index: 99; background: #F8F0DE url(/intro/intro_logo.webp) center 44% / min(56vw, 320px) no-repeat; }
+      html.first .prerender::after { background: #0B1230 url(/intro/intro_poster.webp) center / cover no-repeat; }
+    </style>
+    <script>try { var s = JSON.parse(localStorage.getItem('naman-unse') || '{}').state; if (!(s && s.introSeen) && location.pathname === '/') document.documentElement.classList.add('first'); } catch (e) {}</script>
   </head>
   <body>
     <div id="root"></div>

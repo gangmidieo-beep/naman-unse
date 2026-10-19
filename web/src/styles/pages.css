@@ -1,24 +1,25 @@
 /* 화면별 스타일 v2 — 첫 실행·입력·오늘의 운세·결과 문서·운세함·결제·프리미엄·부적 작성·재미로 보는 운세 */
 
-/* ---------- 첫 실행 소개 ---------- */
-.intro { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
-.intro-track { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
-.intro-track::-webkit-scrollbar { display: none; }
-.intro-slide { flex: 0 0 100%; scroll-snap-align: center; padding: 24px 22px 0; }
-.intro-art { border-radius: 24px; overflow: hidden; aspect-ratio: 800 / 547; padding: 2.5px; background: var(--gold-grad); box-shadow: var(--shadow-rare); }
-.intro-art .in { width: 100%; height: 100%; border-radius: 21.5px; overflow: hidden; background: var(--ink-grad); position: relative; }
-.intro-art img { width: 100%; height: 100%; object-fit: cover; }
-.intro-seal { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--gold-light); }
-.intro-seal .seal { width: 88px; height: 88px; font-size: 52px; border-radius: 10px; background: var(--seal); color: #F8E9C8; display: grid; place-items: center; font-family: var(--brush); }
-.intro-seal b { font-family: var(--brush); font-size: 36px; font-weight: 400; }
-.intro-slide small { display: block; margin-top: 26px; color: var(--gold-deep); font-family: var(--serif); font-weight: 700; font-size: 14px; letter-spacing: .2em; }
-.intro-slide h1 { font-family: var(--serif); font-weight: 900; font-size: var(--fs-hero); line-height: 1.35; margin: 6px 0 10px; letter-spacing: -.03em; }
-.intro-slide p { color: var(--ink-3); font-size: var(--fs-body); }
-.intro-dots { display: flex; justify-content: center; gap: 4px; margin: 10px 0; }
-.intro-dots button { width: 32px; height: 32px; position: relative; }
-.intro-dots button::after { content: ""; position: absolute; inset: 12px 11px; border-radius: 5px; background: #CDBF9F; }
-.intro-dots button.on::after { inset: 12px 4px; background: var(--gold); }
-.intro-cta { padding: 0 22px; display: flex; flex-direction: column; align-items: center; }
+/* ---------- 첫 방문 인트로 영상 (2026-10-15) ---------- */
+/* 휴대폰: 세로 영상을 화면 가득. PC: 가운데 세로 영상 + 양옆은 첫 장면을 흐리게 깔아 빈 곳이 없게 */
+.intro-v { position: fixed; inset: 0; z-index: 50; background: #0B1230; overflow: hidden; transition: opacity .35s ease; }
+.intro-v .iv-bg { position: absolute; inset: -40px; background: center / cover no-repeat; filter: blur(28px) brightness(.55); }
+.intro-v .iv-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+@media (min-aspect-ratio: 3/4) { .intro-v .iv-video { left: 50%; width: auto; aspect-ratio: 9 / 16; transform: translateX(-50%); box-shadow: 0 0 80px rgba(0, 0, 0, .55); } }
+/* 끝 장면: 문 안쪽 금빛이 화면 가득 번지며 한지색 → 로고 */
+.intro-v .iv-light { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 55%, #FEFCF2 0%, #FEFCF2 38%, rgba(254, 240, 200, .92) 62%, rgba(232, 190, 110, .55) 100%);
+  transition: opacity .9s ease; }
+.intro-v .iv-logo { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.94); transition: opacity .8s ease .25s, transform 1.4s cubic-bezier(.2, .7, .2, 1) .25s; pointer-events: none; }
+.intro-v .iv-logo img { width: min(72vw, 420px); height: auto; filter: drop-shadow(0 6px 18px rgba(150, 100, 30, .18)); }
+.intro-v.phase-logo .iv-light, .intro-v.phase-out .iv-light { opacity: 1; }
+.intro-v.phase-logo .iv-logo, .intro-v.phase-out .iv-logo { opacity: 1; transform: none; }
+.intro-v.phase-out { opacity: 0; }
+.intro-v .iv-skip { position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px; z-index: 2; padding: 9px 16px; min-height: 44px;
+  border-radius: 999px; border: 1px solid rgba(232, 205, 150, .55); background: rgba(11, 18, 48, .45); color: #F3E3BE;
+  font-size: 15px; font-weight: 700; letter-spacing: .02em; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: iv-in .5s ease both; }
+@keyframes iv-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .intro-v .iv-logo, .intro-v .iv-light { transition: opacity .3s; transform: none; } }
 
 /* ---------- 폼 ---------- */
 .form { padding: 0 18px; }

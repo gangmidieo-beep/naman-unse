@@ -1,66 +1,80 @@
-// 첫 실행 소개 3장 → 바로 홈(대표님 요청 2026-10-12: 사이트 들어갈 때 사주 입력 받지 않기).
-// 1.2초마다 다음 장으로 자동으로 넘어가고, 마지막 장도 1.2초 뒤 홈으로 들어간다. 손으로 넘기거나 누르면 자동 넘김은 멈춤(그땐 "시작하기").
-// 사주 정보는 홈에서 "오늘의 운세 자세히 보기"·유료 풀이를 처음 볼 때 한 번만 받는다.
+// 첫 방문 인트로 영상 (대표님 요청 2026-10-15) — 보름달 밤, 1인칭으로 신당에 들어가는 6초 영상 →
+// 금빛이 번지며 한지색 화면에 '나만의 운세' 로고 → 홈. 처음 방문할 때 한 번만(introSeen), 무음, 건너뛰기 버튼.
+// 영상이 늦게 뜨거나(LOAD_LIMIT_MS 안에 재생 시작 못 함) 자동 재생이 막히면 기다리지 않고 바로 홈으로.
+// 데이터 절약 모드·'동작 줄이기' 설정이면 영상 없이 로고만 잠깐 보여 주고 홈으로.
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Img } from '../components/Img';
-import { Button } from '../components/ui';
 import { useApp } from '../store/app';
-import type { ImgKey } from '../assets/images';
 
-const AUTO_MS = 1200; // 자동 넘김 간격(1~1.5초 사이 요청)
-const SLIDES: { img: ImgKey | null; who: string; title: string; text: string }[] = [
-  { img: 'cheongungBanner', who: '天宮道士 · 천궁도사', title: '오늘의 운세부터\n평생의 흐름까지 읽어드리지요', text: '정통사주·재물·직장·신년운세를 깊이 풀어 드리오.' },
-  { img: 'wolhaBanner', who: '月下仙女 · 월하선녀', title: '사랑과 인연의 실을\n따라가 볼게요', text: '연애·결혼·궁합·인연의 흐름을 다정하게 살펴 드려요.' },
-  { img: null, who: '나만의 운세', title: '지금 바로\n나만의 운세를 시작해요', text: '로그인·입력 없이 둘러보고, 매일 아침 운세를 받아 보세요.' },
-];
+const VIDEO = '/intro/intro.mp4'; // H.264 — 휴대폰·사파리·크롬
+const VIDEO_WEBM = '/intro/intro.webm'; // VP9 — H.264 를 못 트는 브라우저용
+const POSTER = '/intro/intro_poster.webp';
+const LOGO = '/intro/intro_logo.webp';
+const LOAD_LIMIT_MS = 2500; // 이 안에 재생이 시작되지 않으면 홈으로
+const LOGO_BEFORE_END = 0.9; // 영상 끝나기 몇 초 전부터 금빛·로고를 띄울지
+const LOGO_HOLD_MS = 1300; // 로고를 보여 주는 시간
+
+const lowData = () => {
+  try {
+    const c = (navigator as any).connection;
+    return !!c?.saveData || /(^|-)2g$/.test(c?.effectiveType ?? '') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch { return false; }
+};
 
 export default function Intro() {
   const nav = useNavigate();
   const setIntroSeen = useApp((s) => s.setIntroSeen);
-  const [i, setI] = useState(0);
-  const track = useRef<HTMLDivElement>(null);
-  const target = useRef<number | null>(null); // 버튼으로 넘기는 중엔 스크롤 중간값 무시
-  const [auto, setAuto] = useState(true);
-  const go = (n: number) => { target.current = n; setI(n); track.current?.scrollTo({ left: n * track.current.clientWidth, behavior: 'smooth' }); };
-  const onScroll = (el: HTMLDivElement) => {
-    const n = Math.round(el.scrollLeft / el.clientWidth);
-    if (target.current != null) { if (n === target.current) target.current = null; return; }
-    setI(n);
+  const video = useRef<HTMLVideoElement>(null);
+  const [noVideo] = useState(lowData);
+  const [phase, setPhase] = useState<'video' | 'logo' | 'out'>(noVideo ? 'logo' : 'video');
+  const [skip, setSkip] = useState(false);
+  const done = useRef(false);
+
+  const home = () => {
+    if (done.current) return;
+    done.current = true;
+    setIntroSeen();
+    setPhase('out');
+    setTimeout(() => nav('/', { replace: true }), 350);
   };
-  const start = () => { setIntroSeen(); nav('/', { replace: true }); };
+
+  // 영상: 시간 안에 재생이 안 되면 홈으로, 끝나기 직전 로고로
   useEffect(() => {
-    if (!auto) return;
-    const t = setTimeout(() => (i >= SLIDES.length - 1 ? start() : go(i + 1)), AUTO_MS);
+    const v = video.current;
+    if (!v) return;
+    let started = false;
+    const limit = setTimeout(() => { if (!started) home(); }, LOAD_LIMIT_MS);
+    const onPlay = () => { started = true; };
+    const toLogo = () => setPhase((p) => (p === 'video' ? 'logo' : p));
+    const onTime = () => { if (v.duration && v.currentTime >= v.duration - LOGO_BEFORE_END) toLogo(); };
+    v.addEventListener('playing', onPlay);
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('ended', toLogo);
+    v.addEventListener('error', home);
+    v.play()?.catch(home); // 자동 재생이 막힌 기기(절전 모드 등)
+    const s = setTimeout(() => setSkip(true), 600);
+    return () => { clearTimeout(limit); clearTimeout(s); v.removeEventListener('playing', onPlay); v.removeEventListener('timeupdate', onTime); v.removeEventListener('ended', toLogo); v.removeEventListener('error', home); };
+  }, []);
+
+  // 로고: 잠깐 보여 주고 홈으로
+  useEffect(() => {
+    if (phase !== 'logo') return;
+    const t = setTimeout(home, LOGO_HOLD_MS);
     return () => clearTimeout(t);
-  }, [auto, i]);
+  }, [phase]);
+
   return (
-    <main className="intro" onPointerDown={() => setAuto(false)} onKeyDown={() => setAuto(false)}>
-      <div className="intro-track" ref={track} onScroll={(e) => onScroll(e.currentTarget)}>
-        {SLIDES.map((s, n) => (
-          <section className="intro-slide" key={n} aria-label={`${n + 1}번째 소개`}>
-            <div className="intro-art"><div className="in">
-              {s.img ? <Img k={s.img} eager={n === 0} alt={s.who} /> : <div className="intro-seal"><span className="seal">運</span><b>나만의 운세</b></div>}
-            </div></div>
-            <small>{s.who}</small>
-            <h1>{s.title.split('\n').map((l, k) => <span key={k}>{l}<br /></span>)}</h1>
-            <p>{s.text}</p>
-          </section>
-        ))}
-      </div>
-      <div className="intro-dots" role="tablist" aria-label="소개 넘기기">
-        {SLIDES.map((_, n) => <button key={n} role="tab" aria-selected={i === n} aria-label={`${n + 1}번째`} className={i === n ? 'on' : ''} onClick={() => go(n)} />)}
-      </div>
-      <div className="intro-cta">
-        {i < SLIDES.length - 1 ? (
-          <>
-            <Button kind="ink" onClick={() => go(i + 1)}>다음</Button>
-            <button className="textlink" onClick={start}>건너뛰기</button>
-          </>
-        ) : (
-          <Button kind="gold" onClick={start}>시작하기</Button>
-        )}
-      </div>
+    <main className={`intro-v phase-${phase}`} aria-label="나만의 운세 인트로">
+      <div className="iv-bg" style={{ backgroundImage: `url(${POSTER})` }} aria-hidden />
+      {!noVideo && (
+        <video ref={video} className="iv-video" poster={POSTER} muted playsInline autoPlay preload="auto" disablePictureInPicture aria-hidden>
+          <source src={VIDEO} type='video/mp4; codecs="avc1.640028"' />
+          <source src={VIDEO_WEBM} type='video/webm; codecs="vp9"' onError={home} />
+        </video>
+      )}
+      <div className="iv-light" aria-hidden />
+      <div className="iv-logo"><img src={LOGO} alt="나만의 운세" /></div>
+      {skip && phase === 'video' && <button className="iv-skip" onClick={home}>건너뛰기 ›</button>}
     </main>
   );
 }
