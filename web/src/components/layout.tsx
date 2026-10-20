@@ -66,13 +66,14 @@ export function SectionHeader({ en, title, desc, center, style, more }: { en: st
   );
 }
 
-// 하단 탭 아이콘 — 대표님 시안(정자·나침반·타로·부적·함) 그림을 윤곽만 남겨 색을 입힌다(활성 = 먹색 칸 + 금색)
+// 하단 탭 아이콘 — 2026-10-20 대표님 점검 사항2: 단조로운 윤곽 아이콘 → 카테고리마다 특징이 보이는 컬러 아이콘
+// (한옥·팔괘 나침반·타로 카드·붉은 부적·보물함, 사장님 Higgsfield 생성). 다크모드에서도 잘 보이게 그림 자체 색을 쓴다. 활성 = 먹색 칸
 const TABS = [
-  { to: '/', label: '홈', i: 'tab_home', end: true },
-  { to: '/unse', label: '운세', i: 'tab_unse' },
-  { to: '/tarot', label: '타로', i: 'tab_tarot' },
-  { to: '/talisman', label: '부적', i: 'tab_talisman' },
-  { to: '/box', label: '운세함', i: 'tab_box' },
+  { to: '/', label: '홈', i: 'tabc_home', end: true },
+  { to: '/unse', label: '운세', i: 'tabc_unse' },
+  { to: '/tarot', label: '타로', i: 'tabc_tarot' },
+  { to: '/talisman', label: '부적', i: 'tabc_talisman' },
+  { to: '/box', label: '운세함', i: 'tabc_box' },
 ];
 export function TabBar() {
   return (
@@ -80,7 +81,7 @@ export function TabBar() {
       <Link to="/" className="tabs-logo" aria-label="나만의 운세 홈"><BrandLogo /></Link>
       {TABS.map((t) => (
         <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
-          <span className="i" aria-hidden><span className="ic" style={{ WebkitMaskImage: `url(/img/v4/${t.i}.png)`, maskImage: `url(/img/v4/${t.i}.png)` }} /></span>
+          <span className="i" aria-hidden><img className="icc" src={`/img/v4/${t.i}.webp`} alt="" width={56} height={56} /></span>
           {t.label}
         </NavLink>
       ))}

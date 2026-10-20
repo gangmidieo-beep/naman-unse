@@ -79,8 +79,9 @@ export function HeroDuo() {
 }
 
 // 오늘의 운세 먹색 카드 (홈 — 결제 권유 금지)
-export function TodayCard({ name, isSample, date, total, stars, line, to = '/today' }: {
-  name: string; isSample: boolean; date: string; total: number; stars: number; line: string; to?: string;
+// 2026-10-20 대표님 점검 사항2: 검은 카드가 너무 진함 → 아이보리 한지 카드, 오른쪽(휴대폰은 아래)에 오늘의 풀이 두 문장(brief)을 넣어 꽉 차게
+export function TodayCard({ name, isSample, date, total, stars, line, brief, to = '/today' }: {
+  name: string; isSample: boolean; date: string; total: number; stars: number; line: string; brief?: string; to?: string;
 }) {
   const shown = useCountUp(total);
   return (
@@ -88,8 +89,13 @@ export function TodayCard({ name, isSample, date, total, stars, line, to = '/tod
       <div className="in">
         <div className="top"><small>TODAY'S FORTUNE</small><span>{date}</span></div>
         <h4>{name}님, 오늘의 운세예요{isSample && <span className="sample-badge">예시</span>}</h4>
-        <div className="sc" aria-label={`${total}점`}><b aria-hidden>{shown}</b><span aria-hidden>점</span><Stars n={stars} /></div>
-        <p className="q">“{line}”</p>
+        <div className="tbody">
+          <div className="tl">
+            <div className="sc" aria-label={`${total}점`}><b aria-hidden>{shown}</b><span aria-hidden>점</span><Stars n={stars} /></div>
+            <p className="q">“{line}”</p>
+          </div>
+          {brief && <p className="tr">{brief}</p>}
+        </div>
         {isSample && <Link to="/profile/new" className="sample-link">예시 화면이에요. <b>내 정보를 입력</b>하면 나만의 운세로 바뀌어요 ›</Link>}
         <Button kind="gold" to={to} className="mt">오늘의 운세 자세히 보기</Button>
       </div>
@@ -106,7 +112,7 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
   const [anim, setAnim] = useState(true);
   const [drag, setDrag] = useState(0);
   const hold = useRef(false);
-  const start = useRef<{ x: number; dx: number; moved: boolean } | null>(null);
+  const start = useRef<{ x: number; y: number; dx: number; moved: boolean; t: number } | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
   const go = useCallback((to: number) => { setAnim(true); setPos(to); }, []);
@@ -129,16 +135,22 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
     if (pos === 0) { setAnim(false); setPos(n); }
     else if (pos === n + 1) { setAnim(false); setPos(1); }
   };
-  const down = (e: React.PointerEvent) => { start.current = { x: e.clientX, dx: 0, moved: false }; setAnim(false); (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); };
+  // 2026-10-20 대표님: 화면을 아래로 내리려고 엄지로 배너를 스치기만 해도 상품으로 넘어감 → 손가락이 위아래로 움직였거나
+  // 브라우저가 스크롤로 가져간 경우(pointercancel)·오래 누른 경우는 '누름'으로 치지 않는다. 가볍게 톡 누를 때만 이동.
+  const down = (e: React.PointerEvent) => { start.current = { x: e.clientX, y: e.clientY, dx: 0, moved: false, t: Date.now() }; setAnim(false); if (e.pointerType === 'mouse') (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); };
   const move = (e: React.PointerEvent) => {
     if (!start.current) return;
     const dx = e.clientX - start.current.x;
+    const dy = e.clientY - start.current.y;
     start.current.dx = dx;
-    if (Math.abs(dx) > 6) start.current.moved = true;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) start.current.moved = true;
+    if (Math.abs(dy) > Math.abs(dx)) return; // 세로 스크롤 중엔 배너를 옆으로 끌지 않음
     setDrag(dx);
   };
+  const cancel = () => { if (!start.current) return; setAnim(true); setDrag(0); start.current = null; };
   const up = () => {
     if (!start.current) return;
+    if (Date.now() - start.current.t > 700) start.current.moved = true; // 길게 누른 건 이동하지 않음
     const w = wrap.current?.clientWidth ?? 1;
     const { moved, dx } = start.current;
     if (dx < -w * 0.18) go(pos + 1);
@@ -156,7 +168,7 @@ export function RollingBanner({ items, interval = 4000 }: { items: BannerItem[];
   const cur = ((pos - 1 + n) % n) + 1;
   return (
     <div className="banner-wrap" onMouseEnter={() => (hold.current = true)} onMouseLeave={() => (hold.current = false)} aria-roledescription="carousel" aria-label="추천 풀이">
-      <div className="banner-view" ref={wrap} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+      <div className="banner-view" ref={wrap} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel}>
         <div className="banner-track" onTransitionEnd={onEnd}
           style={{ transform: `translateX(calc(${-pos * 100}% + ${drag}px))`, transition: anim ? 'transform .45s ease' : 'none' }}>
           {slides.map((b, k) => (

@@ -3,6 +3,7 @@
 import longOutline from '@naman/content/data/reading-outline-long.json';
 import outline from '@naman/content/data/reading-outline.json';
 import desc from '@naman/content/data/toc-desc.json';
+import { Icon } from './Icon';
 
 type Sec = { id: string; title: string; each?: 'daewoon' | 'seun' | 'month' };
 type Part = { title: string; base?: boolean; pairBase?: number; sections?: Sec[] };
@@ -46,9 +47,9 @@ export function ReadingToc({ productId, title }: { productId: string; title: str
     <section className="pd-sec pd-toc">
       <h2><i aria-hidden>❖</i>결과지 목차</h2>
       <div className="toc-meta">
-        <span><b>A4 약 40~50쪽</b>분량</span>
-        <span><b>{parts.length}부 {total}장</b>구성</span>
-        <span><b>화면 + PDF</b>저장</span>
+        <span><i className="mi"><Icon name="file-text" size={20} /></i><b>A4 약 40~50쪽</b>분량</span>
+        <span><i className="mi"><Icon name="layers" size={20} /></i><b>{parts.length}부 {total}장</b>구성</span>
+        <span><i className="mi"><Icon name="scroll-text" size={20} /></i><b>화면 + PDF</b>저장</span>
       </div>
       <p className="toc-lead">장마다 <b>핵심 요약 → 상세 해석 → 장점·포인트 → 주의할 점 → 이렇게 해 보세요 → 한 줄 정리</b> 순서로 담겨요. 사주 원국표·오행 분포·대운표·세운표도 함께 들어가요.</p>
       <ol className="toc-parts">

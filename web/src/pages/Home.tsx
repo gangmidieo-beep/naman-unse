@@ -42,7 +42,7 @@ export default function Home() {
       <AppHeader />
       <main className="screen home4">
         {/* 처음이면 "자세히 보기" → 사주 정보 1회 입력(푸시 동의 포함) → 오늘의 운세 */}
-        <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine}
+        <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine} brief={f.brief}
           to={isSample ? '/profile/new?back=/today&first=1' : '/today'} />
 
         {!premium && <PremiumButton />}

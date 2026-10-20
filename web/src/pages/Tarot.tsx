@@ -113,7 +113,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
     setTimeout(() => { sfx.finale(); onDone(); }, 700);
   };
   return (
-    <div className={`ttable ph-${phase}`}>
+    <div className={`ttable ph-${phase}${need === 1 ? ' one' : ''}`}>
       <SoundToggle />
       {phase === 'ready' || phase === 'shuffle' ? (
         <div className="tdeck4">
@@ -198,7 +198,7 @@ function TodayTarot() {
       {!done ? (
         <TarotTable cards={draw} need={1} onDone={() => { unlock(`${dayKey}:0`); track('page_view', { content: 'tarot' }); }} />
       ) : (
-        <div className="tslots n1 done"><div className="slot open"><div className="flipper"><div className="front"><TarotFace d={c!} /></div></div></div></div>
+        <div className="tslots n1 done one"><div className="slot open"><div className="flipper"><div className="front"><TarotFace d={c!} /></div></div></div></div>
       )}
       {c && side && <p className="tname">{c.card.nameEn}<small>{c.card.nameKo} · {c.reversed ? '역방향' : '정방향'}</small></p>}
       {c && side && !read && (

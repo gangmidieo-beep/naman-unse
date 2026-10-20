@@ -31,7 +31,7 @@ export function ShareBlock({ s, title, text, path, id, children }: { s: ReturnTy
   const toast = useToast();
   return (
     <>
-      <div className="pad mt14"><Button kind="ink" onClick={() => s.setOpen(true)}>결과 이미지로 공유하기</Button></div>
+      <div className="pad mt14"><Button kind="gold" onClick={() => s.setOpen(true)}>결과 이미지로 공유하기</Button></div>
       <ShareSheet open={s.open} onClose={() => s.setOpen(false)} card={s.ref} title={title} text={text} path={path} contentId={id} onDone={(m) => m && toast(m)} />
       <ShareCard ref={s.ref} title={title} sub={koDate()}>{children}</ShareCard>
     </>

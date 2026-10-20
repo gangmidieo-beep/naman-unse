@@ -255,3 +255,52 @@
   .zc, .sgrid button, .dcards button, .mgrid button, .bpick button { transition: transform .15s ease; }
   .zc:active, .sgrid button:active, .dcards button:active, .mgrid button:active, .bpick button:active { transform: scale(.97); }
 }
+
+/* ===================================================================================
+   2026-10-20 대표님 「점검 사항2」 — 별자리·혈액형·MBTI 결과: 검은 바탕 → 밝은 아이보리 한지 + 산수화 + 골드
+   (구성·기능은 그대로, 색과 바탕만 바꿈)
+   =================================================================================== */
+:root { --fun-ivory: linear-gradient(105deg, rgba(251, 245, 230, .97) 38%, rgba(251, 245, 230, .72) 62%, rgba(251, 245, 230, .25) 100%), url(/img/v4/bg_fun_ivory.webp) right top / 120% auto no-repeat, #FBF5E6; }
+/* 선택 버튼(별자리·혈액형): 먹색 → 금테 한지 */
+.sgrid button.on, .bpick button.on { background: linear-gradient(180deg, #FFF6DD, #F3DFA9); border-color: #B8892E; box-shadow: 0 0 0 1.5px #B8892E inset, 0 4px 10px rgba(150, 105, 30, .18); }
+.sgrid button.on .starart { background: #A8741E; }
+.sgrid button.on b, .bpick button.on { color: #5A3A10; }
+.sgrid button.on small { color: #7A5A28; }
+/* 별자리 결과 */
+.shero { background: var(--fun-ivory); border: 1.5px solid #C9A04E; color: var(--ink); box-shadow: 0 6px 18px rgba(120, 86, 24, .12), inset 0 0 0 4px rgba(255, 252, 240, .7); }
+.shero::before { opacity: .35; background-image: radial-gradient(1.6px 1.6px at 20% 30%, #C9962F, transparent), radial-gradient(1.2px 1.2px at 60% 18%, #C9962F, transparent), radial-gradient(1.8px 1.8px at 78% 70%, #C9962F, transparent), radial-gradient(1.2px 1.2px at 40% 82%, #C9962F, transparent); }
+.shero .starart { background: #A8741E; }
+.shero .big { right: -6px; bottom: 30px; opacity: .32; transform: scale(1.35); transform-origin: right bottom; }
+.shero .cons { opacity: .55; }
+.shero small { color: #8A5A14; }
+.shero b.t { color: var(--ink); }
+.srows div { color: var(--ink-2); border-bottom: 1px dashed rgba(184, 137, 46, .3); padding-bottom: 6px; }
+.srows svg { color: #A8741E; }
+.srows b { color: #7A4A12; }
+.shero .en { color: #8A5A14; }
+.sabout { background: linear-gradient(105deg, rgba(251, 245, 230, .96) 45%, rgba(251, 245, 230, .5)), #FBF5E6 url(/img/v4/bg_today_ivory.webp) right bottom / cover no-repeat; border-color: #DCC48C; }
+/* 혈액형 결과 */
+.bhero { background: var(--fun-ivory); border: 1.5px solid #C9A04E; color: var(--ink); box-shadow: 0 6px 18px rgba(120, 86, 24, .12), inset 0 0 0 4px rgba(255, 252, 240, .7); }
+.bmed { background: radial-gradient(circle, #FFF8E6, #F1DDAE); border: 2px solid #C9A04E; box-shadow: 0 0 0 5px rgba(201, 160, 78, .15); }
+.btx small { color: #8A5A14; }
+.btx b.t { color: var(--ink); }
+.btx p { color: var(--ink-3); }
+.bcards > div { background: rgba(255, 253, 246, .88); border: 1px solid #E0C994; box-shadow: 0 2px 6px rgba(120, 86, 24, .06); }
+.bcards svg { color: #B0662A; }
+.bcards b { color: #7A4A12; }
+.bcards .stars { color: #C9962F; }
+.bcards em { color: var(--ink); }
+.bcards span { color: var(--ink-2); }
+/* MBTI 결과 + 사주 기질 */
+.mhero { background: linear-gradient(90deg, rgba(251, 245, 230, .98) 48%, rgba(251, 245, 230, .7)), var(--land) right center / auto 100% no-repeat, #FBF5E6; border: 1.5px solid #C9A04E; color: var(--ink); box-shadow: 0 6px 18px rgba(120, 86, 24, .12); }
+.mtop small { color: #8A5A14; }
+.mtop b.t { color: var(--ink); }
+.mtop p { color: var(--ink-2); }
+.mbox { background: rgba(255, 253, 246, .92); border: 1px solid #E6D3A6; }
+.msaju { background: linear-gradient(180deg, #FFF3D2, #EBCB86); color: #4A2E0C; border-color: #B8892E; box-shadow: 0 4px 10px rgba(150, 105, 30, .18); }
+.msaju i { border-color: #8A5A14; color: #8A5A14; }
+.msaju-open { background: linear-gradient(105deg, rgba(251, 245, 230, .96) 45%, rgba(251, 245, 230, .5)), #FBF5E6 url(/img/v4/bg_today_ivory.webp) right bottom / cover no-repeat; border-color: #C9A04E; }
+.msaju-open h3 { color: #7A4A12; }
+.msaju-open p { color: var(--ink-2); }
+.msaju-open ul { color: var(--ink-3); }
+.adnote.ink { color: var(--ink-4); }

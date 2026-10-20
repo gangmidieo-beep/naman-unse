@@ -123,7 +123,7 @@ export function PremiumButton() {
   return (
     <>
       <button className="pbtn" onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <span className="pc">PREMIUM</span>
+        <span className="pc"><i aria-hidden>♛</i>PREMIUM</span>
         <span className="pt"><b>프리미엄 멤버십</b><small>광고 없이 · 주간·월간 운세 · 전 상품 10% 할인</small></span>
         <span className="pp">월 {won(SUB.monthly.price)} ›</span>
       </button>

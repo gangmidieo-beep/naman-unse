@@ -9,9 +9,14 @@
 	redir @apex https://www.{host}{uri} 301
 	root * /srv
 	encode zstd gzip
-	@assets path /assets/* /fonts/* /img/*
-	header @assets Cache-Control "public, max-age=31536000, immutable"
-	header /index.html Cache-Control "no-cache"
+	# 2026-10-20: 대표님 휴대폰에 예전 화면이 남던 문제 — 이름에 해시가 붙는 /assets·/fonts 만 1년 고정,
+	# 이름이 그대로인 그림(/img·/intro)은 하루, 나머지(각 쪽 HTML 등)는 매번 새로 확인(no-cache)
+	@hashed path /assets/* /fonts/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@media path /img/* /intro/*
+	header @media Cache-Control "public, max-age=86400"
+	@html not path /assets/* /fonts/* /img/* /intro/*
+	header @html Cache-Control "no-cache"
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin

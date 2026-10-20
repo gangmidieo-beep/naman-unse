@@ -771,3 +771,75 @@
 .who-pick .nm em { font-style: normal; font-size: 12.5px; font-weight: 800; color: #8A6418; background: var(--gold-pale); border-radius: 999px; padding: 1px 8px; }
 .who-pick .bd { font-size: 14.5px; color: var(--ink-3); }
 .who-add { display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: 8px; border-radius: 14px; border: 1.5px dashed #C99A3A; color: #8A6418; font-weight: 900; font-size: 16px; text-decoration: none; background: rgba(251, 243, 223, .6); }
+
+/* ===================================================================================
+   2026-10-20 대표님 「점검 사항2」 — 홈
+   =================================================================================== */
+/* 오늘의 운세: 검은 카드 → 아이보리 한지(매화·산수화 은은하게) + 오른쪽(휴대폰은 아래) 오늘의 풀이 두 문장 */
+.today { background: linear-gradient(135deg, #E9CF8E, #B8892E 45%, #E9CF8E); box-shadow: 0 10px 22px rgba(120, 86, 24, .18); }
+.today > .in { background: #FBF5E6 url(/img/v4/bg_today_ivory.webp) center / cover no-repeat; color: var(--ink); }
+.today .top small { color: var(--gold-deep); }
+.today .top span { color: var(--ink-3); }
+.today h4 { color: var(--ink); }
+.today .sc > span { color: var(--ink-3); }
+.today .sc .stars, .today .sc [class*="star"] { color: #C9962F; }
+.today p.q { color: var(--ink-2); border-top-color: rgba(184, 137, 46, .35); }
+.today p.q b { color: var(--gold-deep); }
+.today .sample-link { color: var(--ink-3); }
+.today .sample-link b { color: var(--gold-deep); }
+.today .tbody { display: grid; gap: 4px; }
+.today .tr { font-family: var(--serif); font-size: 16.5px; line-height: 1.7; color: var(--ink-2); border-top: 1px dashed rgba(184, 137, 46, .4); padding-top: 10px; margin-top: 2px; }
+@media (min-width: 560px) {
+  .today .tbody { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: center; }
+  .today .tr { border-top: 0; border-left: 1px solid rgba(184, 137, 46, .4); padding: 4px 0 4px 20px; margin: 0; }
+}
+/* 프리미엄 멤버십 배너: 검정 → 짙은 브라운 + 골드, 정자·산 배경 은은하게 */
+.pbtn { background: #2A170B url(/img/v4/bg_premium_brown.webp) right center / cover no-repeat; border: 1.5px solid #C9A04E; box-shadow: 0 8px 18px rgba(70, 40, 10, .28); padding: 14px 14px; }
+.pbtn .pc { display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(180deg, #3A2410, #24150A); color: #F2D58C; border: 1px solid #C9A04E; box-shadow: inset 0 0 0 1px rgba(242, 213, 140, .15); }
+.pbtn .pc i { font-style: normal; font-size: 14px; color: #F2C94C; }
+.pbtn .pt b { color: #FBE9BF; }
+.pbtn .pt small { color: #E6D3AE; }
+.pbtn .pp { padding: 8px 12px; border-radius: 12px; background: linear-gradient(180deg, #FBE3A4, #E2B85E); color: #3A2410; font-size: 15.5px; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
+/* 지금 많이 찾는 풀이 배너: 왼쪽 어두운 칸과 그림 경계가 딱 나뉘던 것 → 그림이 왼쪽으로 갈수록 서서히 사라지게 */
+.banner img { width: 78%; -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .35) 16%, #000 42%); mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, .35) 16%, #000 42%); }
+.banner .shade { background: linear-gradient(90deg, rgba(20, 17, 13, .78) 0%, rgba(20, 17, 13, .45) 34%, rgba(20, 17, 13, 0) 58%); }
+.banner::after { content: ""; position: absolute; left: 10px; top: 10px; width: 64px; height: 30px; opacity: .45; pointer-events: none;
+  background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 30' fill='none' stroke='%23D9B66A' stroke-width='1.4'%3E%3Cpath d='M4 22c0-6 6-9 11-6 1-7 11-9 15-3 3-5 12-4 13 2 5-1 9 3 8 7H4z'/%3E%3Cpath d='M20 20c0-3 3-5 6-3M36 19c1-3 5-4 7-1'/%3E%3C/svg%3E"); }
+/* 홈 소제목의 "풀이"·"운세" 금색 → 검은색 (대표님 요청) */
+.home4 .sec h3 em { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: inherit; }
+/* 하단·상단 메뉴: 컬러 아이콘 */
+.tab .i .icc { display: block; width: 32px; height: 32px; margin: auto; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .15)); }
+.tab .i { background: transparent; }
+.tab.on .i { background: var(--ink); box-shadow: inset 0 0 0 1.5px var(--gold); }
+@media (min-width: 900px) { .tab .i .icc { width: 28px; height: 28px; } }
+.today .top span { background: rgba(251, 245, 230, .82); padding: 2px 8px; border-radius: 8px; position: relative; z-index: 1; }
+
+/* ===================================================================================
+   2026-10-20 「점검 사항2」 — 상품 상세
+   =================================================================================== */
+/* 큰 제목(평생운세 등): 금색 그라데이션 글자 → "평생운세란?"과 같은 진한 금갈색 단색(다크모드에서도 또렷하게) */
+.pd-title h1 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--gold-deep); filter: none; text-shadow: 0 1px 0 rgba(255, 255, 255, .7); }
+.pd4.dk .pd-title h1 { color: var(--gold-light); text-shadow: none; }
+/* 운명서에 담기는 내용: 검은 카드 → 아이보리 한지 + 은은한 산수화·금 테두리 */
+.pd-contents .pc { background: #FBF5E6 url(/img/v4/bg_today_ivory.webp) center / cover no-repeat; color: var(--ink); border: 1px solid #D9BE82; box-shadow: 0 3px 10px rgba(120, 86, 24, .08), inset 0 0 0 3px rgba(255, 253, 245, .6); }
+.pd-contents b { color: var(--ink); }
+.pd-contents .ds { color: var(--ink-3); }
+.pd-contents .ic { box-shadow: 0 0 0 3px #FBF0D4, 0 0 0 4px #D9BE82; }
+.pd4.dk .pd-contents b { color: #F5E7C2; } .pd4.dk .pd-contents .ds { color: var(--on-ink-2); }
+/* 결과지 목차 분량 칸: 아이콘 + 한지 */
+.pd-toc .toc-meta span { flex-direction: row; justify-content: center; gap: 8px; padding: 12px 6px; background: #FBF5E6 url(/img/v4/bg_today_ivory.webp) center / cover; flex-wrap: wrap; }
+.pd-toc .toc-meta .mi { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #F3E3BC; color: #8A5A14; flex: 0 0 auto; }
+.pd-toc .toc-meta b { width: auto; }
+@media (max-width: 480px) { .pd-toc .toc-meta span { flex-direction: column; } }
+
+/* 2026-10-20 「점검 사항2」 오늘의 타로(1장): 뒤집힌 카드 1.5배, 고를 때 펼친 카드·카드 더미도 크게 */
+.ttable.one .tslots.n1 .slot { width: 207px; height: 333px; }
+.ttable.one .tslots.n1 .tfront b { font-size: 24px; } .ttable.one .tslots.n1 .tfront small { font-size: 13px; } .ttable.one .tslots.n1 .tfront .sym svg { width: 66px; height: 66px; }
+.ttable.one .tslots.n1 .slot em { font-size: 15px; bottom: -26px; }
+.ttable.one .tdeck4 .stack { width: 156px; height: 252px; }
+.ttable.one .tfan4 { height: 300px; }
+.ttable.one .tfan4 .fc { width: 86px; height: 140px; margin-left: -43px; bottom: 70px; transform-origin: 50% 430px; }
+.ttable.one .tfan4 .fc.sel { transform: rotate(var(--r)) translateY(-40px) scale(1.08); }
+.tslots.n1.one .slot { width: 207px; height: 333px; }
+.tslots.n1.one .tfront b { font-size: 24px; } .tslots.n1.one .tfront small { font-size: 13px; }
+.ttable.one .tfan4 .fc { transform-origin: 50% 400px; }

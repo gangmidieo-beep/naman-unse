@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#FBF7EE" />
+    <!-- 휴대폰 다크모드가 화면 색을 강제로 뒤집지 않게(대표님: 다크모드에서 제목·아이콘이 잘 안 보임) -->
+    <meta name="color-scheme" content="light only" />
     <title>나만의 운세</title>
     <link rel="icon" href="/img/icons/app_icon_32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -11,6 +13,7 @@
     <!-- 첫 화면 글자 번쩍임 막기(2026-10-19): 검색용 사전 렌더 글(.prerender)은 화면에 안 보이게 가리고, 앱이 뜰 때까지
          한지색 바탕 + 로고를 보여 준다. 처음 방문(인트로 영상 차례)이면 영상과 같은 남색 바탕. 글 자체는 그대로 있어 검색에는 읽힌다. -->
     <style>
+      :root { color-scheme: light only; }
       html, body { margin: 0; background: #F8F0DE; }
       .prerender::after { content: ""; position: fixed; inset: 0; z-index: 99; background: #F8F0DE url(/intro/intro_logo.webp) center 44% / min(56vw, 320px) no-repeat; }
       html.first .prerender::after { background: #0B1230 url(/intro/intro_poster.webp) center / cover no-repeat; }

@@ -17,3 +17,6 @@
 ## 첫 방문 인트로 영상 (2026-10-19)
 - `web/public/intro/intro.mp4`·`intro.webm`·`intro_poster.webp` — Higgsfield AI(이미지 GPT Image 2.5 → 영상 MiniMax H3)로 새로 생성. 월하선녀는 이 프로젝트의 기존 캐릭터 그림(`web/public/img/char/wolha_card.webp`)을 참고 이미지로 사용. 실존 인물 아님.
 - `web/public/intro/intro_logo.webp` — 대표님이 보내 주신 '나만의 운세' 로고(앱 아이콘 원본 `docs/assets-source/app_icon.png`)에서 바탕만 투명하게 뺀 것.
+
+## 점검 사항2 (2026-10-20)
+- `web/public/img/v4/tabc_*.webp` (메뉴 컬러 아이콘 5종), `bg_today_ivory.webp`·`bg_premium_brown.webp`·`bg_fun_ivory.webp` (배경), `web/public/img/thumb/thumb_tarot_*_v2.webp` (타로 새 주제 8종 썸네일) — 사장님 Higgsfield 계정 이미지 생성(GPT Image 2.5)으로 새로 만든 그림. 실존 인물·상표 없음.

@@ -2,6 +2,8 @@
 // demo=true 면 관리자 화면 확인용 가짜 회원·주문·이벤트 30일치를 만든다(개발 전용, 운영 DB 에 쓰지 말 것).
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import detailDb from '../../../packages/content/data/product-detail.json' with { type: 'json' };
+import copyHistory from '../../../packages/content/data/product-detail-history.json' with { type: 'json' };
+import { createHash } from 'node:crypto';
 import talismanMap from '../../../packages/content/data/talisman-map.json' with { type: 'json' };
 import bcrypt from 'bcryptjs';
 import brand from '../../../brand.config.json' with { type: 'json' };
@@ -12,6 +14,9 @@ import { newId } from './auth.ts';
 const S = schema;
 // v3: 상품마다 탭·분류·버튼 문구·결과 제목·추천 부적·상세 문구
 const recommendOf = (id: string) => (talismanMap.rules.find((r) => r.products.includes(id))?.talismans ?? ['t_all']).slice(0, 2);
+// 상세 문구 지문 — scripts/copy-history.mjs 와 같은 방식(키 정렬 JSON → sha1 앞 16자)
+const canonJson = (v: unknown): string => (Array.isArray(v) ? `[${v.map(canonJson).join(',')}]` : v && typeof v === 'object' ? `{${Object.keys(v as object).sort().map((k) => `${JSON.stringify(k)}:${canonJson((v as any)[k])}`).join(',')}}` : JSON.stringify(v));
+const copySha = (v: unknown) => createHash('sha1').update(canonJson(v)).digest('hex').slice(0, 16);
 const TAB: Record<string, string> = { reading: 'unse', photo: 'unse', tarot: 'tarot', talisman: 'talisman' };
 function v3Fields(p: any) {
   const talismanBtn = () => {
@@ -77,6 +82,15 @@ export async function seedBase(db: Db) {
     if (Object.keys(patch).length) await db.update(S.products).set(patch as any).where(eq(S.products.id, r.id));
   }
   if (needV2) await syncCatalogV2(db, rows);
+  // 상세 문구 동기화(2026-10-20): DB 에 예전 기본 문구가 그대로면(관리자가 고치지 않았으면) 새 문구로 바꾼다.
+  // 3차에서 상품 26종 설명을 고쳤는데 운영 DB 에는 처음 넣은 문구가 남아 화면이 안 바뀌던 문제. 관리자가 직접 고친 문구는 그대로 둔다.
+  for (const r of rows) {
+    if (!r.detailCopy) continue;
+    const [cur] = await db.select({ d: S.products.detailCopy }).from(S.products).where(eq(S.products.id, r.id));
+    if (!cur) continue;
+    const old = (copyHistory as Record<string, string[]>)[r.id] ?? [];
+    if (cur.d == null || (old.includes(copySha(cur.d)) && copySha(cur.d) !== copySha(r.detailCopy))) await db.update(S.products).set({ detailCopy: r.detailCopy }).where(eq(S.products.id, r.id));
+  }
   // v3 이전에 만든 DB: 새 칸이 비어 있는 상품만 채운다(관리자가 고친 값은 보존)
   for (const r of rows) if (r.tab) await db.update(S.products).set({ tab: r.tab, category: r.category, buttonLabel: r.buttonLabel, resultTitle: r.resultTitle, recommend: r.recommend, detailCopy: r.detailCopy }).where(and(eq(S.products.id, r.id), isNull(S.products.tab)));
   await db.insert(S.categories).values(brand.categories.filter((c) => c.id !== 'all').map((c: any, i) => ({ id: c.id, tab: 'unse', label: c.label, sub: c.sub ?? null, character: c.character ?? null, groups: c.groups ?? null, sort: i })))
