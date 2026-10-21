@@ -126,6 +126,19 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 - 앱 아이콘 원본: `docs/assets-source/app-icon/` (Play 스토어 512px 포함)
 - Play 스토어 등록(설명문·데이터 보안 답변·인앱 상품 130개·서비스 계정 연결·출시 순서): `docs/스토어등록.md`, 이미지 `docs/store/`
 
+## 10-1. 보상형 광고 (무료 상세 풀이 잠금)
+
+띠별·혈액형·MBTI·타로 결과와 오늘의 운세 상세 풀이는 **광고를 끝까지 봐야** 열립니다(프리미엄 회원 제외, 하루 횟수·간격은 관리자 「광고」). 재생 시간은 광고 플랫폼이 준 광고 길이 그대로입니다.
+
+| 어디 | 플랫폼 | 넣을 값 | 어디에 |
+|---|---|---|---|
+| 앱(Android) | AdMob 보상형(Rewarded) | `VITE_ADMOB_REWARDED_ID` = 보상형 광고 단위 ID (`ca-app-pub-…/…`) | 앱 빌드 PC의 `.env` (없으면 구글 테스트 광고) |
+| 웹 | Google Ad Manager 보상형 | `VITE_GAM_REWARDED_UNIT` = 광고 단위 경로 (`/네트워크코드/단위이름`) | Railway **www** 서비스 변수 → 재배포 |
+
+- AdMob: https://apps.admob.com → 앱 → 광고 단위 추가 → **보상형** → 단위 ID 복사
+- Ad Manager(웹 보상형은 애드센스에 없음): https://admanager.google.com → 인벤토리 → 광고 단위 → 새 단위(크기 **보상형**) → 경로 복사. Ad Manager 계정은 애드센스 계정으로 무료 개설 가능
+- 값이 비어 있으면(연동 전) 웹은 광고 없이 바로 열어 줍니다. 막고 싶으면 `brand.config.json` → `ads.rewardedResult.whenUnavailable` 을 `"block"` 으로
+
 ## 11. 점검 명령
 
 ```powershell

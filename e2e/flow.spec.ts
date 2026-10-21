@@ -35,7 +35,9 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await expect(page.getByLabel('오늘의 총운')).toBeVisible();
   await expect(page.getByText(/김순자님, 오늘의 운세예요/)).toBeVisible();
   await page.getByRole('button', { name: /상세 풀이 보기/ }).click();
-  await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 8000 });
+  // 보상형 광고 게이트(실제 플랫폼 연동 구조): 광고 보기 선택 → (시험 모드 가짜 광고 5초) → 보상 → 풀이 열림
+  await page.getByRole('button', { name: '광고 보고 풀이 열기' }).click();
+  await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 12000 });
   await expect(page.getByRole('region', { name: '상세 풀이' })).toBeVisible();
 
   // 운세 탭 → 운명·사주 → 재물운 상세(공통 템플릿) → 결제
@@ -112,8 +114,11 @@ test('무료 운세 3차: 띠 그림·해별 풀이, 혈액형 오늘 기질, MB
   await page.addInitScript(() => localStorage.setItem('naman-unse', JSON.stringify({ state: { introSeen: true, profiles: [{ id: 'p1', name: '테스트', gender: 'M', year: 1975, month: 11, day: 30, calendar: 'solar', leap: false, hour: 14 }], mainId: 'p1', purchases: [], talismans: [] }, version: 2 })));
   const openAd = async (name: RegExp) => {
     await page.getByRole('button', { name }).click();
-    const ad = page.getByRole('button', { name: '풀이 열기' });
-    if (await page.getByRole('dialog', { name: '광고' }).isVisible()) await ad.click({ timeout: 6000 });
+    const gate = page.getByRole('dialog', { name: '광고 보고 풀이 열기' });
+    if (await gate.isVisible()) {
+      await page.getByRole('button', { name: '광고 보고 풀이 열기' }).click();
+      await page.getByRole('button', { name: '풀이 열기' }).click({ timeout: 12000 });
+    }
   };
   await page.goto('/zodiac');
   await expect(page.locator('.zgrid img')).toHaveCount(12);

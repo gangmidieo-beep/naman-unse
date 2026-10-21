@@ -81,7 +81,7 @@ export default function Today() {
             {!open ? (
               <div className="pad mt14">
                 <Button kind="gold" onClick={() => run(() => unlock(key), 'today-detail')}>✦ 상세 풀이 보기</Button>
-                <div className="adnote">짧은 광고를 보시면 상세 풀이가 열립니다 · 프리미엄 회원은 광고 없음</div>
+                <div className="adnote">광고를 끝까지 보시면 상세 풀이가 열립니다 · 프리미엄 회원은 광고 없음</div>
               </div>
             ) : (
               <section className="detailbox" id="detail" aria-label="상세 풀이">

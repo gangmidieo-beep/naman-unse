@@ -391,7 +391,7 @@ export function Push() {
 const AD_LABEL: Record<string, [string, string]> = {
   home_banner: ['홈 하단 배너', '홈 화면 맨 아래 배너 1개'],
   detail_native: ['상세 운세 네이티브', '오늘의 운세 상세 풀이 안 네이티브 광고 1개'],
-  rewarded: ['결과 보상형 전면', '띠별·혈액형·MBTI·타로 결과, 오늘의 운세 상세 풀이 전'],
+  rewarded: ['결과 보상형 전면', '띠별·혈액형·MBTI·타로 결과, 오늘의 운세 상세 풀이 전 — 앱 AdMob 보상형, 웹 Google Ad Manager 보상형(광고 단위는 서버 변수 VITE_ADMOB_REWARDED_ID · VITE_GAM_REWARDED_UNIT). 광고를 끝까지 봐야 열림'],
   exit: ['앱 종료 팝업', '뒤로가기로 종료할 때 AdMob 또는 이미지+링크'],
   content_banner: ['콘텐츠 하단 배너', '재미로 보는 운세·띠별 결과 아래 배너'],
   tarot_banner: ['타로 탭 하단 배너', '타로 탭 맨 아래 배너'],

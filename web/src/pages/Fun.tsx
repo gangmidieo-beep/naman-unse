@@ -46,7 +46,7 @@ function Gate({ k, label, children }: { k: string; label: string; children: Reac
   return (
     <div className="pad mt14">
       <Button kind="gold" onClick={() => run(() => unlock(k), k)}>✦ {label}</Button>
-      <div className="adnote">짧은 광고를 보시면 결과가 열립니다 · 하루 횟수 제한 · 프리미엄 회원은 광고 없음</div>
+      <div className="adnote">광고를 끝까지 보시면 결과가 열립니다 · 하루 횟수 제한 · 프리미엄 회원은 광고 없음</div>
       {modal}
     </div>
   );
@@ -403,7 +403,7 @@ export function MbtiPage() {
                   <ul>{r.traits.map((x) => <li key={x}>{x}</li>)}</ul>
                 </div>
               )}
-              {!sajuOpen && !premium && <p className="adnote ink">짧은 광고를 보시면 사주 기질 풀이가 열립니다</p>}
+              {!sajuOpen && !premium && <p className="adnote ink">광고를 끝까지 보시면 사주 기질 풀이가 열립니다</p>}
             </section>
             <ShareBlock s={share} title="MBTI 운세" text={`${r.type} 오늘 — ${t.head}`} path="/fun/mbti" id={`mbti-${r.type}`}>
               <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 40 }}>{r.type}</p>

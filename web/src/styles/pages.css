@@ -394,3 +394,20 @@ textarea.input { min-height: 110px; padding: 12px 16px; font-size: 19px; line-he
 .sso { position: relative; min-height: 58px; font-size: 17.5px; }
 .sso i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 28px; height: 28px; }
 .sso.google { background: #fff; border: 1.5px solid #DADCE0; color: #1F1F1F; }
+
+/* ---------- 보상형 광고 게이트(전체 화면) — 2026-10-21 실제 광고 플랫폼 연동 구조 ---------- */
+.rg { position: fixed; inset: 0; z-index: 70; background: radial-gradient(120% 80% at 50% 0%, #1E2650 0%, #0F1430 60%, #090C1F 100%); color: #F5EFE1; display: grid; place-items: center; padding: 24px; animation: fade .2s; }
+.rg-in { width: 100%; max-width: 420px; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.rg-in small { font-family: var(--sans); font-size: 12px; letter-spacing: .3em; color: var(--gold); }
+.rg-in b { font-family: var(--serif); font-size: 26px; line-height: 1.35; font-weight: 900; }
+.rg-in p { font-size: 17px; line-height: 1.55; color: rgba(245, 239, 225, .78); }
+.rg .btn.big { width: 100%; min-height: 58px; font-size: 19px; margin-top: 6px; }
+.rg-x { background: none; border: 0; color: rgba(245, 239, 225, .6); font-size: 16px; text-decoration: underline; text-underline-offset: 4px; padding: 8px; cursor: pointer; }
+.rg-note { font-size: 14px; color: rgba(245, 239, 225, .5); }
+.rg-spin { width: 44px; height: 44px; border-radius: 50%; border: 3px solid rgba(230, 200, 119, .25); border-top-color: var(--gold); animation: rgspin .9s linear infinite; }
+@keyframes rgspin { to { transform: rotate(360deg); } }
+.rg-mock { width: 100%; height: 100%; display: grid; grid-template-rows: auto 1fr auto auto; gap: 14px; justify-items: center; align-items: center; }
+.rg-tag { font-family: var(--sans); font-size: 13px; color: #0F1430; background: var(--gold); border-radius: 999px; padding: 4px 12px; font-weight: 800; }
+.rg-mockbox { width: 100%; height: 100%; min-height: 50vh; border: 2px dashed rgba(230, 200, 119, .45); border-radius: 18px; display: grid; place-items: center; text-align: center; font-size: 22px; color: rgba(245, 239, 225, .7); line-height: 1.6; }
+.rg-mockbox small { font-size: 14px; color: rgba(245, 239, 225, .45); }
+.rg-count { font-family: var(--sans); font-size: 18px; font-weight: 800; color: var(--gold); }

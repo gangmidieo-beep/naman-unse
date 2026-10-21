@@ -1145,7 +1145,8 @@
     "rewardedResult": {
       "enabled": true,
       "maxPerDay": 5,
-      "minIntervalSec": 60
+      "minIntervalSec": 60,
+      "whenUnavailable": "open"
     },
     "exitPopup": {
       "mode": "admob"

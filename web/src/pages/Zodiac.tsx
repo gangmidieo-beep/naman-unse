@@ -90,7 +90,7 @@ export function ZodiacDetail() {
         {!open ? (
           <div className="pad mt14">
             <Button kind="gold" onClick={() => run(() => unlock(key), 'zodiac')}>✦ {name}띠 오늘 운세 보기</Button>
-            <div className="adnote">짧은 광고를 보시면 결과가 열립니다 · 프리미엄 회원은 광고 없음</div>
+            <div className="adnote">광고를 끝까지 보시면 결과가 열립니다 · 프리미엄 회원은 광고 없음</div>
           </div>
         ) : (
           <>
