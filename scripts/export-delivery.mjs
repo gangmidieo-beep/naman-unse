@@ -2,7 +2,7 @@
 // 작업 기록·내부 자료·참고 캡처를 빼고, 운영용 CLAUDE.md 로 바꾸고, 새 git 이력(커밋 1개)으로 시작한다.
 // 끝나면 사본에서 독립성 검사(전 파일)·비밀 값 검사를 돌려 둘 다 통과해야 성공.
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,6 +39,12 @@ console.log(`복사 ${keep.length}개 파일 (뺀 것 ${files.length - keep.leng
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: OUT, stdio: 'inherit' });
 run('node', ['scripts/check-independence.mjs', '--all']);
 run('node', ['scripts/scan-secrets.mjs']);
+// 납품본의 독립성 검사 스크립트는 금지어 목록을 '공개해도 되는 것'만으로 바꾼다
+// (개발 저장소 목록에는 다른 서비스의 판매자 아이디·서비스 ID 가 들어 있어 양수인에게 넘기지 않음)
+const pub = 'dXAucmFpbHdheS5hcHAKZmJxKCdpbml0Jwpzay1hbnQtCnhrZXlzaWItCuyynOq2geuPhOuguQ=='; // base64(키 접두어 2종·임시 도메인·픽셀 호출·옛 캐릭터 이름) — 이 파일이 검사에 걸리지 않게 부호화
+const ci = join(OUT, 'scripts', 'check-independence.mjs');
+writeFileSync(ci, readFileSync(ci, 'utf8').replace(/Buffer\.from\(\n\s*'[A-Za-z0-9+/=]+',\n\s*'base64',\n\)/, `Buffer.from('${pub}', 'base64')`).replace('목록 원본: docs/독립양도구조.md', '납품본: 키 접두어·임시 도메인·옛 캐릭터 이름만 검사'));
+run('node', ['scripts/check-independence.mjs', '--all']);
 run('git', ['init', '-q', '-b', 'main']);
 run('git', ['add', '-A']);
 run('git', ['-c', 'user.name=H COMPANY', '-c', 'user.email=delivery@localhost', 'commit', '-q', '-m', '나만의 운세 v1.0.0 납품본']);

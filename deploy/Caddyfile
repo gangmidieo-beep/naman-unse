@@ -20,6 +20,10 @@
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
+		# 2026-10-21 양도 전 점검: 항상 https 로(1년), 다른 사이트 iframe 안에 끼워 넣기 금지(클릭 가로채기 방지)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options SAMEORIGIN
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
 	}
 	try_files {path} {path}/index.html /index.html
 	file_server

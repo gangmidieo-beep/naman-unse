@@ -843,3 +843,8 @@
 .tslots.n1.one .slot { width: 207px; height: 333px; }
 .tslots.n1.one .tfront b { font-size: 24px; } .tslots.n1.one .tfront small { font-size: 13px; }
 .ttable.one .tfan4 .fc { transform-origin: 50% 400px; }
+
+/* 2026-10-21 양도 전 전수 점검: 부적 목록 줄이 좁은 폰에서 오른쪽으로 삐져나가던 것(가격 줄 nowrap) — 줄은 화면 안에, 긴 가격 설명은 줄바꿈 */
+.row4 { min-width: 0; max-width: 100%; overflow: hidden; }
+.row4 .pc-price { flex-wrap: wrap; white-space: normal; }
+.row4 .pc-price small { white-space: nowrap; }

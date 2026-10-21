@@ -1,9 +1,10 @@
 // 나만의 운세 서버 — Fastify. 공개 API + 관리자 API(/admin/api). MOCK_MODE 면 결제·로그인·푸시를 가짜로 처리한다.
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
+import { mockMode } from './services/mock.ts';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import bcrypt from 'bcryptjs';
-import { and, asc, desc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, extname } from 'node:path';
@@ -28,7 +29,9 @@ const API = () => process.env.API_ORIGIN || `http://localhost:${process.env.PORT
 const UPLOADS = fileURLToPath(new URL('../.data/uploads', import.meta.url));
 
 export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean; mock?: boolean; http?: typeof fetch } = {}) {
-  const MOCK = opts.mock ?? process.env.MOCK_MODE !== 'false';
+  // 시험 모드(결제 없이 바로 지급)는 MOCK_MODE=true 라고 똑똑히 적었을 때만. 변수가 없거나 오타면 '운영'으로 본다(예전엔 반대라 변수를 지우면 공짜 지급이 됐음)
+  const MOCK = opts.mock ?? mockMode();
+  if (MOCK && (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production')) console.warn('[경고] 운영 환경인데 MOCK_MODE=true — 결제 없이 상품이 지급됩니다. Railway 변수 MOCK_MODE 를 false 로 바꾸세요.');
   const http = opts.http ?? fetch;
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024 });
   const db = opts.db ?? (await openDb()).db;
@@ -64,7 +67,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.get('/auth/providers', async () => ({ providers: MOCK ? ['google', 'kakao', 'naver'] : (['google', 'kakao', 'naver'] as const).filter((p) => isConfigured(p)) }));
 
   /* ---------- 게스트·로그인 ---------- */
-  app.post('/auth/guest', async (req) => {
+  app.post('/auth/guest', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req) => {
     const { deviceId, platform } = (req.body ?? {}) as { deviceId?: string; platform?: string };
     const dev = deviceId || newId('d_');
     let [u] = await db.select().from(S.users).where(and(eq(S.users.deviceId, dev), isNull(S.users.provider)));
@@ -95,8 +98,13 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const { code, state } = req.query as { code?: string; state?: string };
     const st = state ? takeState(state) : null;
     if (!isProvider(provider) || !code || !st) return rep.redirect(`${WEB()}/auth/callback?error=1`);
-    const info = await exchange(provider, code, `${API()}/auth/${provider}/callback`, state!);
-    return finishLogin(rep, provider, info, st.redirect);
+    try {
+      const info = await exchange(provider, code, `${API()}/auth/${provider}/callback`, state!);
+      return await finishLogin(rep, provider, info, st.redirect);
+    } catch (e) { // 제공자 쪽 오류(코드 만료·키 불일치 등) — 500 대신 로그인 화면으로
+      req.log.warn(`[oauth ${provider}] ${(e as Error).message}`);
+      return rep.redirect(`${WEB()}/auth/callback?error=1`);
+    }
   });
   // 게스트로 쓰던 사주·구매·부적·구독·이벤트를 로그인 계정으로 합치기
   app.post('/auth/merge', async (req, rep) => {
@@ -329,6 +337,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [o] = await db.select().from(S.orders).where(eq(S.orders.id, f.orderId));
     if (!o || o.channel !== 'pg') return rep.type('text/plain').send('SUCCESS'); // 모르는 주문은 기록만 하고 재전송은 멈춘다
     if (f.state === 'paid') {
+      if (o.status !== 'pending') return rep.type('text/plain').send('SUCCESS'); // 이미 확정·취소된 주문에 온 재전송 — 상태를 건드리지 않음
       if (f.amount !== o.amount) { // 금액 위변조 — 확정하지 않음
         req.log.error(`[payapp] 금액 불일치 order=${o.id} 주문=${o.amount} 통보=${f.amount}`);
         await db.update(S.orders).set({ status: 'failed' }).where(eq(S.orders.id, o.id));
@@ -358,7 +367,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       if (target) await revokeOrder(db, target, target.status === 'paid' ? 'refunded' : 'cancelled');
       return;
     }
-    if (f.state === 'failed') { log.warn(`[payapp rebill] 자동결제 실패 rebill=${f.rebillNo} user=${userId}`); return; }
+    if (f.state === 'failed') { log.warn(`[payapp rebill] 자동결제 실패 rebill=${f.rebillNo} user=${userId}`); await markRebillFailed(f.rebillNo); return; }
     if (f.state !== 'paid') return;
     const expected = first?.amount ?? sub!.amount;
     if (f.amount !== expected) { log.error(`[payapp rebill] 금액 불일치 rebill=${f.rebillNo} 주문=${expected} 통보=${f.amount}`); return; }
@@ -375,8 +384,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const f = env ? parsePayappFeedback((req.body ?? {}) as Record<string, unknown>, env, (m) => req.log.warn(m)) : null;
     if (!f) return rep.code(400).type('text/plain').send('FAIL');
     req.log.warn(`[payapp rebill] 자동결제 승인 실패 rebill=${f.rebillNo} order=${f.orderId}`);
+    await markRebillFailed(f.rebillNo);
     return rep.type('text/plain').send('SUCCESS');
   });
+  // 자동결제 승인 실패: 구독을 '유예(grace)'로 표시(이미 낸 기간까지는 그대로 이용, 관리자 구독 화면에 보임). PayApp 이 다시 승인하면 갱신 통보로 active 로 돌아온다
+  async function markRebillFailed(rebillNo?: string) {
+    if (!rebillNo) return;
+    await db.update(S.subscriptions).set({ status: 'grace' }).where(and(eq(S.subscriptions.rebillNo, rebillNo), eq(S.subscriptions.status, 'active')));
+  }
   // 자동결제 해지(웹) — PayApp 정기결제를 해지하고, 이미 낸 기간까지는 그대로 이용
   async function stopRebills(userIds: string[], why: string) {
     const env = payappEnv();
@@ -425,6 +440,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       if (p.kind === 'subscription') {
         const s = await verifySubscription(b.purchaseToken, http);
         if (!subscriptionUsable(s.status, s.expiresAt)) return rep.code(402).send({ error: '구독이 활성 상태가 아니에요' });
+        if (s.productId && s.productId !== playId) return rep.code(402).send({ error: '구매한 구독 상품과 달라요' }); // 월 구독 토큰으로 연 구독 신고 못 하게
         return fulfillOrder(db, order, { ref: b.purchaseToken, expiresAt: s.expiresAt, subStatus: s.status });
       }
       const c = await verifyProduct(playId, b.purchaseToken, http);
@@ -542,10 +558,13 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   });
 
   /* ---------- 공유 링크 /s/:code ---------- */
-  app.post('/share', async (req) => {
-    const b = req.body as { contentId: string; path: string; title: string; text: string };
+  app.post('/share', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const b = (req.body ?? {}) as { contentId?: string; path?: string; title?: string; text?: string };
+    const userId = await userOf(req);
+    if (!userId) return rep.code(401).send({ error: '로그인(게스트 포함)이 필요해요' });
+    if (!b.contentId || !b.path || !String(b.path).startsWith('/') || String(b.path).startsWith('//')) return rep.code(400).send({ error: '공유할 화면이 없어요' });
     const code = newId().slice(0, 10);
-    await db.insert(S.shareLinks).values({ code, contentId: b.contentId, path: b.path, title: String(b.title).slice(0, 80), text: String(b.text).slice(0, 200), userId: await userOf(req) });
+    await db.insert(S.shareLinks).values({ code, contentId: String(b.contentId).slice(0, 60), path: String(b.path).slice(0, 200), title: String(b.title ?? '').slice(0, 80), text: String(b.text ?? '').slice(0, 200), userId });
     return { code, url: `${API()}/s/${code}` };
   });
   app.get('/s/:code', async (req, rep) => {
@@ -611,7 +630,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const { email, password } = req.body as { email: string; password: string };
     const [a] = await db.select().from(S.admins).where(eq(S.admins.email, String(email).toLowerCase()));
     if (!a) return rep.code(401).send({ error: '이메일 또는 비밀번호가 맞지 않아요' });
-    if (a.lockedUntil && a.lockedUntil > new Date()) return rep.code(423).send({ error: '5회 틀려서 10분간 잠겼어요' });
+    if (a.lockedUntil && a.lockedUntil > new Date()) return rep.code(401).send({ error: '이메일 또는 비밀번호가 맞지 않아요 (여러 번 틀리면 10분간 잠겨요)' });
     if (!(await bcrypt.compare(password, a.passwordHash))) {
       const failed = a.failedCount + 1;
       await db.update(S.admins).set({ failedCount: failed, lockedUntil: failed >= 5 ? new Date(Date.now() + 600_000) : null }).where(eq(S.admins.id, a.id));
@@ -801,14 +820,23 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.get(`${A}/audit`, { preHandler: guard('super') }, async () => db.select().from(S.auditLogs).orderBy(desc(S.auditLogs.createdAt)).limit(200));
 
   // 예약 푸시 — 1분마다 도래한 캠페인을 발송 처리(FCM 연결 전 MOCK) + 매일 아침 자동 푸시(사용자 알림 시간)
+  // 어떤 단계가 실패해도(DB 잠깐 끊김·FCM 오류) 서버가 죽지 않게 전부 감싼다
+  let ticking = false;
   const timer = setInterval(async () => {
-    await runDailyPush(db, http).catch((e) => app.log.warn(`[daily push] ${(e as Error).message}`));
-    await runExpiryReminders(db, http).catch((e) => app.log.warn(`[expiry remind] ${(e as Error).message}`));
-    const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
-    for (const c of due) {
-      await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시
-      await db.update(S.pushCampaigns).set({ status: 'sent', sentCount: await deliver(c) }).where(eq(S.pushCampaigns.id, c.id));
-    }
+    if (ticking) return;
+    ticking = true;
+    try {
+      await runDailyPush(db, http).catch((e) => app.log.warn(`[daily push] ${(e as Error).message}`));
+      await runExpiryReminders(db, http).catch((e) => app.log.warn(`[expiry remind] ${(e as Error).message}`));
+      const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
+      for (const c of due) {
+        await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시
+        const sentCount = await deliver(c).catch((e) => { app.log.warn(`[push ${c.id}] ${(e as Error).message}`); return 0; });
+        await db.update(S.pushCampaigns).set({ status: 'sent', sentCount }).where(eq(S.pushCampaigns.id, c.id));
+      }
+      // 결제창에서 그냥 나간 주문은 하루 지나면 '취소'로 정리(통계·목록 오염 방지). PayApp 통보는 분 단위로 오므로 하루면 충분
+      await db.update(S.orders).set({ status: 'cancelled' }).where(and(eq(S.orders.status, 'pending'), eq(S.orders.channel, 'pg'), lt(S.orders.createdAt, new Date(Date.now() - 86_400_000))));
+    } catch (e) { app.log.warn(`[timer] ${(e as Error).message}`); } finally { ticking = false; }
   }, 60_000);
   app.addHook('onClose', async () => clearInterval(timer));
   return { app, db };

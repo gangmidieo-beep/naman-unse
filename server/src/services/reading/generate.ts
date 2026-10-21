@@ -1,6 +1,7 @@
 // 유료 풀이 생성 — 결제 완료 → readings(queued) → 워커가 생성 → done.
 // 실제 AI 호출은 READING_AI=live + ANTHROPIC_API_KEY + ANTHROPIC_MODEL 이 모두 있을 때만(비용 보고·승인 후 켬). 아니면 예시 풀이로 흐름만 완성.
 import { and, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import { mockMode } from '../mock.ts';
 import { calcSaju, solarToLunar, tojeong, type SajuResult } from '@naman/engine';
 import outline from '../../../../packages/content/data/reading-outline.json' with { type: 'json' };
 import sajuSample from '../../../../packages/content/data/sample-readings/saju.json' with { type: 'json' };
@@ -139,6 +140,8 @@ export function startReadingWorker(db: Db, log: { warn: (m: string) => void }, h
     if (busy) return;
     busy = true;
     try {
+      // 운영 중 AI 가 꺼져 있으면(키 없음·READING_AI!=live) 결제된 풀이를 예시 내용으로 끝내지 않고 대기열에 둔다 — 키를 넣으면 이어서 생성
+      if (!liveAI() && !mockMode()) return;
       // 40분 넘게 generating 이면 멈춘 것으로 보고 다시 대기열로(서버 재시작 등). 끝난 장은 content 에 남아 있어 이어서 쓴다
       await db.update(S.readings).set({ status: 'queued' }).where(and(eq(S.readings.status, 'generating'), or(lt(S.readings.startedAt, new Date(Date.now() - 2_400_000)), and(isNull(S.readings.startedAt), lt(S.readings.createdAt, new Date(Date.now() - 2_400_000))))));
       // 실패한 풀이는 3분 뒤 자동으로 다시(최대 3번)
@@ -146,7 +149,7 @@ export function startReadingWorker(db: Db, log: { warn: (m: string) => void }, h
       const list = await db.select().from(S.readings).where(eq(S.readings.status, 'queued')).limit(2);
       if (list.length) await db.update(S.readings).set({ status: 'generating', startedAt: new Date() }).where(inArray(S.readings.id, list.map((x) => x.id)));
       await Promise.all(list.map((r) => runOne(db, r, http).catch((e) => log.warn(`[reading] ${r.id} 실패: ${e.message}`))));
-    } finally { busy = false; }
+    } catch (e) { log.warn(`[reading worker] ${(e as Error).message}`); } finally { busy = false; }
   };
   const t = setInterval(tick, 3000);
   t.unref?.();

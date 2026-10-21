@@ -88,7 +88,7 @@
 .ad-notif strong { font-size: 14px; }
 .ad-adslot { display: grid; gap: 8px; }
 .ad-login { min-height: 100vh; display: grid; place-items: center; background: var(--ink); padding: 20px; }
-.ad-login form { width: min(380px, 100%); background: var(--hanji); border-radius: 18px; padding: 26px; display: grid; gap: 12px; }
+.ad-login form { box-sizing: border-box; width: 100%; max-width: 380px; background: var(--hanji); border-radius: 18px; padding: 26px; display: grid; gap: 12px; }
 .ad-login h1 { font-family: var(--brush); font-weight: 400; font-size: 26px; display: flex; gap: 8px; align-items: center; }
 .ad-login label { display: grid; gap: 4px; font-weight: 700; font-size: 14px; }
 .ad-login input { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; background: #FFFDF8; }

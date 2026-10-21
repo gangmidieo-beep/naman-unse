@@ -15,7 +15,9 @@ const SITE = '나만의 운세';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const shell = readFileSync(join(dist, 'index.html'), 'utf8');
+const PAGES = []; // sitemap 용
 function page(path, title, desc, body) {
+  PAGES.push(path);
   const html = shell
     .replace(/<title>.*?<\/title>/, `<title>${esc(title)}</title>\n    <meta name="description" content="${esc(desc)}" />\n    <meta property="og:title" content="${esc(title)}" />\n    <meta property="og:description" content="${esc(desc)}" />`)
     .replace('<div id="root"></div>', `<div id="root"><div class="prerender">${body}</div></div>`);
@@ -55,6 +57,11 @@ page('privacy', `개인정보처리방침 | ${SITE}`, `${SITE} 개인정보처�
 page('terms', `이용약관 | ${SITE}`, `${SITE} 이용약관`, `<h1>이용약관</h1><p>서비스 내용, 결제와 환불, 이용자의 의무를 안내합니다.</p>`);
 page('contact', `문의하기 | ${SITE}`, `${SITE} 문의`, `<h1>문의하기</h1><p>이용 중 불편한 점이나 결제·환불 문의를 받습니다.</p>`);
 
+// robots.txt · sitemap.xml (2026-10-21 양도 전 점검) — 검색 등록용. 관리자·결제·내 운세함은 검색 제외
+const ORIGIN = (process.env.PUBLIC_WEB_ORIGIN ?? env.PUBLIC_WEB_ORIGIN ?? '').replace(/\/$/, '');
+writeFileSync(join(dist, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nDisallow: /pay\nDisallow: /box\nDisallow: /reading\nDisallow: /auth\nDisallow: /dev\n${ORIGIN ? `Sitemap: ${ORIGIN}/sitemap.xml\n` : ''}`);
+const today = new Date().toISOString().slice(0, 10);
+writeFileSync(join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...PAGES, 'fun', 'zodiac', 'fun/zodiac-star', 'fun/blood', 'fun/mbti', 'fun/dream', 'fun/small', 'fun/oneline', 'fun/factbomb'].map((p) => `  <url><loc>${ORIGIN}/${p}</loc><lastmod>${today}</lastmod></url>`).join('\n')}\n</urlset>\n`);
 // ads.txt — 게시자 ID(ca-pub-XXXX → pub-XXXX)
 const pub = ADSENSE.replace(/^ca-/, '');
 writeFileSync(join(dist, 'ads.txt'), pub ? `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n` : '# 대표님 애드센스 게시자 ID(ADSENSE_CLIENT_ID)를 .env 에 넣고 다시 빌드하면 채워집니다\n');

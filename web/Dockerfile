@@ -2,7 +2,7 @@
 # 빌드 때 API_ORIGIN·PUBLIC_WEB_ORIGIN·MOCK_MODE 등이 화면 코드에 들어간다(Railway 는 서비스 변수를 빌드 인자로 넘김).
 FROM node:22-slim AS build
 WORKDIR /app
-ARG MOCK_MODE=true
+ARG MOCK_MODE=false
 ARG API_ORIGIN=
 ARG PUBLIC_WEB_ORIGIN=
 ARG KAKAO_JS_KEY=

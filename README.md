@@ -69,6 +69,8 @@ npm run dev                 # 웹 http://localhost:5391 · 서버 http://localho
 5. 터미널로 올릴 때: `railway up --service server` / `railway up --service www`
 6. 확인: `https://서버주소/health` 가 `{"ok":true}` 이면 정상
 
+> **서버는 1대(replica 1)로 운영하세요.** 풀이 생성 워커·예약 푸시·로그인 state 가 서버 메모리를 쓰기 때문에 2대 이상이면 풀이가 두 번 만들어지거나 로그인이 실패할 수 있어요. (Railway 기본값이 1대)
+
 ## 5. 도메인 연결
 
 - Railway → 서비스 → Settings → Networking → **Custom Domain** 에 `www.도메인`(웹), `api.도메인`(서버) 추가 → 안내되는 CNAME 을 도메인 회사 DNS 에 입력

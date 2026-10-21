@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     envDir: '..',
     define: {
-      __MOCK_MODE__: JSON.stringify(env.MOCK_MODE !== 'false'),
+      // 시험 모드는 MOCK_MODE=true 라고 똑똑히 적었을 때만(변수 없음·오타 = 운영). 개발 서버(vite dev)·테스트는 변수 없어도 시험 모드
+      __MOCK_MODE__: JSON.stringify(env.MOCK_MODE === 'true' || (env.MOCK_MODE === undefined && mode !== 'production')),
       __API_ORIGIN__: JSON.stringify(env.API_ORIGIN || ''),
       __PUBLIC_WEB_ORIGIN__: JSON.stringify(env.PUBLIC_WEB_ORIGIN || ''),
       __KAKAO_JS_KEY__: JSON.stringify(env.KAKAO_JS_KEY || ''),

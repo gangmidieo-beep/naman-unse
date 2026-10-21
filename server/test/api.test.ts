@@ -81,7 +81,7 @@ describe('공개 API', () => {
   });
   it('이벤트 배치 + 공유 링크 OG·카드 이미지', async () => {
     expect((await app.inject({ method: 'POST', url: '/events', payload: { events: [{ name: 'content_view', props: { content: 'tarot' } }] } })).json().saved).toBe(1);
-    const s = (await app.inject({ method: 'POST', url: '/share', payload: { contentId: 'today', path: '/today', title: '오늘의 운세', text: '94점 — 좋은 날이에요' } })).json();
+    const s = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'today', path: '/today', title: '오늘의 운세', text: '94점 — 좋은 날이에요' } })).json();
     const html = await app.inject({ url: `/s/${s.code}` });
     expect(html.body).toContain('og:image');
     expect(html.body).toContain('utm_source=share');
@@ -153,7 +153,7 @@ describe('관리자 API', () => {
   });
   it('관리자 5회 실패 잠금', async () => {
     for (let i = 0; i < 5; i++) await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'staff@test.kr', password: 'wrong' } });
-    expect((await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'staff@test.kr', password: 'staff-secret-1' } })).statusCode).toBe(423);
+    expect((await app.inject({ method: 'POST', url: '/admin/api/login', payload: { email: 'staff@test.kr', password: 'staff-secret-1' } })).statusCode).toBe(401); // 잠김도 401(계정 존재 여부를 안 알려줌)
   });
   it('관리자 계정: 추가 → 비밀번호 변경 → 이전 관리자 삭제(남은 토큰도 즉시 무효)', async () => {
     const ip = { remoteAddress: '10.9.9.9' }; // 위 잠금 테스트와 분당 로그인 제한을 나눠 쓰지 않게

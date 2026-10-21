@@ -5,6 +5,11 @@ import { createAdmin } from './services/seed.ts';
 import { schema as S } from './db/index.ts';
 import { startReadingWorker } from './services/reading/generate.ts';
 
+// 운영 필수값 점검 — 비밀키 없이 떠서 첫 로그인 때 죽는 일이 없게 시작 전에 거부
+if ((process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production') && !process.env.JWT_SECRET) { console.error('JWT_SECRET 이 없어요 — Railway 변수(또는 .env)에 32자 이상 임의 문자열을 넣어 주세요'); process.exit(1); }
+// 잡히지 않은 비동기 오류는 로그만 남기고 서버는 계속(Node 는 기본으로 프로세스를 끝내 버림)
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
+
 // 첫 배포용: ADMIN_EMAIL + ADMIN_INIT_PASSWORD 가 있고 관리자가 한 명도 없을 때만 한 번 만든다.
 // (양도 때 이전 관리자를 지워도 재시작하면서 다시 생기지 않게 — 이후 계정·비밀번호는 관리자 화면 「관리자 계정」에서)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_INIT_PASSWORD) {

@@ -95,6 +95,14 @@ describe('PayApp 웹 결제', () => {
     expect(o.status).toBe('paid');
     const ent = (await app.inject({ url: '/me/entitlements', headers: auth(token) })).json();
     expect(ent.owned.filter((x: any) => x.orderId === orderId)).toHaveLength(1);
+    // 이미 확정된 주문에 다른 금액의 통보가 다시 와도(재전송·오류) 결제완료가 '실패'로 뒤집히지 않음
+    expect((await feedback(orderId, 100)).body).toBe('SUCCESS');
+    expect((await app.inject({ url: `/orders/${orderId}`, headers: auth(token) })).json().status).toBe('paid');
+  });
+  it('공유 링크는 로그인(게스트 포함) 필요, 상대 경로만', async () => {
+    expect((await app.inject({ method: 'POST', url: '/share', payload: { contentId: 'x', path: '/today', title: 't', text: 'x' } })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'x', path: 'https://evil.example', title: 't', text: 'x' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'x', path: '/today', title: 't', text: 'x' } })).statusCode).toBe(200);
   });
   it('웹 월 구독 = PayApp 정기결제(매월 자동결제): 등록 → 1회차 → 다음 달 자동 승인 → 해지 → 기간까지 이용', async () => {
     const t = await guest('pay-3');
