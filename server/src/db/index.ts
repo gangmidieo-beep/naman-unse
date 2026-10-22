@@ -18,7 +18,17 @@ export async function openDb(opts: { url?: string; dir?: string } = {}): Promise
   if (url) {
     const client = postgres(url, { max: 10 });
     const db = drizzlePg(client, { schema, casing: 'snake_case' }) as unknown as Db;
-    await migratePg(db as any, { migrationsFolder: MIGRATIONS });
+    // Railway 내부망(postgres.railway.internal)은 컨테이너가 뜬 직후 몇 초 동안 이름이 안 풀릴 수 있다(2026-10-22 실제 발생: 서버가 바로 죽고 재시작 반복).
+    // 연결·이름 풀이 실패면 최대 90초(3초 × 30회) 다시 시도하고, 그래도 안 되면 그때 종료
+    for (let i = 1; ; i++) {
+      try { await migratePg(db as any, { migrationsFolder: MIGRATIONS }); break; }
+      catch (e) {
+        const code = (e as any)?.cause?.code ?? (e as any)?.code;
+        if (i >= 30 || !['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'EAI_AGAIN', 'ETIMEDOUT', 'CONNECT_TIMEOUT'].includes(code)) throw e;
+        console.warn(`[db] 연결 대기 ${i}/30 (${code}) — 3초 뒤 다시`);
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
     return { db, close: () => client.end() };
   }
   const dir = opts.dir ?? process.env.PGLITE_DIR ?? fileURLToPath(new URL('../../.data/pglite', import.meta.url));
