@@ -63,6 +63,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       .where(and(eq(S.subscriptions.userId, userId), inArray(S.subscriptions.status, ['active', 'grace']), gt(S.subscriptions.expiresAt, new Date()))).limit(1))[0];
 
   app.get('/health', async () => ({ ok: true, mock: MOCK }));
+  // 운세함 '공지사항' — 아직 관리자 공지 기능이 없어 빈 목록(화면은 "공지가 없어요"). 2026-10-23 양도 전 점검: 404 로그 제거
+  app.get('/notices', async () => [] as { id: string; title: string; body: string; createdAt: string }[]);
   // 화면이 "어떤 로그인을 보여줄지·결제 전에 로그인을 요구할지" 정할 때 씀(키가 등록된 것만)
   app.get('/auth/providers', async () => ({ providers: MOCK ? ['google', 'kakao', 'naver'] : (['google', 'kakao', 'naver'] as const).filter((p) => isConfigured(p)) }));
 

@@ -87,7 +87,7 @@
 .ad-notif .seal { width: 18px; height: 18px; font-size: 10px; }
 .ad-notif strong { font-size: 14px; }
 .ad-adslot { display: grid; gap: 8px; }
-.ad-login { min-height: 100vh; display: grid; place-items: center; background: var(--ink); padding: 20px; }
+.ad-login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 380px); justify-content: center; align-items: center; background: var(--ink); padding: 20px; }
 .ad-login form { box-sizing: border-box; width: 100%; max-width: 380px; background: var(--hanji); border-radius: 18px; padding: 26px; display: grid; gap: 12px; }
 .ad-login h1 { font-family: var(--brush); font-weight: 400; font-size: 26px; display: flex; gap: 8px; align-items: center; }
 .ad-login label { display: grid; gap: 4px; font-weight: 700; font-size: 14px; }
