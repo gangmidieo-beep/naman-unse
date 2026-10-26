@@ -4,6 +4,11 @@ import { openDb } from './db/index.ts';
 import { createAdmin } from './services/seed.ts';
 import { schema as S } from './db/index.ts';
 import { startReadingWorker } from './services/reading/generate.ts';
+import { aiStatus, normalizeAiEnv } from './services/env.ts';
+
+// AI 변수 값 정리(앞뒤 공백·따옴표·대소문자) — 대표님이 Railway 화면에서 직접 넣은 값이 조금 달라도 켜지게
+normalizeAiEnv();
+console.log('[AI] 상태', JSON.stringify(aiStatus()));
 
 // 운영 필수값 점검 — 비밀키 없이 떠서 첫 로그인 때 죽는 일이 없게 시작 전에 거부
 if ((process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production') && !process.env.JWT_SECRET) { console.error('JWT_SECRET 이 없어요 — Railway 변수(또는 .env)에 32자 이상 임의 문자열을 넣어 주세요'); process.exit(1); }

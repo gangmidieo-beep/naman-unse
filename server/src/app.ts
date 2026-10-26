@@ -1,6 +1,7 @@
 // 나만의 운세 서버 — Fastify. 공개 API + 관리자 API(/admin/api). MOCK_MODE 면 결제·로그인·푸시를 가짜로 처리한다.
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { mockMode } from './services/mock.ts';
+import { aiStatus } from './services/env.ts';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import bcrypt from 'bcryptjs';
@@ -62,7 +63,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     !!(await db.select({ id: S.subscriptions.id }).from(S.subscriptions)
       .where(and(eq(S.subscriptions.userId, userId), inArray(S.subscriptions.status, ['active', 'grace']), gt(S.subscriptions.expiresAt, new Date()))).limit(1))[0];
 
-  app.get('/health', async () => ({ ok: true, mock: MOCK }));
+  // ai: 유료 풀이(reading)·손금관상(photo)·2세(baby) 켜짐 여부 + 빠진 변수 이름(값은 안 보임) — 양도 후 대표님 키 입력 확인용
+  app.get('/health', async () => ({ ok: true, mock: MOCK, ai: aiStatus() }));
   // 운세함 '공지사항' — 아직 관리자 공지 기능이 없어 빈 목록(화면은 "공지가 없어요"). 2026-10-23 양도 전 점검: 404 로그 제거
   app.get('/notices', async () => [] as { id: string; title: string; body: string; createdAt: string }[]);
   // 화면이 "어떤 로그인을 보여줄지·결제 전에 로그인을 요구할지" 정할 때 씀(키가 등록된 것만)
