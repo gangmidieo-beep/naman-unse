@@ -134,6 +134,14 @@ describe('관리자 API', () => {
     expect(st.dreamTop.length).toBeGreaterThan(0);
     expect(st.shares.length).toBeGreaterThan(0);
   });
+  it('브라우저 사전 요청(CORS) — 관리자 저장(PATCH)·광고(PUT)·삭제(DELETE) 허용', async () => {
+    const origin = 'https://localhost'; // 앱(Capacitor) 출처 — 웹 출처도 같은 설정을 씀
+    for (const [method, url] of [['PATCH', '/admin/api/products/wealth'], ['PUT', '/admin/api/ads/home_banner'], ['DELETE', '/admin/api/banners/x'], ['DELETE', '/profiles/x']]) {
+      const r = await app.inject({ method: 'OPTIONS', url, headers: { origin, 'access-control-request-method': method, 'access-control-request-headers': 'authorization,content-type' } });
+      expect(r.statusCode).toBe(204);
+      expect(String(r.headers['access-control-allow-methods'])).toContain(method);
+    }
+  });
   it('권한 2단계 — 운영자는 가격·광고·환불 불가, 변경 이력 기록', async () => {
     expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(staff), payload: { badge: 'BEST' } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(staff), payload: { price: 1000 } })).statusCode).toBe(403);

@@ -39,7 +39,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   await seedBase(db);
   if (opts.demo) await seedDemo(db);
   const origins = [WEB(), 'https://localhost', 'capacitor://localhost', 'http://localhost', /^http:\/\/localhost:\d+$/]; // 앱(Capacitor 안드로이드)은 https://localhost
-  await app.register(cors, { origin: origins, credentials: true });
+  // methods 를 꼭 적어야 함 — @fastify/cors 기본값은 GET·HEAD·POST 뿐이라 브라우저가 PATCH·PUT·DELETE 를 막음
+  // (2026-10-27 대표님 제보: 관리자 상품 가격·이미지 저장 안 됨, 광고 설정·배너 삭제·관리자 삭제·내 사주 삭제도 같은 원인)
+  await app.register(cors, { origin: origins, credentials: true, methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] });
   await app.register(rateLimit, { global: false });
   // PayApp 결제 통보는 form(x-www-form-urlencoded) 으로 온다
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
