@@ -1,5 +1,6 @@
 // 유료 풀이 생성 — 결제 완료 → readings(queued) → 워커가 생성 → done.
-// 실제 AI 호출은 READING_AI=live + ANTHROPIC_API_KEY + ANTHROPIC_MODEL 이 모두 있을 때만(비용 보고·승인 후 켬). 아니면 예시 풀이로 흐름만 완성.
+// 실제 AI 호출은 ANTHROPIC_API_KEY + ANTHROPIC_MODEL 이 있을 때(READING_AI=off 면 판매 중지 — services/env.ts aiSwitchOn). 아니면 예시 풀이로 흐름만 완성.
+import { aiSwitchOn } from '../env.ts';
 import { and, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { mockMode } from '../mock.ts';
 import { calcSaju, solarToLunar, tojeong, type SajuResult } from '@naman/engine';
@@ -67,7 +68,7 @@ ${people.map((p, i) => sajuLine(`${p.name}(${p.gender === 'M' ? '남' : '여'}, 
 }
 
 /* ---------- 생성 ---------- */
-export const liveAI = () => process.env.READING_AI === 'live' && !!process.env.ANTHROPIC_API_KEY && !!process.env.ANTHROPIC_MODEL;
+export const liveAI = () => aiSwitchOn() && !!process.env.ANTHROPIC_API_KEY && !!process.env.ANTHROPIC_MODEL;
 const KRW_PER_USD = 1400;
 async function callClaude(system: string, user: string, http: typeof fetch) {
   const r = await http('https://api.anthropic.com/v1/messages', {

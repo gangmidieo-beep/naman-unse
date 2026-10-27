@@ -47,7 +47,7 @@ describe('PayApp 웹 결제', () => {
   });
   it('AI 풀이가 꺼져 있으면 유료 풀이는 팔지 않음(부적은 판매)', async () => {
     token = await guest('pay-1');
-    delete process.env.READING_AI;
+    process.env.READING_AI = 'off'; // 판매 스위치를 끄면(키가 있어도) 유료 풀이 판매 중지
     try {
       const r = await app.inject({ method: 'POST', url: '/orders', headers: auth(token), payload: { productId: 'jeongtong', phone: '010-1111-2222' } });
       expect(r.statusCode).toBe(503);
