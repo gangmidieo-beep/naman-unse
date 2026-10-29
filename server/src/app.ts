@@ -252,6 +252,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     else await db.insert(S.readings).values({ id: newId('r_'), orderId: o.id, profileId: o.profileId, productId: o.productId, status: 'done', content: content as any, model, doneAt: new Date() });
   };
   const IMG = /^data:image\/(png|jpe?g|webp|heic|svg\+xml);base64,/;
+  const photoBusy = new Set<string>(); // 사진 분석·2세 그리는 중인 주문
   app.post('/photo/analyze', { bodyLimit: 8 * 1024 * 1024, logLevel: 'silent', config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
     const { kind, image, orderId } = (req.body ?? {}) as { kind?: string; image?: string; orderId?: string };
     if ((kind !== 'palm' && kind !== 'face') || typeof image !== 'string' || !IMG.test(image)) return rep.code(400).send({ error: '사진 형식을 확인해 주세요' });
@@ -260,12 +261,15 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!found) return;
     if ((found.r?.content as any)?.photo) return (found.r!.content as any).photo;
     if (!photoLive()) { const res = samplePhoto(kind); await saveResult(found.o, found.r, { photo: res }, 'sample'); return res; }
+    // 두 번 눌러도 AI 는 한 번만(같은 주문이 분석 중이면 기다리라고 안내)
+    if (photoBusy.has(found.o.id)) return rep.code(409).send({ error: '사진을 보고 있어요. 잠시만 기다려 주세요', code: 'busy' });
+    photoBusy.add(found.o.id);
     try {
       const res = await analyzePhoto(kind, image, http); // image 는 이 요청이 끝나면 버려진다
       if ('error' in res) return rep.code(422).send({ error: kind === 'palm' ? '손바닥이 잘 보이게 밝은 곳에서 다시 찍어 주세요' : '얼굴 정면이 잘 보이게 다시 찍어 주세요', code: 'unclear' });
       await saveResult(found.o, found.r, { photo: res }, process.env.PHOTO_AI_MODEL || 'claude-sonnet-5-5');
       return res;
-    } catch { return rep.code(502).send({ error: '풀이가 잠시 지연되고 있어요. 조금 뒤 다시 시도해 주세요.' }); }
+    } catch { return rep.code(502).send({ error: '풀이가 잠시 지연되고 있어요. 조금 뒤 다시 시도해 주세요.' }); } finally { photoBusy.delete(found.o.id); }
   });
   app.post('/photo/baby', { bodyLimit: 16 * 1024 * 1024, logLevel: 'silent', config: { rateLimit: { max: 6, timeWindow: '1 minute' } } }, async (req, rep) => {
     const { a, b, orderId } = (req.body ?? {}) as { a?: string; b?: string; orderId?: string };
@@ -275,11 +279,13 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!found) return;
     if ((found.r?.content as any)?.baby) return (found.r!.content as any).baby;
     if (!babyLive()) return sampleBaby(); // 키 없음: 예시 그림(보관하지 않음 — 키가 들어오면 다시 만들 수 있게)
+    if (photoBusy.has(found.o.id)) return rep.code(409).send({ error: '아기 얼굴을 그리고 있어요. 잠시만 기다려 주세요', code: 'busy' });
+    photoBusy.add(found.o.id);
     try {
       const res = await generateBaby(a, b, http);
       await saveResult(found.o, found.r, { baby: res }, process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image');
       return res;
-    } catch { return rep.code(502).send({ error: '아이 얼굴을 그리는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.' }); }
+    } catch { return rep.code(502).send({ error: '아이 얼굴을 그리는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.' }); } finally { photoBusy.delete(found.o.id); }
   });
 
   /* ---------- 주문(결제) ----------

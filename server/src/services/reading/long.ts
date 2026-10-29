@@ -158,8 +158,9 @@ ${batch.map((s) => `- id "${s.id}" · 제목 "${s.title}" · 목표 ${s.len}자\
 let running = 0;
 const waiters: (() => void)[] = [];
 const limit = () => Math.max(1, +(process.env.READING_CONCURRENCY ?? 6)); // 동시에 보내는 AI 호출 수(서버 전체)
-async function slot<T>(fn: () => Promise<T>): Promise<T> {
-  if (running >= limit()) await new Promise<void>((r) => waiters.push(r));
+// first: 손님이 화면에서 기다리는 짧은 호출(타로) — 감정서 묶음보다 먼저 자리를 받는다
+async function slot<T>(fn: () => Promise<T>, first = false): Promise<T> {
+  if (running >= limit()) await new Promise<void>((r) => (first ? waiters.unshift(r) : waiters.push(r)));
   running++;
   try { return await fn(); } finally { running--; waiters.shift()?.(); }
 }
@@ -192,7 +193,7 @@ export function parseLooseJson(text: string): any | null {
 export class AiFormatError extends Error { constructor(public truncated: boolean, public tokensIn = 0, public tokensOut = 0) { super('AI 응답 형식 오류'); } }
 // 응답을 기다리는 시간 — 긴 글은 몇 분 걸린다(초당 약 50~80토큰). 예전 300초 고정이면 큰 묶음이 시간 초과 → 같은 요청을 여러 번 다시 보내 비용만 나갔다
 export const timeoutFor = (maxTokens: number) => Math.max(300_000, maxTokens * 45 + 60_000);
-export async function callClaudeLong(system: string, user: string, maxTokens: number, http: typeof fetch, model = process.env.ANTHROPIC_MODEL) {
+export async function callClaudeLong(system: string, user: string, maxTokens: number, http: typeof fetch, model = process.env.ANTHROPIC_MODEL, first = false) {
   let paidIn = 0, paidOut = 0; // 형식 오류로 버린 응답의 토큰(요금은 이미 나감)
   for (let attempt = 0; ; attempt++) {
     const r = await slot(() => http('https://api.anthropic.com/v1/messages', {
@@ -200,7 +201,7 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY!, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
       signal: AbortSignal.timeout(timeoutFor(maxTokens)),
-    }).catch((e) => ({ ok: false, status: 0, headers: new Headers(), json: async () => ({}), err: e }) as any));
+    }).catch((e) => ({ ok: false, status: 0, headers: new Headers(), json: async () => ({}), err: e }) as any), first);
     // 시간 초과는 같은 요청을 다시 보내도 또 초과 → 잘린 것처럼 알려서 장을 나눠 쓰게(재전송 금지)
     if ((r as any).err?.name === 'TimeoutError') { await recordAiFailure(null, '응답 시간 초과(장을 나눠 다시 씀)'); throw new AiFormatError(true, paidIn, paidOut); }
     if (r.ok) {

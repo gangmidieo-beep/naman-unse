@@ -63,7 +63,7 @@ ${lines.join('\n')}`,
 export async function generateTarot(p: { id: string; title: string; positions: string[] }, orderId: string, input: TarotInput, name: string, http: typeof fetch = fetch) {
   const cards = tarotCards(orderId, p.id, p.positions.length);
   const { system, user } = prompt(p, cards, input, name);
-  const r = await callClaudeLong(system, user, 2500 + p.positions.length * 450, http);
+  const r = await callClaudeLong(system, user, 2500 + p.positions.length * 450, http, undefined, true); // 화면에서 기다리는 손님 → 먼저
   const j = r.json as any;
   const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
   const ai: TarotAI = {
