@@ -167,9 +167,51 @@ describe('PayApp 웹 결제', () => {
     await feedback(y.id, y.amount);
     ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
     expect(Math.round((new Date(ent.subscription.expiresAt).getTime() - exp0) / 864e5)).toBe(365);
-    await feedback(y.id, y.amount, '9'); // 결제사에서 환불
+    await feedback(y.id, y.amount, '9'); // 결제사에서 연간 이용권만 환불 → 그 365일만 빠지고, 이미 낸 월 기간은 남음
     ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
-    expect(ent.premium).toBe(false);
+    expect(ent.premium).toBe(true);
+    expect(Math.abs(new Date(ent.subscription.expiresAt).getTime() - exp0)).toBeLessThan(864e5);
+    await feedback(y.id, y.amount, '8'); // 환불 뒤에 늦게 온 취소 통보는 상태를 바꾸지 않음
+    expect((await app.inject({ url: `/orders/${y.id}`, headers: auth(t) })).json().status).toBe('refunded');
+  });
+  it('월 자동결제를 두 번 등록해도 하나만 남고 나중 것은 해지·환불', async () => {
+    const t = await guest('pay-dup');
+    const a = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055557777' } })).json();
+    const b = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055557777' } })).json();
+    await feedback(a.id, a.amount, '4', { rebill_no: a.providerRef.slice(1), mul_no: 'DA1' });
+    const c0 = calls.length;
+    await feedback(b.id, b.amount, '4', { rebill_no: b.providerRef.slice(1), mul_no: 'DB1' });
+    const cmds = calls.slice(c0).map((x) => `${x.get('cmd')}:${x.get('rebill_no') ?? x.get('mul_no')}`);
+    expect(cmds).toEqual([`rebillCancel:${b.providerRef.slice(1)}`, 'paycancel:DB1']);
+    const ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect(ent.subscription.rebillNo).toBe(a.providerRef.slice(1));
+  });
+  it('PayApp 에서 월 자동결제를 환불하면 다음 달 자동결제도 해지', async () => {
+    const t = await guest('pay-rf');
+    const m = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055558888' } })).json();
+    const rb = m.providerRef.slice(1);
+    await feedback(m.id, m.amount, '4', { rebill_no: rb, mul_no: 'RF1' });
+    const c0 = calls.length;
+    await feedback(m.id, m.amount, '9', { rebill_no: rb, mul_no: 'RF1' });
+    expect(calls.slice(c0).some((x) => x.get('cmd') === 'rebillCancel' && x.get('rebill_no') === rb)).toBe(true);
+    expect((await app.inject({ url: '/me/entitlements', headers: auth(t) })).json().premium).toBe(false);
+  });
+  it('연간 이용권 위에 월 자동결제가 확정돼도 남은 기간이 줄지 않는다', async () => {
+    const t = await guest('pay-yr');
+    const m = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_monthly', phone: '01055559999' } })).json();
+    const y = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_yearly', phone: '01055559999' } })).json();
+    await feedback(y.id, y.amount, '4', { mul_no: 'YR1' });
+    await feedback(m.id, m.amount, '4', { rebill_no: m.providerRef.slice(1), mul_no: 'YR2' });
+    const ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect((new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5).toBeGreaterThan(300);
+  });
+  it('부분 환불은 이용을 막지 않고 기록만', async () => {
+    const t = await guest('pay-part');
+    const tal = (await app.inject({ url: '/products' })).json().find((p: any) => p.kind === 'talisman');
+    const o = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: tal.id, phone: '01055550000' } })).json();
+    await feedback(o.id, o.amount, '4', { mul_no: 'PT1' });
+    await feedback(o.id, o.amount, '70', { mul_no: 'PT1' });
+    expect((await app.inject({ url: `/orders/${o.id}`, headers: auth(t) })).json().status).toBe('paid');
   });
   it('자동결제 실패 통보(failurl)는 SUCCESS 로 받고 기록만', async () => {
     const r = await app.inject({ method: 'POST', url: '/pay/payapp/rebill-fail', headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -207,6 +249,7 @@ describe('PayApp 웹 결제', () => {
     expect(parsePayappFeedback({ userid: 'x', linkkey: ENV.linkkey, linkval: ENV.linkval }, ENV, (m) => logs.push(m))).toBeNull();
     expect(logs[0]).not.toContain(ENV.userid);
     expect(parsePayappFeedback({ ...ENV, var1: 'O1', price: '9900', pay_state: '64' }, ENV)?.state).toBe('refunded');
+    expect(parsePayappFeedback({ ...ENV, var1: 'O1', price: '9900', pay_state: '71' }, ENV)?.state).toBe('partial');
   });
 });
 

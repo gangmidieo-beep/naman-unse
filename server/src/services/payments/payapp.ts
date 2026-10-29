@@ -11,11 +11,12 @@ export const payappEnv = (): PayAppEnv | null => {
 };
 
 // pay_state → 우리 주문 상태
-const STATES: Record<string, 'paid' | 'cancelled' | 'refunded' | 'failed'> = {
+// 70·71 = 부분취소: 일부 금액만 돌려준 것 — 풀이·구독은 그대로 두고 기록만(예전엔 전부 회수했다)
+const STATES: Record<string, 'paid' | 'cancelled' | 'refunded' | 'failed' | 'partial'> = {
   '4': 'paid',
   '99': 'failed', // 정기결제 2회차 이후 승인 실패(failurl 로 통보)
   '8': 'cancelled', '16': 'cancelled', '31': 'cancelled', '32': 'cancelled',
-  '9': 'refunded', '64': 'refunded', '70': 'refunded', '71': 'refunded',
+  '9': 'refunded', '64': 'refunded', '70': 'partial', '71': 'partial',
 };
 
 // 휴대폰 번호: 하이픈·공백·+82 제거 → 01X 로 시작하는 10~11자리만 허용

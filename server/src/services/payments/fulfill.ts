@@ -24,8 +24,10 @@ export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; m
     const [cur] = await db.select().from(S.subscriptions)
       .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
     if (cur) {
-      // 웹 이용권은 남은 기간 뒤에 이어 붙이고, Google Play 는 Google 이 알려준 만료일을 그대로 쓴다
-      const expiresAt = opts.expiresAt ?? new Date(cur.expiresAt.getTime() + passDays(o.productId) * DAY);
+      // 웹 이용권은 남은 기간 뒤에 이어 붙이고, Google Play 는 Google 이 알려준 만료일을 그대로 쓴다.
+      // 웹 월 자동결제(만료일 지정)가 연간 이용권 위에 들어와도 남은 기간을 줄이지 않는다(더 늦은 날 기준)
+      const given = opts.expiresAt && o.channel !== 'google' && opts.expiresAt < cur.expiresAt ? cur.expiresAt : opts.expiresAt;
+      const expiresAt = given ?? new Date(cur.expiresAt.getTime() + passDays(o.productId) * DAY);
       await db.update(S.subscriptions).set({ plan, status: opts.subStatus ?? 'active', amount: o.amount, renewedAt: new Date(), expiresAt, canceledAt: null, remindDay: null, ...auto }).where(eq(S.subscriptions.id, cur.id));
     } else {
       await db.insert(S.subscriptions).values({
@@ -44,13 +46,20 @@ export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; m
   return o;
 }
 
-// 취소·환불 → 주문 상태 변경 + 구독이면 즉시 이용 종료
+// 취소·환불 → 주문 상태 변경 + 구독이면 그 주문이 더해 준 기간만큼 줄임(남은 기간이 없으면 종료)
+// 이미 환불·취소된 주문에 늦게 온 통보는 상태를 바꾸지 않는다(관리자 환불 후 PayApp 취소 통보로 '환불'이 '취소'로 바뀌던 문제)
 export async function revokeOrder(db: Db, order: Order, status: 'cancelled' | 'refunded') {
-  if (order.status === status) return order;
+  if (order.status === status || order.status === 'refunded' || order.status === 'cancelled') return order;
   const [o] = await db.update(S.orders).set({ status, refundStatus: status === 'refunded' ? 'done' : order.refundStatus }).where(eq(S.orders.id, order.id)).returning();
   if (order.status === 'paid' && o.kind === 'subscription') {
-    await db.update(S.subscriptions).set({ status: 'expired', expiresAt: new Date(), canceledAt: new Date(), autoRenew: false })
-      .where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
+    const subs = await db.select().from(S.subscriptions).where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
+    for (const s of subs) {
+      // Google 은 Google 이 알려주는 상태가 기준(RTDN) → 바로 종료. 웹은 이 주문 몫(30일·365일)만 뺀다
+      const left = o.channel === 'google' ? 0 : s.expiresAt.getTime() - passDays(o.productId) * DAY;
+      // 자동결제 기간은 '다음 결제일 + 2일'이라 며칠 남는 자투리는 종료로 본다
+      if (left > Date.now() + 3 * DAY) await db.update(S.subscriptions).set({ expiresAt: new Date(left) }).where(eq(S.subscriptions.id, s.id));
+      else await db.update(S.subscriptions).set({ status: 'expired', expiresAt: new Date(), canceledAt: new Date(), autoRenew: false }).where(eq(S.subscriptions.id, s.id));
+    }
   }
   return o;
 }

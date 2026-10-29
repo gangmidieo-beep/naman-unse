@@ -386,7 +386,19 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (f.rebillNo) { await rebillFeedback(f, req.log); return rep.type('text/plain').send('SUCCESS'); }
     const [o] = await db.select().from(S.orders).where(eq(S.orders.id, f.orderId));
     if (!o || o.channel !== 'pg') return rep.type('text/plain').send('SUCCESS'); // 모르는 주문은 기록만 하고 재전송은 멈춘다
+    if (f.state === 'partial') { // 부분 환불 — 이용은 그대로, 기록만
+      req.log.warn(`[payapp] 부분 환불 order=${o.id} 금액=${f.amount}`);
+      await db.update(S.orders).set({ refundStatus: 'partial' }).where(eq(S.orders.id, o.id));
+      return rep.type('text/plain').send('SUCCESS');
+    }
     if (f.state === 'paid') {
+      // 24시간 미결제 정리로 취소된 주문에 늦게 결제 완료가 오면(가상계좌 등) 돈은 받았으니 지급한다
+      if (o.status === 'cancelled' && !o.paidAt && f.amount === o.amount) {
+        req.log.warn(`[payapp] 정리된 주문에 늦은 결제 완료 → 지급 order=${o.id}`);
+        const [back] = await db.update(S.orders).set({ status: 'pending' }).where(and(eq(S.orders.id, o.id), eq(S.orders.status, 'cancelled'))).returning();
+        if (back) await fulfillOrder(db, back, { ref: f.mulNo, method: f.method });
+        return rep.type('text/plain').send('SUCCESS');
+      }
       if (o.status !== 'pending') return rep.type('text/plain').send('SUCCESS'); // 이미 확정·취소된 주문에 온 재전송 — 상태를 건드리지 않음
       if (f.amount !== o.amount) { // 금액 위변조 — 확정하지 않음
         req.log.error(`[payapp] 금액 불일치 order=${o.id} 주문=${o.amount} 통보=${f.amount}`);
@@ -412,9 +424,16 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const userId = first?.userId ?? sub?.userId;
     if (!userId) { log.warn(`[payapp rebill] 모르는 정기결제 rebill=${f.rebillNo}`); return; }
     const [same] = f.mulNo ? await db.select().from(S.orders).where(and(eq(S.orders.providerRef, f.mulNo), eq(S.orders.userId, userId))) : [];
+    if (f.state === 'partial') { if (same) await db.update(S.orders).set({ refundStatus: 'partial' }).where(eq(S.orders.id, same.id)); return; }
     if (f.state === 'refunded' || f.state === 'cancelled') {
       const target = same ?? (first?.status === 'pending' ? first : null);
       if (target) await revokeOrder(db, target, target.status === 'paid' ? 'refunded' : 'cancelled');
+      // PayApp 판매자 사이트에서 환불해도 다음 달 자동결제는 계속 나간다 → 함께 해지(손님 화면엔 '해지할 자동결제가 없어요'로 막혀 있었음)
+      if (target?.status === 'paid') {
+        const env = payappEnv();
+        try { if (env) await payappRebillCancel(f.rebillNo, env, http); } catch (e: any) { log.error(`[payapp rebill] 환불 후 자동결제 해지 실패 rebill=${f.rebillNo} ${e.message} — PayApp 판매자 사이트에서 직접 해지 필요`); }
+        await db.update(S.subscriptions).set({ autoRenew: false, canceledAt: new Date() }).where(eq(S.subscriptions.rebillNo, f.rebillNo));
+      }
       return;
     }
     if (f.state === 'failed') { log.warn(`[payapp rebill] 자동결제 실패 rebill=${f.rebillNo} user=${userId}`); await markRebillFailed(f.rebillNo); return; }
@@ -423,9 +442,21 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (f.amount !== expected) { log.error(`[payapp rebill] 금액 불일치 rebill=${f.rebillNo} 주문=${expected} 통보=${f.amount}`); return; }
     if (same?.status === 'paid') return; // 같은 통보가 다시 옴
     const opts = { ref: f.mulNo, method: f.method, expiresAt: rebillUntil(), rebillNo: f.rebillNo, autoRenew: true };
-    if (first?.status === 'pending') { await fulfillOrder(db, first, opts); return; }
+    if (first?.status === 'pending') {
+      // 같은 사람이 탭 두 개·두 번 눌러 월 자동결제를 두 개 등록한 경우: 먼저 것만 두고 새 것은 해지·환불(매달 두 번 빠지던 문제)
+      const [dup] = await db.select().from(S.subscriptions).where(and(eq(S.subscriptions.userId, userId), eq(S.subscriptions.channel, 'pg'), eq(S.subscriptions.autoRenew, true), gt(S.subscriptions.expiresAt, new Date())));
+      if (dup?.rebillNo && dup.rebillNo !== f.rebillNo) {
+        const env = payappEnv();
+        log.error(`[payapp rebill] 중복 월 자동결제 → 새 것 해지·환불 user=${userId} 기존=${dup.rebillNo} 새=${f.rebillNo}`);
+        try { if (env) { await payappRebillCancel(f.rebillNo, env, http); if (f.mulNo) await payappCancel(f.mulNo, '중복 자동결제 자동 환불', env, http); } }
+        catch (e: any) { log.error(`[payapp rebill] 중복 해지·환불 실패 rebill=${f.rebillNo} ${e.message} — PayApp 판매자 사이트에서 직접 처리 필요`); }
+        await db.update(S.orders).set({ status: 'refunded', refundStatus: 'done', providerRef: f.mulNo ?? first.providerRef, paidAt: new Date() }).where(eq(S.orders.id, first.id));
+        return;
+      }
+      await fulfillOrder(db, first, opts); return;
+    }
     // 다음 달 자동 승인 → 갱신 주문
-    const [renew] = await db.insert(S.orders).values({ id: newId('O'), userId, productId: first?.productId ?? 'premium_monthly', kind: 'subscription', amount: f.amount, discount: 0, method: 'card', channel: 'pg', status: 'pending', providerRef: f.mulNo }).returning();
+    const [renew] = await db.insert(S.orders).values({ id: newId('O'), userId, productId: first?.productId ?? (brand as any).subscription?.monthly?.id ?? 'premium_monthly', kind: 'subscription', amount: f.amount, discount: 0, method: 'card', channel: 'pg', status: 'pending', providerRef: f.mulNo }).returning();
     await fulfillOrder(db, renew, opts);
   }
   // 2회차 이후 자동 승인이 실패하면 PayApp 이 failurl 로 알려준다(pay_state=99). 기간이 끝나면 자연히 일반 회원으로 돌아간다.
@@ -586,7 +617,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [o] = await db.select().from(S.orders).where(eq(S.orders.id, oid));
     const [r] = o ? await db.select().from(S.readings).where(eq(S.readings.orderId, o.id)) : [];
     const c = r?.content as any;
-    if (!o || !r || r.status !== 'done' || c?.version !== 2) return rep.code(404).type('text/plain; charset=utf-8').send('감정서를 찾을 수 없어요');
+    if (!o || o.status !== 'paid' || !r || r.status !== 'done' || c?.version !== 2) return rep.code(404).type('text/plain; charset=utf-8').send('감정서를 찾을 수 없어요');
     const [p] = await db.select().from(S.products).where(eq(S.products.id, o.productId));
     const title = p?.title ?? o.productId;
     const key = `${r.id}:${r.doneAt?.getTime() ?? 0}`;
