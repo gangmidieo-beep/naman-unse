@@ -95,3 +95,34 @@ export async function saveImage(node: HTMLElement, filename: string) {
   track('share', { kind: 'image', filename });
   return dataUrl;
 }
+
+/** 부적 저장 — 화면을 캡처하지 않고 부적 그림 파일을 그대로 PNG 로 저장(2026-10-29 대표님 제보).
+ *  예전 방식(화면 캡처)은 휴대폰에서 등장 애니메이션 때문에 부적이 한쪽으로 밀려 잘리고,
+ *  PC 에서는 그림을 늦게 불러오는 설정(lazy) 때문에 빈 흰 화면만 저장됐다. */
+export async function saveTalismanImage(src: string, filename: string) {
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = src;
+  await img.decode();
+  const pad = Math.round(img.naturalWidth * 0.06);
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth + pad * 2;
+  c.height = img.naturalHeight + pad * 2;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#1C1612'; // 먹색 바탕 위에 부적(앱 화면과 같은 느낌)
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(img, pad, pad);
+  const dataUrl = c.toDataURL('image/png');
+  if (await saveImageNative(dataUrl, filename)) { track('share', { kind: 'image', filename }); return dataUrl; }
+  const blob = await (await fetch(dataUrl)).blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `naman-unse_${filename.replace(/\.png$/i, '').replace(/[^\w.-]+/g, '').replace(/^_+/, '') || Date.now()}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  track('share', { kind: 'image', filename });
+  return dataUrl;
+}

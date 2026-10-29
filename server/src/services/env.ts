@@ -38,3 +38,31 @@ export function aiStatus(env: NodeJS.ProcessEnv = process.env) {
   const claude = aiSwitchOn(env) && !!env.ANTHROPIC_API_KEY;
   return { reading: claude && !!env.ANTHROPIC_MODEL, photo: claude, baby: !!env.GEMINI_API_KEY, missing };
 }
+
+/* AI 호출 진단 — 2026-10-29: 실서버에서 감정서가 '풀이를 쓰는 중 문제'로 끝나는데 원인(키·잔액·모델명)을 볼 방법이 없었다.
+   마지막 실패의 HTTP 상태와 Anthropic 오류 종류·문구(키·본문 없이 앞부분만)를 메모리에 두고 /health 에 보여 준다. */
+type AiErr = { at: string; status: number; type: string; message: string };
+export const aiDiag: { lastError: AiErr | null; lastOkAt: string | null } = { lastError: null, lastOkAt: null };
+export async function recordAiFailure(r: { status: number; text?: () => Promise<string> } | null, fallback = '') {
+  let type = '', message = fallback;
+  try {
+    const body = r?.text ? await r.text() : '';
+    const j = body ? JSON.parse(body) : null;
+    type = String(j?.error?.type ?? '');
+    message = String(j?.error?.message ?? message);
+  } catch { /* 본문 없음 */ }
+  message = message.replace(/sk-ant-[A-Za-z0-9_-]+/g, 'sk-ant-***').slice(0, 200);
+  aiDiag.lastError = { at: new Date().toISOString(), status: r?.status ?? 0, type, message };
+}
+export const recordAiOk = () => { aiDiag.lastOkAt = new Date().toISOString(); };
+/** 대표님이 바로 알아볼 수 있게 흔한 오류를 한국어로 */
+export function aiErrorHint(e: AiErr | null) {
+  if (!e) return null;
+  const m = `${e.type} ${e.message}`.toLowerCase();
+  if (e.status === 401 || m.includes('authentication')) return 'API 키가 틀렸어요 — Anthropic 콘솔에서 새 키를 만들어 ANTHROPIC_API_KEY 에 다시 넣어 주세요';
+  if (m.includes('credit') || m.includes('billing') || m.includes('balance')) return 'Anthropic 크레딧(잔액)이 부족해요 — 콘솔 Billing 에서 충전해 주세요';
+  if (e.status === 404 || m.includes('model')) return 'ANTHROPIC_MODEL 이름이 맞지 않아요 — claude-sonnet-5-5 로 넣어 주세요';
+  if (e.status === 403 || m.includes('permission')) return 'API 키 권한·조직 설정 문제예요 — 콘솔에서 키를 확인해 주세요';
+  if (e.status === 429 || e.status === 529) return '잠시 요청이 몰렸어요(자동 재시도) — 계속되면 콘솔 한도를 확인해 주세요';
+  return null;
+}

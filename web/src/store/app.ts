@@ -54,6 +54,7 @@ type State = {
   setPlan: (plan: Plan, auto?: boolean) => void;
   addPurchase: (p: Purchase) => void;
   addTalisman: (t: MyTalisman) => void;
+  removeOrder: (orderId: string) => void;
   setAccount: (a: Account | null) => void;
   noteAdView: () => void;
   unlock: (key: string) => void;
@@ -99,8 +100,10 @@ export const useApp = create<State>()(
       setEventNotify: (eventNotify) => set({ eventNotify }),
       setPlan: (plan, auto = true) =>
         set({ plan, planAuto: !!plan && auto, planUntil: plan ? new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 86400000).toISOString().slice(0, 10) : null }),
-      addPurchase: (p) => set((s) => ({ purchases: [p, ...s.purchases] })),
-      addTalisman: (t) => set((s) => ({ talismans: [t, ...s.talismans] })),
+      // 같은 주문이 두 번 담기지 않게(결제 확인 화면과 서버 동기화가 동시에 담던 문제 — 2026-10-29 사랑부적 1건이 2건으로 보임)
+      addPurchase: (p) => set((s) => (s.purchases.some((x) => x.orderId === p.orderId) ? s : { purchases: [p, ...s.purchases] })),
+      addTalisman: (t) => set((s) => (s.talismans.some((x) => x.orderId === t.orderId) ? s : { talismans: [t, ...s.talismans] })),
+      removeOrder: (orderId) => set((s) => ({ purchases: s.purchases.filter((x) => x.orderId !== orderId), talismans: s.talismans.filter((x) => x.orderId !== orderId) })),
       setAccount: (account) => set({ account }),
       noteAdView: () =>
         set((s) => ({ adViews: { date: today(), count: (s.adViews.date === today() ? s.adViews.count : 0) + 1, last: Date.now() } })),

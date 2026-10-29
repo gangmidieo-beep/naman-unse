@@ -1,6 +1,6 @@
 // 결제 인터페이스 — 화면은 이것만 부른다. 구현체: mock(시안·테스트), web(PayApp), google-play(10 단계에서 네이티브 연결).
 import { MOCK_MODE } from '../lib/api';
-import { useApp } from '../store/app';
+import { useApp, type MyTalisman } from '../store/app';
 
 export type PayResult = { status: 'paid' | 'cancelled' | 'failed' | 'redirect'; orderId: string; message?: string; code?: string };
 export type PayMethod = { id: string; label: string };
@@ -136,22 +136,42 @@ export const phoneOk = (v: string) => /^01[016789]\d{7,8}$/.test(v.replace(/\D/g
 
 // 프리미엄 여부·기간·자동결제는 서버가 기준(이용권 만료·환불·해지 반영)
 type Owned = { productId: string; orderId: string; profileId?: string | null; kind?: string; amount?: number; createdAt?: string };
-type Ent = { premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string; autoRenew?: boolean; channel?: string } | null; owned?: Owned[] };
-export async function syncEntitlements(): Promise<Ent | null> {
+type Ent = { premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string; autoRenew?: boolean; channel?: string } | null; owned?: Owned[]; talismans?: MyTalisman[] };
+let syncing: Promise<Ent | null> | null = null;
+export function syncEntitlements(): Promise<Ent | null> {
+  syncing ??= doSync().finally(() => { syncing = null; });
+  return syncing;
+}
+/* 서버가 기준 — 운세함(서재·부적함·결제 내역)을 서버 주문으로 맞춘다(2026-10-29 대표님 요청).
+   - 모바일·웹 어디서 로그인해도 같은 목록 / 환불·삭제한 주문은 빠짐 / 같은 주문이 두 번 보이지 않음
+   - 이 기기에서만 만든 부적(예전 버전)은 서버에 올려서 다른 기기에서도 보이게 */
+async function doSync(): Promise<Ent | null> {
   const e = await apiAuth<Ent>('/me/entitlements').catch(() => null);
   if (!e) return null;
   const s = e.subscription;
   useApp.setState({ plan: e.premium ? s?.plan ?? 'monthly' : null, planUntil: e.premium && s ? s.expiresAt.slice(0, 10) : null, planAuto: !!(e.premium && s?.autoRenew) });
-  // 서버에 결제 완료로 남아 있는데 이 기기 운세함에 없는 풀이·부적을 채워 넣는다
-  // (2026-10-29: 결제 후 돌아오는 화면이 열리지 않아 운세함에 안 보이던 주문 복구 · 다른 기기·로그인 후에도 보이게)
-  const have = new Set(useApp.getState().purchases.map((x) => x.orderId));
-  const add = (e.owned ?? []).filter((o) => o.kind && o.kind !== 'subscription' && !have.has(o.orderId)).map((o) => ({
-    orderId: o.orderId, productId: o.productId, profileId: o.profileId ?? '', price: o.amount ?? 0,
-    createdAt: o.createdAt ?? new Date().toISOString(), kind: (o.kind === 'talisman' ? 'talisman' : 'reading') as 'talisman' | 'reading', status: 'paid' as const,
-  }));
-  if (add.length) useApp.setState((st) => ({ purchases: [...add, ...st.purchases].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }));
+  if (!e.owned) return e; // 예전 서버 — 운세함은 건드리지 않음
+  const st = useApp.getState();
+  const prev = new Map(st.purchases.map((x) => [x.orderId, x]));
+  const purchases = e.owned.filter((o) => o.kind && o.kind !== 'subscription').map((o) => ({
+    orderId: o.orderId, productId: o.productId, profileId: o.profileId ?? prev.get(o.orderId)?.profileId ?? '', price: o.amount ?? prev.get(o.orderId)?.price ?? 0,
+    createdAt: o.createdAt ?? prev.get(o.orderId)?.createdAt ?? new Date().toISOString(), kind: (o.kind === 'talisman' ? 'talisman' : 'reading') as 'talisman' | 'reading', status: 'paid' as const,
+  })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const owned = new Set(purchases.map((x) => x.orderId));
+  const server = e.talismans ?? [];
+  const onServer = new Set(server.map((t) => t.orderId));
+  const localOnly = st.talismans.filter((t) => owned.has(t.orderId) && !onServer.has(t.orderId));
+  for (const t of localOnly) void apiAuth('/me/talismans', { method: 'POST', body: JSON.stringify(t) }).catch(() => {});
+  useApp.setState({ purchases, talismans: [...server, ...localOnly] });
   return e;
 }
+/** 운세함에서 지우기 — 서버에 숨김 표시(모든 기기 반영) 후 이 기기 목록에서도 뺌 */
+export async function hideOrder(orderId: string) {
+  await apiAuth(`/me/orders/${encodeURIComponent(orderId)}/hide`, { method: 'POST', body: '{}' });
+  useApp.getState().removeOrder(orderId);
+}
+/** 완성한 부적을 계정에 보관(실패해도 이 기기에는 남고, 다음 동기화 때 다시 올림) */
+export const saveTalismanToServer = (t: MyTalisman) => apiAuth('/me/talismans', { method: 'POST', body: JSON.stringify(t) }).catch(() => null);
 /** 이 기기의 게스트 토큰(로그인 직후 게스트 기록을 계정으로 합칠 때 씀) */
 export const guestToken = () => readGuest().token ?? null;
 // 웹 월 자동결제 해지 — 다음 달부터 결제되지 않고, 이미 낸 기간까지는 프리미엄 유지

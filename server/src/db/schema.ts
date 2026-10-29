@@ -97,6 +97,7 @@ export const orders = pgTable('orders', {
   providerRef: text(),
   createdAt: now(),
   paidAt: timestamp({ withTimezone: true }),
+  hiddenAt: timestamp({ withTimezone: true }), // 손님이 운세함에서 지운 주문(결제 기록은 남기고 화면에서만 숨김)
 }, (t) => [index('orders_user').on(t.userId), index('orders_created').on(t.createdAt)]);
 
 export const subscriptions = pgTable('subscriptions', {

@@ -13,7 +13,7 @@ import { BottomSheet, Button, ProductThumb, TalismanPaper, useToast } from '../c
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
 import { BRAND, CHAR, charOf, displayTitle, isPhoto, isTarot, productById, thumbOf, won, type Product, type Talisman } from '../lib/catalog';
 import { api, MOCK_MODE } from '../lib/api';
-import { apiAuth, getPayments } from '../platform/payments';
+import { apiAuth, getPayments, hideOrder, syncEntitlements } from '../platform/payments';
 import { enablePush, syncPushPrefs } from '../platform/native';
 import { birthLabel, hourLabel } from './ProfileNew';
 
@@ -34,14 +34,21 @@ function Empty({ icon, text, to }: { icon: string; text: ReactNode; to?: string 
   const body = <><span className="ic"><Icon name={icon} size={30} /></span><p>{text}</p>{to && <span className="chev">›</span>}</>;
   return to ? <Link to={to} className="lib-empty">{body}</Link> : <div className="lib-empty">{body}</div>;
 }
-function BookRow({ o, p }: { o: { orderId: string; createdAt: string }; p: Product }) {
+// 운세함 항목 지우기 버튼(×) — 누르면 확인창. 결제는 취소되지 않고 화면에서만 지워짐(모든 기기 반영)
+function DelBtn({ onAsk }: { onAsk: () => void }) {
+  return <button type="button" className="lib-del" aria-label="운세함에서 지우기" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAsk(); }}>×</button>;
+}
+function BookRow({ o, p, onDel }: { o: { orderId: string; createdAt: string }; p: Product; onDel: () => void }) {
   const t = thumbOf(p);
   return (
-    <Link to={`/reading/${o.orderId}`} className="lib-book">
-      {t.src ? <img src={t.src} alt="" /> : <span className="hz">{t.hanja}</span>}
-      <div><b>{displayTitle(p)}</b><span className="d">{dot(o.createdAt)}</span><p>{p.cardCopy}</p></div>
-      <span className="chev">›</span>
-    </Link>
+    <div className="lib-item">
+      <Link to={`/reading/${o.orderId}`} className="lib-book">
+        {t.src ? <img src={t.src} alt="" /> : <span className="hz">{t.hanja}</span>}
+        <div><b>{displayTitle(p)}</b><span className="d">{dot(o.createdAt)}</span><p>{p.cardCopy}</p></div>
+        <span className="chev">›</span>
+      </Link>
+      <DelBtn onAsk={onDel} />
+    </div>
   );
 }
 
@@ -64,6 +71,13 @@ export default function Box() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [sheet, setSheet] = useState<null | 'profiles' | 'notice' | 'terms' | 'biz' | 'contact' | 'withdraw'>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [hideAsk, setHideAsk] = useState<string | null>(null); // 운세함에서 지울 주문
+  const hide = async (orderId: string) => {
+    try { if (MOCK_MODE) s.removeOrder(orderId); else await hideOrder(orderId); toast('운세함에서 지웠어요'); } catch (e) { toast((e as Error).message); }
+    setHideAsk(null);
+  };
+  // 운세함을 열 때마다 서버 기준으로 맞춤(웹에서 산 것이 모바일에도, 환불·삭제한 건 빠짐)
+  useEffect(() => { if (!MOCK_MODE) void syncEntitlements(); }, []);
   useEffect(() => { api<Notice[]>('/notices').then(setNotices).catch(() => setNotices([])); }, []);
   const books = s.purchases.filter((o) => o.kind === 'reading').map((o) => ({ o, p: productById(o.productId) })).filter((x) => x.p);
   const fate = books.filter((x) => (charOf(x.p!) === 'cheongung' || isPhoto(x.p!)) && !isTarot(x.p!));
@@ -104,18 +118,18 @@ export default function Box() {
         )}
 
         <LibSec en="DESTINY" title={<>나의 <em>운명서</em></>}>
-          {fate.length ? fate.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)
+          {fate.length ? fate.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} onDel={() => setHideAsk(o.orderId)} />)
             : <Empty icon="scroll-text" to="/unse?cat=fate" text={<>아직 운명서가 없어요.<br />나만의 운명서를 받아보세요.</>} />}
         </LibSec>
         <LibSec en="FATE" title={<>나의 <em>인연서</em></>}>
-          {love.length ? love.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} />)
+          {love.length ? love.map(({ o, p }) => <BookRow key={o.orderId} o={o} p={p!} onDel={() => setHideAsk(o.orderId)} />)
             : <Empty icon="heart-handshake" to="/unse?cat=love" text={<>아직 인연서가 없어요.<br />나만의 인연서를 받아보세요.</>} />}
         </LibSec>
         <LibSec en="TAROT" title={<>나의 <em>타로함</em></>}>
           {tarot.length ? (
             <div className="lib-tarot">
               {tarot.map(({ o, p }) => (
-                <Link key={o.orderId} to={`/reading/${o.orderId}`}><div className="cd">{(() => { const d = tarotSpread(`${o.orderId}:${p!.id}`, (p as any).cards ?? 1)[0]; const src = d && tarotArt(d.card.id); return src ? <img src={src} alt="" className={d.reversed ? 'rev' : ''} loading="lazy" /> : <CardBack />; })()}</div><b>{p!.title}</b><span>{dot(o.createdAt)}</span></Link>
+                <Link key={o.orderId} to={`/reading/${o.orderId}`} className="lib-item"><DelBtn onAsk={() => setHideAsk(o.orderId)} /><div className="cd">{(() => { const d = tarotSpread(`${o.orderId}:${p!.id}`, (p as any).cards ?? 1)[0]; const src = d && tarotArt(d.card.id); return src ? <img src={src} alt="" className={d.reversed ? 'rev' : ''} loading="lazy" /> : <CardBack />; })()}</div><b>{p!.title}</b><span>{dot(o.createdAt)}</span></Link>
               ))}
             </div>
           ) : <Empty icon="layers" to="/tarot" text={<>아직 타로 기록이 없어요.<br />나만의 타로를 받아보세요.</>} />}
@@ -126,7 +140,7 @@ export default function Box() {
               {s.talismans.map((t) => {
                 const tt = productById(t.talismanId) as Talisman | undefined;
                 if (!tt) return null;
-                return <Link key={t.id} to={`/talisman/${t.talismanId}/make?order=${t.orderId}`}><TalismanPaper t={tt} size={0.78} /><b>{tt.title}</b><span>{dot(t.issuedAt)}</span></Link>;
+                return <Link key={t.id} to={`/talisman/${t.talismanId}/make?order=${t.orderId}`} className="lib-item"><DelBtn onAsk={() => setHideAsk(t.orderId)} /><TalismanPaper t={tt} size={0.78} /><b>{tt.title}</b><span>{dot(t.issuedAt)}</span></Link>;
               })}
             </div>
           ) : <Empty icon="gift" to="/talisman" text={<>아직 부적이 없어요.<br />나만의 부적을 받아보세요.</>} />}
@@ -145,7 +159,7 @@ export default function Box() {
                     <div className="r"><b>{won(o.price)}</b><span>{o.status === 'paid' ? (to ? '열기 ›' : '결제 완료') : '환불'}</span></div>
                   </>
                 );
-                return <li key={o.orderId}>{to ? <Link to={to} className="lib-pay-row">{body}</Link> : body}</li>;
+                return <li key={o.orderId} className="lib-item">{to ? <Link to={to} className="lib-pay-row">{body}</Link> : body}<DelBtn onAsk={() => setHideAsk(o.orderId)} /></li>;
               })}
             </ul>
           ) : <Empty icon="file-text" text={<>결제 내역이 없어요.</>} />}
@@ -223,6 +237,13 @@ export default function Box() {
         <div className="btn-row">
           <Button kind="line" onClick={() => setSheet(null)}>취소</Button>
           <Button kind="ink" onClick={withdraw}>탈퇴하기</Button>
+        </div>
+      </BottomSheet>
+      <BottomSheet open={!!hideAsk} onClose={() => setHideAsk(null)} title="운세함에서 지울까요?">
+        <p className="note" style={{ margin: '0 0 14px' }}>지우면 운세함·결제 내역에서 사라지고 다시 볼 수 없어요. (결제가 취소되지는 않아요)</p>
+        <div className="btn-row">
+          <Button kind="line" onClick={() => setHideAsk(null)}>그대로 두기</Button>
+          <Button kind="ink" onClick={() => hideAsk && hide(hideAsk)}>지우기</Button>
         </div>
       </BottomSheet>
       <BottomSheet open={!!confirmDel} onClose={() => setConfirmDel(null)} title="이 사주 정보를 지울까요?">

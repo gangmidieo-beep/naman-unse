@@ -22,6 +22,14 @@ if (!__MOCK_MODE__ && __API_ORIGIN__) {
     if (!hasToken) return;
     await syncEntitlements();
   })();
+  // 다른 기기(웹·모바일)에서 산 것도 바로 보이게 — 앱/탭으로 돌아올 때마다 서버 기준으로 다시 맞춤(30초에 한 번까지)
+  let last = Date.now();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || Date.now() - last < 30_000) return;
+    last = Date.now();
+    const st = useApp.getState();
+    if (st.account?.token) void syncEntitlements();
+  });
 }
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

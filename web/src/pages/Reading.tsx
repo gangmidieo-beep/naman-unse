@@ -88,6 +88,7 @@ export default function ReadingPage() {
   // 실결제 모드: 서버가 쓴 풀이를 3초마다 확인(queued → generating → done). 다른 기기에서 열어도 서버 주문으로 찾음
   const live = !MOCK_MODE && !orderId.startsWith('sample-');
   const [srv, setSrv] = useState<{ status: string; content?: any; productId?: string; profileId?: string; attempts?: number } | null>(null);
+  const [retryTick, setRetryTick] = useState(0); // [다시 시도] 누르면 확인을 다시 시작
   useEffect(() => {
     if (!live) return;
     let stop = false;
@@ -100,7 +101,7 @@ export default function ReadingPage() {
     };
     poll();
     return () => { stop = true; };
-  }, [live, orderId]);
+  }, [live, orderId, retryTick]);
   // /reading/sample-<상품id> 는 예시 주소(시안·공유 미리보기용)
   const order = purchases.find((x) => x.orderId === orderId) ?? (live && srv?.productId ? { orderId, productId: srv.productId, profileId: srv.profileId ?? '', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null) ?? (orderId.startsWith('sample-') ? { orderId, productId: orderId.slice(7), profileId: 'sample', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null);
   const p = order ? productById(order.productId) : null;
@@ -122,7 +123,9 @@ export default function ReadingPage() {
     return (
       <>
         <SubHeader title="풀이" />
-        <main className="screen no-tab"><p className="muted center mt24">{srv.status === 'failed' ? '풀이를 쓰는 중 문제가 생겼어요. 잠시 후 다시 열어 주세요. 계속되면 문의해 주세요.' : '풀이를 찾을 수 없어요.'}</p><div className="pad mt14"><Button to="/box">나의 운세함으로</Button></div></main>
+        <main className="screen no-tab"><p className="muted center mt24">{srv.status === 'failed' ? '풀이를 쓰는 중 문제가 생겼어요. [다시 시도]를 눌러 주세요. 계속되면 문의해 주세요.' : '풀이를 찾을 수 없어요.'}</p>
+          {srv.status === 'failed' && <div className="pad mt14"><Button kind="gold" onClick={async () => { await apiAuth(`/readings/${encodeURIComponent(orderId)}/retry`, { method: 'POST', body: '{}' }).catch(() => null); setSrv({ ...srv, status: 'queued', attempts: 0 }); setRetryTick((n) => n + 1); }}>다시 시도</Button></div>}
+          <div className="pad mt14"><Button to="/box">나의 운세함으로</Button></div></main>
       </>
     );
   if (!order || !p)

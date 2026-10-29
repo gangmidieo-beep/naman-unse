@@ -850,3 +850,26 @@
 .row4 { min-width: 0; max-width: 100%; overflow: hidden; }
 .row4 .pc-price { flex-wrap: wrap; white-space: normal; }
 .row4 .pc-price small { white-space: nowrap; }
+
+/* 운세함 항목 지우기(×) — 2026-10-29 대표님 요청 */
+.lib-item { position: relative; display: block; }
+.lib-pay li.lib-item { display: flex; }
+.lib-del { position: absolute; top: 6px; right: 6px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; border: 1px solid #D9C79C; background: rgba(250, 244, 230, .95); color: var(--ink-3); font-size: 18px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+.lib-del:active { background: #EADBB5; }
+.lib-book { padding-right: 40px; }
+.lib-pay li.lib-item .lib-del { position: static; flex: 0 0 30px; margin-left: 6px; }
+.lib-bj .lib-item, .lib-tarot .lib-item { padding-top: 4px; }
+.lib-bj .lib-del, .lib-tarot .lib-del { width: 24px; height: 24px; font-size: 15px; top: 0; right: 0; }
+
+/* 부적 쓰기 장면 — 붓으로 부적을 쓰는 이미지 + 차분한 진행 표시(소리·버튼 없음) */
+.writing { position: fixed; inset: 0; z-index: 60; background: #0E0B08; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; animation: writing-in .6s ease both; }
+.writing-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: writing-zoom 6s ease-out both; }
+.writing-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 8, 6, .15) 0%, rgba(10, 8, 6, .1) 45%, rgba(10, 8, 6, .82) 78%, rgba(10, 8, 6, .95) 100%); }
+.writing-tx { position: relative; width: min(92%, 460px); margin-bottom: calc(52px + env(safe-area-inset-bottom)); text-align: center; color: #F3E6C4; }
+.writing-tx b { display: block; font-family: var(--serif); font-weight: 900; font-size: 22px; letter-spacing: -.01em; }
+.writing-tx p { margin: 10px 0 18px; font-family: var(--serif); font-size: 17px; color: #E3D2A6; min-height: 1.5em; }
+.writing-bar { height: 4px; border-radius: 2px; background: rgba(243, 230, 196, .18); overflow: hidden; }
+.writing-bar i { display: block; height: 100%; background: linear-gradient(90deg, #B98A33, #E9C979); transition: width .1s linear; }
+@keyframes writing-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes writing-zoom { from { transform: scale(1.06); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .writing, .writing-bg { animation: none; } }

@@ -1,6 +1,6 @@
 // 유료 풀이 생성 — 결제 완료 → readings(queued) → 워커가 생성 → done.
 // 실제 AI 호출은 ANTHROPIC_API_KEY + ANTHROPIC_MODEL 이 있을 때(READING_AI=off 면 판매 중지 — services/env.ts aiSwitchOn). 아니면 예시 풀이로 흐름만 완성.
-import { aiSwitchOn } from '../env.ts';
+import { aiDiag, aiSwitchOn, recordAiFailure, recordAiOk } from '../env.ts';
 import { and, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { mockMode } from '../mock.ts';
 import { calcSaju, solarToLunar, tojeong, type SajuResult } from '@naman/engine';
@@ -77,7 +77,8 @@ async function callClaude(system: string, user: string, http: typeof fetch) {
     body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL, max_tokens: 8000, system, messages: [{ role: 'user', content: user }] }),
     signal: AbortSignal.timeout(180_000),
   });
-  if (!r.ok) throw new Error(`AI 호출 실패 ${r.status}`);
+  if (!r.ok) { await recordAiFailure(r as any); throw new Error(`AI 호출 실패 ${r.status}`); }
+  recordAiOk();
   const j = (await r.json()) as any;
   const text = (j.content ?? []).map((c: any) => c.text ?? '').join('');
   const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
@@ -173,6 +174,8 @@ export async function runOne(db: Db, r: typeof S.readings.$inferSelect, http?: t
       tokensIn: (r.tokensIn ?? 0) + g.tokensIn, tokensOut: (r.tokensOut ?? 0) + g.tokensOut, costKrw: (r.costKrw ?? 0) + g.costKrw, doneAt: new Date(),
     }).where(eq(S.readings.id, r.id));
   } catch (e: any) {
+    // AI 호출 오류가 아닌 실패(형식 오류·사주 정보 없음 등)도 /health 진단에 남긴다
+    if (!String(e?.message ?? '').startsWith('AI 호출 실패')) aiDiag.lastError = { at: new Date().toISOString(), status: 0, type: 'generate', message: String(e?.message ?? e).slice(0, 200) };
     // 끝난 장은 저장해 두고(다음 시도에서 이어서), 쓴 토큰·원가도 누적
     await db.update(S.readings).set({
       status: 'failed', attempts: (r.attempts ?? 0) + 1, ...(e.partial ? { content: e.partial } : {}),

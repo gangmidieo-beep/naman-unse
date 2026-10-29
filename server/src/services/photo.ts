@@ -2,7 +2,7 @@
 // 사진은 메모리에서만 쓰고 버린다(저장·로그 없음). 결과 글·2세 그림만 readings.content 에 보관해 운세함에서 다시 본다.
 // 켜는 조건: 손금·관상 = ANTHROPIC_API_KEY (READING_AI=off 면 중지) (모델 PHOTO_AI_MODEL, 기본 claude-sonnet-5-5 — 3차 분량 보강 후 1건 약 100~150원)
 //            2세 = GEMINI_API_KEY (모델 GEMINI_IMAGE_MODEL, 기본 gemini-2.5-flash-image — 1건 2장 약 130~180원). 없으면 예시 결과.
-import { aiSwitchOn } from './env.ts';
+import { aiSwitchOn, recordAiFailure, recordAiOk } from './env.ts';
 import sample from '../../../packages/content/data/photo-sample.json' with { type: 'json' };
 
 export type PhotoKind = 'palm' | 'face';
@@ -63,7 +63,8 @@ export async function analyzePhoto(kind: PhotoKind, image: string, http: typeof 
     }),
     signal: AbortSignal.timeout(150_000),
   });
-  if (!r.ok) throw new Error(`AI 호출 실패 ${r.status}`);
+  if (!r.ok) { await recordAiFailure(r as any); throw new Error(`AI 호출 실패 ${r.status}`); }
+  recordAiOk();
   const j = (await r.json()) as any;
   const text = (j.content ?? []).map((c: any) => c.text ?? '').join('');
   const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));

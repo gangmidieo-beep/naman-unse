@@ -1,7 +1,7 @@
 // 나만의 운세 서버 — Fastify. 공개 API + 관리자 API(/admin/api). MOCK_MODE 면 결제·로그인·푸시를 가짜로 처리한다.
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { mockMode } from './services/mock.ts';
-import { aiStatus } from './services/env.ts';
+import { aiDiag, aiErrorHint, aiStatus } from './services/env.ts';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import bcrypt from 'bcryptjs';
@@ -68,7 +68,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       .where(and(eq(S.subscriptions.userId, userId), inArray(S.subscriptions.status, ['active', 'grace']), gt(S.subscriptions.expiresAt, new Date()))).limit(1))[0];
 
   // ai: 유료 풀이(reading)·손금관상(photo)·2세(baby) 켜짐 여부 + 빠진 변수 이름(값은 안 보임) — 양도 후 대표님 키 입력 확인용
-  app.get('/health', async () => ({ ok: true, mock: MOCK, ai: aiStatus() }));
+  app.get('/health', async () => ({ ok: true, mock: MOCK, ai: { ...aiStatus(), lastOkAt: aiDiag.lastOkAt, lastError: aiDiag.lastError, hint: aiErrorHint(aiDiag.lastError) } }));
   // 운세함 '공지사항' — 아직 관리자 공지 기능이 없어 빈 목록(화면은 "공지가 없어요"). 2026-10-23 양도 전 점검: 404 로그 제거
   app.get('/notices', async () => [] as { id: string; title: string; body: string; createdAt: string }[]);
   // 화면이 "어떤 로그인을 보여줄지·결제 전에 로그인을 요구할지" 정할 때 씀(키가 등록된 것만)
@@ -490,6 +490,15 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const { tokensIn, tokensOut, costKrw, model, ...pub } = r; void tokensIn; void tokensOut; void costKrw; void model; // 원가는 관리자만
     return pub;
   });
+  // 실패한 풀이 다시 쓰기 — 자동 재시도 3번이 끝난 뒤(키·잔액 문제를 고친 다음 등) 손님 화면의 [다시 시도] 버튼. 끝난 장은 이어서 씀
+  app.post('/readings/:oid/retry', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
+    if (!o || o.status !== 'paid') return rep.code(404).send({ error: '결제된 풀이가 없어요' });
+    const [r] = await db.update(S.readings).set({ status: 'queued', attempts: 0 }).where(and(eq(S.readings.orderId, o.id), eq(S.readings.status, 'failed'))).returning();
+    return { status: r ? 'queued' : 'unchanged' };
+  });
   // 정통 감정서 A4 PDF — 화면에서 링크를 받아(10분짜리) 주소를 열면 내려받기. 같은 풀이는 메모리에 잠깐 보관해 다시 만들지 않음
   const pdfCache = new Map<string, Buffer>();
   app.post('/readings/:oid/pdf-link', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, rep) => {
@@ -556,8 +565,34 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const userId = await needUser(req, rep);
     if (!userId) return;
     const subs = await db.select().from(S.subscriptions).where(eq(S.subscriptions.userId, userId)).orderBy(desc(S.subscriptions.expiresAt));
-    const owned = await db.select({ productId: S.orders.productId, orderId: S.orders.id, profileId: S.orders.profileId, kind: S.orders.kind, amount: S.orders.amount, createdAt: S.orders.createdAt }).from(S.orders).where(and(eq(S.orders.userId, userId), eq(S.orders.status, 'paid')));
-    return { premium: await isPremium(userId), subscription: subs[0] ?? null, owned };
+    // 운세함 기준 목록 — 결제 완료이면서 손님이 지우지 않은 주문(환불·삭제된 건 빠짐). 모바일·웹 어디서 로그인해도 같은 목록
+    const owned = await db.select({ productId: S.orders.productId, orderId: S.orders.id, profileId: S.orders.profileId, kind: S.orders.kind, amount: S.orders.amount, createdAt: S.orders.createdAt }).from(S.orders).where(and(eq(S.orders.userId, userId), eq(S.orders.status, 'paid'), isNull(S.orders.hiddenAt)));
+    const ownedIds = new Set(owned.map((o) => o.orderId));
+    const tal = (await db.select().from(S.talismans).where(eq(S.talismans.userId, userId)).orderBy(desc(S.talismans.issuedAt))).filter((t) => ownedIds.has(t.orderId));
+    const talismans = tal.map((t) => ({ id: t.id, talismanId: t.talismanId, orderId: t.orderId, name: t.name, birth: t.birth, wish: t.wish, issuedAt: new Date(t.issuedAt).toISOString().slice(0, 10) }));
+    return { premium: await isPremium(userId), subscription: subs[0] ?? null, owned, talismans };
+  });
+
+  // 완성한 부적을 계정에 보관(다른 기기·웹/모바일에서도 같은 부적함). 같은 주문은 한 장만
+  app.post('/me/talismans', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const b = (req.body ?? {}) as { id?: string; talismanId?: string; orderId?: string; name?: string; birth?: string; wish?: string };
+    const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, String(b.orderId ?? '')), eq(S.orders.userId, userId), eq(S.orders.status, 'paid')));
+    if (!o || o.productId !== b.talismanId) return rep.code(404).send({ error: '결제된 부적이 없어요' });
+    const [have] = await db.select().from(S.talismans).where(eq(S.talismans.orderId, o.id));
+    if (have) return { id: have.id };
+    const id = /^[\w-]{4,40}$/.test(b.id ?? '') ? b.id! : newId('tl_');
+    await db.insert(S.talismans).values({ id, orderId: o.id, userId, talismanId: o.productId, name: String(b.name ?? '').slice(0, 40), birth: String(b.birth ?? '').slice(0, 60), wish: String(b.wish ?? '').slice(0, 80) }).onConflictDoNothing();
+    return { id };
+  });
+  // 운세함에서 지우기 — 결제 기록(정산·환불용)은 남기고 손님 화면(서재·부적함·결제 내역)에서만 숨김. 모든 기기에 반영
+  app.post('/me/orders/:oid/hide', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const [o] = await db.update(S.orders).set({ hiddenAt: new Date() }).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId))).returning({ id: S.orders.id });
+    if (!o) return rep.code(404).send({ error: '주문이 없어요' });
+    return { ok: true };
   });
 
   /* ---------- 이벤트 추적 ---------- */

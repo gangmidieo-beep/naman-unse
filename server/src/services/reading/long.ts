@@ -3,6 +3,7 @@
 // 2) reading-outline-long.json 목차를 사람·대운·세운·월운에 맞게 펼침(약 35~45장)
 // 3) 장들을 4천 자 안팎 묶음으로 나눠 AI 를 동시에 여러 번 호출, 장마다 "이 장에서만 다룰 내용"과 전체 목차를 같이 줘 중복을 막음
 // 4) 묶음이 끝날 때마다 진행분을 저장(화면에 "N/M장 작성 중"), 실패하면 끝난 장은 두고 남은 장만 다시 씀
+import { recordAiFailure, recordAiOk } from '../env.ts';
 import { analyzeSaju, calcSaju, solarToLunar, tojeong, STEMS, BRANCHES, type SajuReport, type SajuResult } from '@naman/engine';
 import longOutline from '../../../../packages/content/data/reading-outline-long.json' with { type: 'json' };
 
@@ -172,6 +173,7 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       signal: AbortSignal.timeout(300_000),
     }).catch((e) => ({ ok: false, status: 0, headers: new Headers(), json: async () => ({}), err: e }) as any));
     if (r.ok) {
+      recordAiOk();
       const j = (await r.json()) as any;
       const text = (j.content ?? []).map((c: any) => c.text ?? '').join('');
       try {
@@ -179,7 +181,7 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       } catch { if (attempt >= 2) throw new Error('AI 응답 형식 오류'); continue; }
     }
     const retryable = [0, 408, 429, 500, 502, 503, 504, 529].includes(r.status);
-    if (!retryable || attempt >= 6) throw new Error(`AI 호출 실패 ${r.status}`);
+    if (!retryable || attempt >= 6) { await recordAiFailure(r as any, (r as any).err?.message ?? ''); throw new Error(`AI 호출 실패 ${r.status}`); }
     const ra = +(r.headers?.get?.('retry-after') ?? 0);
     await sleep(Math.min(90_000, (ra > 0 ? ra * 1000 : 5000 * 2 ** attempt)) * (process.env.NODE_ENV === 'test' ? 0 : 1));
   }
