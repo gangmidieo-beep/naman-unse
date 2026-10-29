@@ -6,9 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../store/app';
 
-const VIDEO = '/intro/intro2.mp4'; // H.264 — 휴대폰·사파리·크롬
-const VIDEO_WEBM = '/intro/intro2.webm'; // VP9 — H.264 를 못 트는 브라우저용
-const POSTER = '/intro/intro2_poster.webp';
+const VIDEO = '/intro/intro3.mp4'; // H.264 — 휴대폰·사파리·크롬
+const VIDEO_WEBM = '/intro/intro3.webm'; // VP9 — H.264 를 못 트는 브라우저용
+const POSTER = '/intro/intro3_poster.webp';
 const LOGO = '/intro/intro_logo.webp';
 const LOAD_LIMIT_MS = 2500; // 이 안에 재생이 시작되지 않으면 홈으로
 const LOGO_BEFORE_END = 0.9; // 영상 끝나기 몇 초 전부터 금빛·로고를 띄울지
