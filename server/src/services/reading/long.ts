@@ -164,6 +164,31 @@ async function slot<T>(fn: () => Promise<T>): Promise<T> {
   try { return await fn(); } finally { running--; waiters.shift()?.(); }
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/* AI 가 돌려준 글에서 JSON 꺼내기 — 2026-10-29 실서버 장애: 감정서가 19/50장에서 "AI 응답 형식 오류"로 멈춤.
+   ① 문자열 안의 실제 줄바꿈·탭(JSON 규칙 위반)을 \\n 으로 고쳐서 다시 읽고 ② 그래도 안 되면 null(호출한 쪽이 장을 나눠 다시 씀) */
+export function parseLooseJson(text: string): any | null {
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  const raw = text.slice(a, b + 1);
+  try { return JSON.parse(raw); } catch { /* 아래에서 고쳐 봄 */ }
+  let out = '', inStr = false, esc = false;
+  for (const ch of raw) {
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '\n') { out += '\\n'; continue; }
+      if (ch === '\r') continue;
+      if (ch === '\t') { out += '\\t'; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  try { return JSON.parse(out.replace(/,\s*([}\]])/g, '$1')); } catch { return null; }
+}
+export class AiFormatError extends Error { constructor(public truncated: boolean) { super('AI 응답 형식 오류'); } }
 export async function callClaudeLong(system: string, user: string, maxTokens: number, http: typeof fetch, model = process.env.ANTHROPIC_MODEL) {
   for (let attempt = 0; ; attempt++) {
     const r = await slot(() => http('https://api.anthropic.com/v1/messages', {
@@ -176,9 +201,11 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       recordAiOk();
       const j = (await r.json()) as any;
       const text = (j.content ?? []).map((c: any) => c.text ?? '').join('');
-      try {
-        return { json: JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)), tokensIn: j.usage?.input_tokens ?? 0, tokensOut: j.usage?.output_tokens ?? 0, stop: j.stop_reason };
-      } catch { if (attempt >= 2) throw new Error('AI 응답 형식 오류'); continue; }
+      const json = parseLooseJson(text);
+      if (json) return { json, tokensIn: j.usage?.input_tokens ?? 0, tokensOut: j.usage?.output_tokens ?? 0, stop: j.stop_reason };
+      // 글자 수 한도(max_tokens)에서 잘린 응답은 같은 요청을 다시 보내도 또 잘린다 → 바로 알려서 장을 나눠 쓰게
+      if (j.stop_reason === 'max_tokens' || attempt >= 1) throw new AiFormatError(j.stop_reason === 'max_tokens');
+      continue;
     }
     const retryable = [0, 408, 429, 500, 502, 503, 504, 529].includes(r.status);
     if (!retryable || attempt >= 6) { await recordAiFailure(r as any, (r as any).err?.message ?? ''); throw new Error(`AI 호출 실패 ${r.status}`); }
@@ -266,26 +293,41 @@ export async function generateLong(
     const extras = (wantIntro ? '\n\n추가로 JSON 에 "intro"(감정서 첫머리 안내, 250~350자, 이름을 부르며 이 감정서의 구성과 읽는 방법을 차분한 존댓말로)도 넣는다.' : '')
       + (wantTips ? '\n\n추가로 JSON 에 "tips"(평생 기억할 실천 조언 3개, 각 40자 안팎) 배열도 넣는다.' : '');
     const sum = batch.reduce((a, s) => a + s.len, 0);
-    const maxTokens = Math.min(32000, Math.ceil(sum * 2.2) + 2000);
-    const res = await callClaudeLong(system, userPrompt(product, people, plan.sections, batch, facts, plan.parts, extras), maxTokens, http);
-    tokensIn += res.tokensIn; tokensOut += res.tokensOut;
-    if (wantIntro && res.json.intro) intro = String(res.json.intro);
-    if (wantTips && Array.isArray(res.json.tips)) tips = res.json.tips.map(String).slice(0, 3);
-    const got = new Map<string, any>((res.json.sections ?? []).map((x: any) => [String(x.id), x]));
+    // 한글은 글자당 토큰이 많아(모델에 따라 2~3배) 예전 2.2배로는 묶음 끝이 잘려 JSON 이 깨졌다 → 3.2배 + 여유
+    const maxTokens = Math.min(32000, Math.ceil(sum * 3.2) + 3000);
     const short: Section[] = [];
-    for (const s of batch) {
-      const x = got.get(s.id);
-      if (!x?.body || String(x.body).length < s.len * 0.5) { short.push(s); continue; }
-      done.set(s.id, chapterOf(s, x));
+    let res: Awaited<ReturnType<typeof callClaudeLong>> | null = null;
+    try {
+      res = await callClaudeLong(system, userPrompt(product, people, plan.sections, batch, facts, plan.parts, extras), maxTokens, http);
+    } catch (e) {
+      if (!(e instanceof AiFormatError)) throw e;
+      short.push(...batch); // 묶음이 깨지면 감정서 전체를 멈추지 않고 한 장씩 나눠서 다시 쓴다
     }
-    // 빠졌거나 많이 짧은 장은 한 장씩 한 번 더
+    if (res) {
+      tokensIn += res.tokensIn; tokensOut += res.tokensOut;
+      if (wantIntro && res.json.intro) intro = String(res.json.intro);
+      if (wantTips && Array.isArray(res.json.tips)) tips = res.json.tips.map(String).slice(0, 3);
+      const got = new Map<string, any>((res.json.sections ?? []).map((x: any) => [String(x.id), x]));
+      for (const s of batch) {
+        const x = got.get(s.id);
+        if (!x?.body || String(x.body).length < s.len * 0.5) { short.push(s); continue; }
+        done.set(s.id, chapterOf(s, x));
+      }
+      await opts.onProgress?.(snapshot());
+    }
+    // 빠졌거나 많이 짧거나 묶음이 깨진 장은 한 장씩(넉넉한 한도로) — 한 장이 끝날 때마다 진행률 저장
     for (const s of short) {
-      const one = await callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, ''), Math.min(16000, Math.ceil(s.len * 2.4) + 1500), http);
+      const lone = (n: number) => callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, s.id === batch[0].id ? extras : ''), n, http);
+      let one: Awaited<ReturnType<typeof callClaudeLong>>;
+      try { one = await lone(Math.min(16000, Math.ceil(s.len * 3.4) + 2500)); }
+      catch (e) { if (!(e instanceof AiFormatError)) throw e; one = await lone(Math.min(32000, Math.ceil(s.len * 5) + 4000)); }
       tokensIn += one.tokensIn; tokensOut += one.tokensOut;
+      if (wantIntro && !intro && one.json.intro) intro = String(one.json.intro);
+      if (wantTips && !tips.length && Array.isArray(one.json.tips)) tips = one.json.tips.map(String).slice(0, 3);
       const x = (one.json.sections ?? [])[0];
       if (x?.body) done.set(s.id, chapterOf(s, x));
+      await opts.onProgress?.(snapshot());
     }
-    await opts.onProgress?.(snapshot());
   };
   // 묶음들을 동시에(호출 수는 READING_CONCURRENCY 로 제한). 하나가 실패해도 나머지는 끝까지 쓰고 마지막에 오류
   const results = await Promise.allSettled(todo.map(runBatch));

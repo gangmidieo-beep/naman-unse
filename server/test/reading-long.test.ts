@@ -1,7 +1,7 @@
 // A4 40~50장 정통 감정서 — 목차 펼치기(전 상품), 묶음 생성·진행 저장·재시도·이어쓰기, 중복 검사
 import { describe, it, expect } from 'vitest';
 import { analyzeSaju, calcSaju } from '@naman/engine';
-import { batchesOf, buildPlan, generateLong, longQuality } from '../src/services/reading/long.ts';
+import { batchesOf, buildPlan, generateLong, longQuality, parseLooseJson } from '../src/services/reading/long.ts';
 import { groupOf, characterOf } from '../src/services/reading/generate.ts';
 import brand from '../../brand.config.json' with { type: 'json' };
 
@@ -16,7 +16,7 @@ const write = (id: string, len: number, name: string) => {
   while (t.length < len) t += `${name} 님의 ${id} 장 ${i++}번째 문장은 원국의 근거를 들어 새롭게 풀이한 내용입니다. `;
   return t;
 };
-function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: string[] } = {}) {
+function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: string[]; truncateBatches?: boolean; rawNewlines?: boolean } = {}) {
   let calls = 0, limited = false;
   const fn = (async (_u: string, init: any) => {
     calls++;
@@ -26,11 +26,15 @@ function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: stri
     const items = [...u.matchAll(/- id "([^"]+)" · 제목 "[^"]*" · 목표 (\d+)자/g)].map((m) => ({ id: m[1], len: +m[2] }));
     opts.log?.push(items.map((x) => x.id).join(','));
     if (items.some((x) => opts.failIds?.includes(x.id))) return new Response('{}', { status: 500 });
+    // 여러 장 묶음이 글자 수 한도에서 잘려 JSON 이 깨진 경우(2026-10-29 실서버)
+    if (opts.truncateBatches && items.length > 1) return new Response(JSON.stringify({ content: [{ type: 'text', text: '{"sections":[{"id":"' + items[0].id + '","body":"잘린 글' }], usage: { input_tokens: 3000, output_tokens: 9000 }, stop_reason: 'max_tokens' }));
     const name = u.match(/사람: ([^(]+)\(/)?.[1] ?? '';
     const json: any = { sections: items.map((x) => ({ id: x.id, summary: '핵심 요약', body: write(x.id, x.len, name), points: ['장점 하나', '장점 둘'], caution: '주의점입니다.', advice: '조언입니다.', line: '한 줄 정리' })) };
     if (u.includes('"intro"')) json.intro = `${name} 님, 반갑습니다.`;
     if (u.includes('"tips"')) json.tips = ['하나', '둘', '셋'];
-    return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(json) }], usage: { input_tokens: 3000, output_tokens: 5000 }, stop_reason: 'end_turn' }));
+    // 문자열 안에 실제 줄바꿈이 들어간(규칙 위반) JSON 도 읽어야 함
+    const text = opts.rawNewlines ? JSON.stringify(json).replace(/입니다\. /g, '입니다.\n') : JSON.stringify(json);
+    return new Response(JSON.stringify({ content: [{ type: 'text', text }], usage: { input_tokens: 3000, output_tokens: 5000 }, stop_reason: 'end_turn' }));
   }) as unknown as typeof fetch;
   return { fn, calls: () => calls };
 }
@@ -123,6 +127,24 @@ describe('장편 생성', () => {
     expect(g.content.chapters.length + 1).toBe(g.plan.sections.length);
   });
 
+  it('묶음 응답이 잘려 JSON 이 깨져도 멈추지 않고 한 장씩 나눠 끝까지 쓴다(2026-10-29)', async () => {
+    env();
+    const log: string[] = [];
+    const g = await generateLong({ id: 'jeongtong', title: '정통운세' }, 'life', 'cheongung', [ME], { http: fakeAI({ truncateBatches: true, log }).fn, now: NOW });
+    clear();
+    expect(g.content.chapters.length + 1).toBe(g.plan.sections.length);
+    expect(g.content.intro).toContain('김현재');
+    expect(g.content.closing.tips).toHaveLength(3);
+    expect(log.some((x) => !x.includes(','))).toBe(true); // 한 장씩 다시 요청
+  });
+  it('문자열 안 줄바꿈이 섞인 JSON 도 읽는다', async () => {
+    expect(parseLooseJson('앞말 {"a":"첫 줄\n둘째 줄","b":[1,2,]} 뒷말')).toEqual({ a: '첫 줄\n둘째 줄', b: [1, 2] });
+    expect(parseLooseJson('{"a":"잘린')).toBeNull();
+    env();
+    const g = await generateLong({ id: 'gunghap', title: '정통궁합' }, 'pair', 'wolha', [ME, YOU], { http: fakeAI({ rawNewlines: true }).fn, now: NOW });
+    clear();
+    expect(g.content.chapters.length + 1).toBe(g.plan.sections.length);
+  });
   it('중복 문장·분량 부족을 찾아낸다', () => {
     const plan = buildPlan({ id: 'wealth', title: '재물운' }, 'theme', [ME], NOW).sections;
     const same = '김현재 님의 재물은 월지 편재에서 시작되어 꾸준히 늘어나는 흐름이오.';
