@@ -61,6 +61,7 @@ export default function ProfileNew() {
       if (!/^\d{8}$/.test(digits)) return setErr('숫자 8자리로 적어 주세요. 예) 19680315');
       const y = +digits.slice(0, 4), m = +digits.slice(4, 6), d = +digits.slice(6, 8);
       if (y < LUNAR_YEAR_MIN || y > THIS_YEAR || m < 1 || m > 12 || d < 1 || d > 31) return setErr(`${LUNAR_YEAR_MIN}년~${THIS_YEAR}년 사이 날짜를 적어 주세요.`);
+      if (new Date(y, m - 1, d).getTime() > Date.now()) return setErr('아직 오지 않은 날짜예요. 생년월일을 다시 확인해 주세요.');
       up({ year: y, month: m, day: d });
     }
     if (step === 'calendar') {

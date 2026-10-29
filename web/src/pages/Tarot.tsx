@@ -328,6 +328,16 @@ export function TarotReading({ p, orderId }: { p: TarotProduct; orderId: string 
   const [aiState, setAiState] = useState<'idle' | 'loading' | 'off'>('idle');
   const topic = TOPIC[p.id];
   useEffect(() => { if (done) try { localStorage.setItem(doneKey(orderId), '1'); } catch { /* 저장 불가 */ } }, [done, orderId]);
+  // 다른 기기·브라우저에서 이미 본 타로면 서버에 저장된 풀이로 바로 결과를 보여 줌(질문 화면이 다시 뜨던 문제)
+  useEffect(() => {
+    if (MOCK_MODE || done || orderId.startsWith('sample-')) return;
+    let live = true;
+    apiAuth<{ content?: { ai?: TarotAi; input?: TarotIn } }>(`/readings/${encodeURIComponent(orderId)}`).then((r) => {
+      if (!live || !r.content?.ai) return;
+      setAi(r.content.ai); setInput(r.content.input ?? {}); setShown(cards.length); setDone(true);
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [orderId]);
   // 질문을 받으면 바로 AI 풀이를 부탁해 둔다 — 카드를 뒤집는 동안 만들어져, 다 뒤집으면 바로 보인다(다시 열면 저장된 풀이)
   useEffect(() => {
     if (!input || ai || MOCK_MODE) { if (MOCK_MODE) setAiState('off'); return; }

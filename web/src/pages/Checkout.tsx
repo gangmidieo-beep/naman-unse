@@ -54,6 +54,8 @@ export default function Checkout() {
   const [err, setErr] = useState('');
   const [phone, setPhone] = useState(savedPhone());
   useEffect(() => { if (p) track('checkout_open', { product: p.id }); }, [p]);
+  // 결제창에서 '뒤로'로 돌아오면(아이폰은 이전 화면을 그대로 되살림) '결제를 확인하고 있어요'가 계속 떠 있던 문제
+  useEffect(() => { const on = (e: PageTransitionEvent) => { if (e.persisted) setBusy(false); }; window.addEventListener('pageshow', on); return () => window.removeEventListener('pageshow', on); }, []);
   // 실결제 모드에서 간편 로그인 키가 하나도 없으면(대표님 등록 전) 로그인 없이 휴대폰 번호로 결제
   const [needLogin, setNeedLogin] = useState(MOCK_MODE);
   useEffect(() => {

@@ -7,15 +7,21 @@ import brand from '../../../brand.config.json';
 import { useApp, usePremium } from '../store/app';
 import { track } from '../lib/track';
 import { MOCK_AD_SECONDS, rewardProvider, showRewarded, type RewardResult } from '../platform/ads';
+import { adSlots } from '../lib/ads';
 
-const cfg = brand.ads.rewardedResult as { enabled: boolean; maxPerDay: number; minIntervalSec: number; whenUnavailable?: 'open' | 'block' };
+type Cfg = { enabled: boolean; maxPerDay: number; minIntervalSec: number; whenUnavailable?: 'open' | 'block' };
+const base = brand.ads.rewardedResult as Cfg;
+// 관리자 › 광고 관리의 '결과 보상형 전면' ON/OFF·하루 최대 횟수·최소 간격이 우선(예전엔 저장만 되고 화면은 brand.config 값을 썼다)
+let live: Cfg = base;
+void adSlots().then((m) => { const r = (m as any).rewarded; if (r) live = { ...base, ...(r.config ?? {}), enabled: !!r.enabled }; });
 export function useRewarded() {
   const premium = usePremium();
   const { adViews, noteAdView } = useApp();
   const [pending, setPending] = useState<null | { grant: () => void; where: string }>(null);
   const run = useCallback(
     (onGranted: () => void, where: string) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const cfg = live;
+      const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10); // 한국 날짜(가게의 '오늘'과 같게)
       const count = adViews.date === today ? adViews.count : 0;
       const tooSoon = Date.now() - adViews.last < cfg.minIntervalSec * 1000;
       if (premium || !cfg.enabled || count >= cfg.maxPerDay || tooSoon) return onGranted();
@@ -45,7 +51,7 @@ function RewardGate({ where, onGranted, onClose }: { where: string; onGranted: (
     if (r === 'rewarded') return onGranted(true);
     if (r === 'dismissed') return setPhase('dismissed');
     // 광고 없음·연동 전: 기본은 사용자를 막지 않고 바로 열어 준다(하루 횟수에는 세지 않음)
-    if ((cfg.whenUnavailable ?? 'open') === 'open') return onGranted(false);
+    if ((live.whenUnavailable ?? 'open') === 'open') return onGranted(false);
     setPhase('failed');
   };
   return (

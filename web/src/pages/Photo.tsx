@@ -3,6 +3,7 @@
 // 2세 얼굴보기: 두 사람 사진 → AI 가 아들·딸 2장 → 저장·공유
 // 사진은 이 화면 메모리에만 두고, 서버도 메모리에서만 처리(저장·로그 없음). 결과 글·2세 그림만 그 주문에 보관(운세함에서 다시 보기).
 import { useEffect, useRef, useState } from 'react';
+import { downloadDataUrl } from '../lib/share';
 import sample from '@naman/content/data/photo-sample.json';
 import { CharacterBubble, useToast } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -135,7 +136,14 @@ function PalmFaceReading({ kind, orderId }: { kind: Kind; orderId: string }) {
   const [image, setImage] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<Result | null>(unlocked[doneKey] && MOCK_MODE ? sampleOf(kind) : null);
-  useEffect(() => { if (unlocked[doneKey] && !result) void loadSaved<Result>(orderId, 'photo').then((r) => setResult(r ?? sampleOf(kind))); }, []);
+  // 결과는 서버에 보관 — 이 기기에 표시가 없어도(새 폰·다른 브라우저·로그인 후) 서버에 있으면 결과를 보여 준다
+  useEffect(() => {
+    if (result) return;
+    void loadSaved<Result>(orderId, 'photo').then((r) => {
+      if (r) { setResult(r); setStep('result'); if (!unlocked[doneKey]) unlock(doneKey); }
+      else if (unlocked[doneKey]) setResult(sampleOf(kind));
+    });
+  }, []);
   useEffect(() => {
     if (step !== 'analyzing' || !image) return;
     const run = MOCK_MODE
@@ -222,7 +230,7 @@ function BabyReading({ orderId }: { orderId: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [res, setRes] = useState<Baby | null>(unlocked[doneKey] && MOCK_MODE ? { boy: '/img/v4/baby_boy.webp', girl: '/img/v4/baby_girl.webp', generatedBy: 'sample' } : null);
-  useEffect(() => { if (unlocked[doneKey] && !res) void loadSaved<Baby>(orderId, 'baby').then((r) => r && setRes(r)); }, []);
+  useEffect(() => { if (!res) void loadSaved<Baby>(orderId, 'baby').then((r) => r && setRes(r)); }, []);
   const go = async () => {
     setBusy(true); setErr('');
     try {
@@ -232,10 +240,10 @@ function BabyReading({ orderId }: { orderId: string }) {
       setRes(r); setA(null); setB(null); unlock(doneKey);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
-  const save = (src: string, name: string) => {
-    const el = document.createElement('a');
-    el.href = src; el.download = `naman-unse_baby_${name}.png`; el.click();
-    toast('사진을 저장했어요');
+  const save = async (src: string, name: string) => {
+    // 앱 안 브라우저는 길게 눌러 저장 안내, 그 밖에는 파일로 내려받기(실패하면 새 창으로 열어 저장)
+    const mode = await downloadDataUrl(src, `baby_${name}.png`).catch(() => { window.open(src, '_blank'); return 'open' as const; });
+    if (mode === 'download') toast('사진을 저장했어요');
   };
   if (res)
     return (

@@ -18,7 +18,7 @@ import { enablePush, syncPushPrefs } from '../platform/native';
 import { birthLabel, hourLabel } from './ProfileNew';
 
 type Notice = { id: number; title: string; date: string; body: string };
-const VERSION = '0.3.0 (구조 v3)';
+const VERSION = '1.0';
 const dot = (s: string) => s.slice(0, 10).replace(/-/g, '.');
 
 // 운세함 v4 (대표님 2차 시안) — 섹션 머리(영문 + 제목 + 산 그림 선), 항목 = 썸네일·이름·구매일 → 결과로 이동, 빈 칸 = 작은 아이콘 + 안내
@@ -233,7 +233,7 @@ export default function Box() {
         <Button kind="line" onClick={() => setSheet(null)}>닫기</Button>
       </BottomSheet>
       <BottomSheet open={sheet === 'withdraw'} onClose={() => setSheet(null)} title="회원 탈퇴">
-        <p>탈퇴하면 계정과 연결된 풀이·부적 보관 기록이 삭제되고 되살릴 수 없어요. 구독은 구글 플레이에서 먼저 해지해 주세요.</p>
+        <p>탈퇴하면 계정과 연결된 풀이·부적 보관 기록이 삭제되고 되살릴 수 없어요. 웹에서 신청한 월 자동결제는 탈퇴할 때 함께 해지돼요. 앱(구글 플레이)에서 구독하셨다면 구글 플레이에서 먼저 해지해 주세요.</p>
         <div className="btn-row">
           <Button kind="line" onClick={() => setSheet(null)}>취소</Button>
           <Button kind="ink" onClick={withdraw}>탈퇴하기</Button>

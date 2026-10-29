@@ -3,7 +3,7 @@
 // 페이스북=facebook.com/sharer, 스레드=threads.com/intent/post. 카카오스토리는 API 종료(2023-11-15)로 숨김 — 결정필요 D14.
 import { type RefObject } from 'react';
 import { BottomSheet } from './ui';
-import { saveImage, shareLink, shortLink, kakaoShare, CHANNELS, type Channel } from '../lib/share';
+import { lastSaveMode, saveImage, shareLink, shortLink, kakaoShare, CHANNELS, type Channel } from '../lib/share';
 import { track } from '../lib/track';
 
 export function ShareSheet({ open, onClose, card, title, text, path, contentId, onDone, imageName }: {
@@ -20,7 +20,7 @@ export function ShareSheet({ open, onClose, card, title, text, path, contentId, 
       const r = await shareLink({ title, text, url }, c === 'native');
       if (r === 'copied') onDone?.('링크를 복사했어요');
     } else if (c === 'image') {
-      if (card?.current) { await saveImage(card.current, imageName ?? `${contentId}.png`); onDone?.('이미지로 저장했어요'); }
+      if (card?.current) { await saveImage(card.current, imageName ?? `${contentId}.png`); onDone?.(lastSaveMode === 'longpress' ? '' : '이미지로 저장했어요'); }
     } else {
       window.open(CHANNELS[c].href!(url, text), '_blank', 'noopener,width=600,height=640');
     }

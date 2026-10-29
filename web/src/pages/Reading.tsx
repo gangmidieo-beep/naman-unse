@@ -1,5 +1,6 @@
 // 풀이 결과 — 생성 대기(별자리 판 애니메이션) → "천궁도사가 풀어드린 나의 운명서" / "월하선녀가 풀어드린 인연서"
 // 한지 문서(금 테두리 프레임 + 명조 본문 18px). MOCK_MODE 는 예시 풀이(11 단계에서 AI 풀이로 교체).
+import { inAppBrowser } from '../lib/share';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import saju from '@naman/content/data/sample-readings/saju.json';
@@ -89,18 +90,37 @@ export default function ReadingPage() {
   const live = !MOCK_MODE && !orderId.startsWith('sample-');
   const [srv, setSrv] = useState<{ status: string; content?: any; productId?: string; profileId?: string; attempts?: number } | null>(null);
   const [retryTick, setRetryTick] = useState(0); // [다시 시도] 누르면 확인을 다시 시작
+  // 진행이 멈춘 듯하면(같은 장 수로 4분 이상) 기다리는 화면에 '나중에 보기·다시 확인' 안내
+  const [moved, setMoved] = useState(() => ({ done: -1, at: Date.now() }));
+  const [, setNow] = useState(0);
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!live) return;
-    let stop = false;
+    let stop = false, timer = 0, fails = 0;
     const poll = async () => {
-      const r = await apiAuth<any>(`/readings/${encodeURIComponent(orderId)}`).catch(() => ({ status: 'missing' }));
+      if (stop) return;
+      let r: any;
+      try { r = await apiAuth<any>(`/readings/${encodeURIComponent(orderId)}`); fails = 0; }
+      catch (e: any) {
+        if (stop) return;
+        // 정말 없는 주문(404)만 '찾을 수 없어요'. 잠깐 끊긴 통신·앱 전환은 다시 확인(예전엔 한 번 실패로 영영 '찾을 수 없어요')
+        if (e?.status === 404) { setSrv({ status: 'missing' }); return; }
+        fails++;
+        timer = window.setTimeout(poll, Math.min(30_000, 4000 * 2 ** Math.min(fails, 3)));
+        return;
+      }
       if (stop) return;
       setSrv(r);
+      const d = r?.content?.progress?.done ?? 0;
+      setMoved((m) => (m.done === d ? m : { done: d, at: Date.now() }));
       // 장편은 몇 분 걸리고, 실패해도 서버가 자동으로 다시 쓴다(최대 3번)
-      if (r.status === 'queued' || r.status === 'generating' || (r.status === 'failed' && (r.attempts ?? 0) < 3)) setTimeout(poll, 4000);
+      if (r.status === 'queued' || r.status === 'generating' || (r.status === 'failed' && (r.attempts ?? 0) < 3)) timer = window.setTimeout(poll, 4000);
     };
     poll();
-    return () => { stop = true; };
+    // 화면으로 돌아오면 바로 다시 확인(휴대폰에서 다른 앱을 보고 왔을 때)
+    const vis = () => { if (document.visibilityState === 'visible') { clearTimeout(timer); void poll(); } };
+    document.addEventListener('visibilitychange', vis);
+    return () => { stop = true; clearTimeout(timer); document.removeEventListener('visibilitychange', vis); };
   }, [live, orderId, retryTick]);
   // /reading/sample-<상품id> 는 예시 주소(시안·공유 미리보기용)
   const order = purchases.find((x) => x.orderId === orderId) ?? (live && srv?.productId ? { orderId, productId: srv.productId, profileId: srv.profileId ?? '', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null) ?? (orderId.startsWith('sample-') ? { orderId, productId: orderId.slice(7), profileId: 'sample', price: 0, createdAt: '', kind: 'reading' as const, status: 'paid' as const } : null);
@@ -119,13 +139,18 @@ export default function ReadingPage() {
   }, [step, live, srv?.status]);
 
   const retrying = srv?.status === 'failed' && (srv.attempts ?? 0) < 3;
-  if (live && srv && ((srv.status === 'failed' && !retrying) || srv.status === 'missing') && !(pre && (isTarot(pre) || isPhoto(pre))))
+  if (live && srv && ((srv.status === 'failed' && !retrying) || srv.status === 'missing' || srv.status === 'cancelled') && !(pre && (isTarot(pre) || isPhoto(pre))))
     return (
       <>
         <SubHeader title="풀이" />
-        <main className="screen no-tab"><p className="muted center mt24">{srv.status === 'failed' ? '풀이를 쓰는 중 문제가 생겼어요. [다시 시도]를 눌러 주세요. 계속되면 문의해 주세요.' : '풀이를 찾을 수 없어요.'}</p>
-          {srv.status === 'failed' && <div className="pad mt14"><Button kind="gold" onClick={async () => { await apiAuth(`/readings/${encodeURIComponent(orderId)}/retry`, { method: 'POST', body: '{}' }).catch(() => null); setSrv({ ...srv, status: 'queued', attempts: 0 }); setRetryTick((n) => n + 1); }}>다시 시도</Button></div>}
-          <div className="pad mt14"><Button to="/box">나의 운세함으로</Button></div></main>
+        <main className="screen no-tab"><p className="muted center mt24">{srv.status === 'failed' ? '풀이를 쓰는 중 문제가 생겼어요. [다시 시도]를 눌러 주세요. 계속되면 문의해 주세요.' : srv.status === 'cancelled' ? '환불·취소된 풀이예요.' : '풀이를 찾을 수 없어요. 결제한 기기·계정으로 로그인했는지 확인해 주세요.'}</p>
+          {srv.status === 'failed' && <div className="pad mt14"><Button kind="gold" onClick={async () => {
+            try { await apiAuth(`/readings/${encodeURIComponent(orderId)}/retry`, { method: 'POST', body: '{}' }); setSrv({ ...srv, status: 'queued', attempts: 0 }); setRetryTick((n) => n + 1); }
+            catch (e: any) { toast(e.message ?? '잠시 후 다시 시도해 주세요'); }
+          }}>다시 시도</Button></div>}
+          {srv.status === 'missing' && <div className="pad mt14"><Button kind="gold" onClick={() => { setSrv(null); setRetryTick((n) => n + 1); }}>다시 확인</Button></div>}
+          <div className="pad mt14"><Button to="/box">나의 운세함으로</Button></div>
+          <div className="pad mt14"><Button kind="line" to="/contact">문의하기</Button></div></main>
       </>
     );
   if (!order || !p)
@@ -153,7 +178,11 @@ export default function ReadingPage() {
   const savePdf = async () => {
     try {
       const { url } = await apiAuth<{ url: string }>(`/readings/${encodeURIComponent(orderId)}/pdf-link`, { method: 'POST', body: '{}' });
-      if (isNativeApp()) window.open(url, '_system'); else window.location.assign(url);
+      if (isNativeApp()) window.open(url, '_system');
+      // 카카오톡 안 브라우저는 파일 내려받기가 막혀 있어 바깥 브라우저(크롬·사파리)로 열어 받는다
+      else if (/KAKAOTALK/i.test(navigator.userAgent)) { location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`; toast('바깥 브라우저에서 PDF 를 열고 있어요'); return; }
+      else if (inAppBrowser()) { toast('이 앱 안에서는 파일 저장이 막혀 있어요. 오른쪽 위 ⋯ 메뉴에서 ‘다른 브라우저로 열기’ 후 다시 눌러 주세요'); return; }
+      else window.location.assign(url);
       toast('PDF 를 만들고 있어요. 잠시 뒤 내려받기가 시작돼요.');
     } catch (e: any) { toast(e.message ?? 'PDF 를 만들지 못했어요'); }
   };
@@ -176,7 +205,16 @@ export default function ReadingPage() {
         <ol className="wait-steps">
           {STEPS.map((s, i) => <li key={s} className={i < step ? 'done' : i === step ? 'on' : ''}>{i < step ? '✓ ' : ''}{s}</li>)}
         </ol>
+        {live && Date.now() - moved.at > 4 * 60_000 && (
+          <p className="note center pad" role="status">조금 오래 걸리고 있어요. 다 쓰이면 ‘나의 운세함’에 자동으로 보관되니, 나중에 열어 보셔도 돼요.</p>
+        )}
         <p className="muted center pad">화면을 닫아도 풀이는 ‘나의 운세함’에 보관돼요.</p>
+        {live && (
+          <div className="pad" style={{ display: 'grid', gap: 10 }}>
+            <Button kind="line" to="/box">운세함에서 나중에 보기</Button>
+            {Date.now() - moved.at > 4 * 60_000 && <Button kind="line" onClick={() => setRetryTick((n) => n + 1)}>다시 확인</Button>}
+          </div>
+        )}
       </main>
     );
 
@@ -236,10 +274,10 @@ export default function ReadingPage() {
         </div>
         <TalismanRecommend p={p} />
       </main>
-      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${resultTitle(p)} · ${title}`} text={`“${r.chapters[0].highlight}” — ${c.name}`} path={`/product/${p.id}`} contentId={p.id} onDone={(m) => m && toast(m)} />
+      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${resultTitle(p)} · ${title}`} text={r.chapters.find((x: any) => x.highlight)?.highlight ? `“${r.chapters.find((x: any) => x.highlight)!.highlight}” — ${c.name}` : `${title} — ${c.name}`} path={`/product/${p.id}`} contentId={p.id} onDone={(m) => m && toast(m)} />
       <ShareCard ref={cardRef} title={title} sub={c.name}>
         <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 24, lineHeight: 1.4 }}>{resultTitle(p)}</p>
-        <p style={{ fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.8, marginTop: 18 }}>“{r.chapters[0].highlight}”</p>
+        {r.chapters.find((x: any) => x.highlight) && <p style={{ fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.8, marginTop: 18 }}>“{r.chapters.find((x: any) => x.highlight)!.highlight}”</p>}
         <p style={{ marginTop: 18, fontSize: 16, color: 'var(--ink-3)' }}>전체 풀이는 나만의 운세 앱에서 볼 수 있어요</p>
       </ShareCard>
     </>

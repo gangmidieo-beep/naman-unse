@@ -11,7 +11,7 @@ import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
 import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, won, type Talisman } from '../lib/catalog';
 import { newId, useApp, useMainProfile, usePremium } from '../store/app';
-import { saveImage, saveTalismanImage } from '../lib/share';
+import { lastSaveMode, saveImage, saveTalismanImage } from '../lib/share';
 import { MOCK_MODE } from '../lib/api';
 import { isNativeApp, saveTalismanToServer } from '../platform/payments';
 import { birthLabel } from './ProfileNew';
@@ -171,7 +171,7 @@ export function TalismanMake() {
               const pic = talismanImg(t.id);
               if (pic) await saveTalismanImage(pic.src, `talisman_${t.id}.png`);
               else if (paperRef.current) await saveImage(paperRef.current, `talisman_${t.id}.png`); // 그림이 없는 부적(글자형)만 화면 캡처
-              toast(isNativeApp() ? '저장했어요' : '부적 이미지를 내려받았어요');
+              if (lastSaveMode !== 'longpress') toast(isNativeApp() ? '저장했어요' : '부적 이미지를 내려받았어요');
             } catch { toast('저장하지 못했어요. 다시 시도해 주세요'); }
           }}>이미지로 저장</Button>
           <Button kind="ink" onClick={() => setShare(true)}>공유하기(선물)</Button>

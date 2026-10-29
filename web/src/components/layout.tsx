@@ -47,7 +47,11 @@ export function SubHeader({ title, sub, back = true, right, big }: { title: stri
   return (
     <header className={`sub${big ? ' big' : ''}`}>
       {back ? (
-        <button className="bk" onClick={() => (history.length > 1 ? nav(-1) : nav('/'))} aria-label="뒤로">‹</button>
+        <button className="bk" onClick={() => {
+          // 결제 뒤 풀이·부적 화면에서 '뒤로'를 누르면 결제사 화면으로 가던 문제 → 운세함으로
+          if (/^\/(reading\/|talisman\/[^/]+\/make|pay\/)/.test(location.pathname)) return nav('/box');
+          return history.length > 1 ? nav(-1) : nav('/');
+        }} aria-label="뒤로">‹</button>
       ) : <span className="r" />}
       <h1 className="t"><b>{title}</b>{sub && <small>{sub}</small>}</h1>
       <span className="r">{right}</span>

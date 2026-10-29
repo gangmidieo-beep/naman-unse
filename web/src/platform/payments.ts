@@ -67,7 +67,7 @@ export async function apiAuth<T>(path: string, init: RequestInit = {}, retried =
     useApp.getState().signOut();
     throw Object.assign(new Error('로그인이 만료됐어요. 다시 로그인해 주세요.'), { code: 'login_expired' });
   }
-  if (!r.ok) throw Object.assign(new Error(j.error ?? '잠시 후 다시 시도해 주세요'), { code: j.code });
+  if (!r.ok) throw Object.assign(new Error(j.error ?? '잠시 후 다시 시도해 주세요'), { code: j.code, status: r.status });
   return j as T;
 }
 

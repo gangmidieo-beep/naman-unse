@@ -78,9 +78,12 @@ export async function kakaoShare(o: { title: string; text: string; url: string; 
 }
 
 // 결과 카드를 이미지로 저장 — 카드는 540×675(CSS px) 로 그리고 2배로 뽑아 1080×1350.
-export async function saveImage(node: HTMLElement, filename: string) {
-  const dataUrl = await toPng(node, { pixelRatio: 1080 / node.offsetWidth, cacheBust: true, backgroundColor: '#F5EFE1' });
-  if (await saveImageNative(dataUrl, filename)) { track('share', { kind: 'image', filename }); return dataUrl; } // 앱: 저장 후 공유 시트
+/* 이미지 내려받기 — 카카오톡·인스타그램 등 앱 안 브라우저는 '내려받기'가 아무 반응 없이 무시된다(저장했다는 안내만 뜨던 문제).
+   그런 곳에서는 이미지를 화면 가득 띄우고 "길게 눌러 저장"을 안내한다. 반환값: 'download' | 'longpress' */
+export const inAppBrowser = () => /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp|DaumApps|everytimeApp|BAND\//i.test(navigator.userAgent);
+export let lastSaveMode: 'download' | 'longpress' = 'download';
+export async function downloadDataUrl(dataUrl: string, filename: string) {
+  if (inAppBrowser()) { showLongPress(dataUrl); lastSaveMode = 'longpress'; return 'longpress' as const; }
   // data: 주소 대신 blob 주소 + 문서에 붙였다 떼기 — 일부 브라우저가 파일 이름을 무시하는 문제 방지
   const blob = await (await fetch(dataUrl)).blob();
   const url = URL.createObjectURL(blob);
@@ -92,6 +95,32 @@ export async function saveImage(node: HTMLElement, filename: string) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  lastSaveMode = 'download';
+  return 'download' as const;
+}
+function showLongPress(src: string) {
+  const bg = document.createElement('div');
+  bg.setAttribute('role', 'dialog');
+  bg.setAttribute('aria-label', '이미지 저장');
+  bg.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(20,16,12,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px';
+  const tip = document.createElement('p');
+  tip.textContent = '이미지를 길게 눌러 ‘사진에 저장’(또는 ‘이미지 저장’)을 눌러 주세요';
+  tip.style.cssText = 'color:#F5EFE1;font-size:18px;line-height:1.6;text-align:center;margin:0';
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '저장할 이미지';
+  img.style.cssText = 'max-width:100%;max-height:70vh;border-radius:8px;-webkit-touch-callout:default;user-select:auto';
+  const close = document.createElement('button');
+  close.textContent = '닫기';
+  close.style.cssText = 'font-size:18px;padding:12px 28px;border-radius:24px;border:1px solid #C9A45C;background:transparent;color:#F5EFE1';
+  close.onclick = () => bg.remove();
+  bg.append(tip, img, close);
+  document.body.appendChild(bg);
+}
+export async function saveImage(node: HTMLElement, filename: string) {
+  const dataUrl = await toPng(node, { pixelRatio: 1080 / node.offsetWidth, cacheBust: true, backgroundColor: '#F5EFE1' });
+  if (await saveImageNative(dataUrl, filename)) { track('share', { kind: 'image', filename }); return dataUrl; } // 앱: 저장 후 공유 시트
+  await downloadDataUrl(dataUrl, filename);
   track('share', { kind: 'image', filename });
   return dataUrl;
 }
@@ -114,15 +143,7 @@ export async function saveTalismanImage(src: string, filename: string) {
   g.drawImage(img, pad, pad);
   const dataUrl = c.toDataURL('image/png');
   if (await saveImageNative(dataUrl, filename)) { track('share', { kind: 'image', filename }); return dataUrl; }
-  const blob = await (await fetch(dataUrl)).blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `naman-unse_${filename.replace(/\.png$/i, '').replace(/[^\w.-]+/g, '').replace(/^_+/, '') || Date.now()}.png`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  await downloadDataUrl(dataUrl, filename);
   track('share', { kind: 'image', filename });
   return dataUrl;
 }
