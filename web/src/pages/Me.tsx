@@ -136,13 +136,16 @@ export default function Box() {
             <ul className="lib-pay">
               {s.purchases.map((o) => {
                 const p = productById(o.productId);
-                return (
-                  <li key={o.orderId}>
+                // 결제 내역에서 바로 열기 — 풀이는 결과 화면, 부적은 만들기(이미 만들었으면 그 부적) 화면
+                const to = o.status !== 'paid' ? null : o.kind === 'talisman' ? `/talisman/${o.productId}/make?order=${o.orderId}` : o.kind === 'reading' ? `/reading/${o.orderId}` : null;
+                const body = (
+                  <>
                     {p && <ProductThumb p={p} size={52} />}
                     <div className="t"><b>{p ? displayTitle(p) : o.productId}</b><span>{dot(o.createdAt)} · {o.orderId}</span></div>
-                    <div className="r"><b>{won(o.price)}</b><span>{o.status === 'paid' ? '결제 완료' : '환불'}</span></div>
-                  </li>
+                    <div className="r"><b>{won(o.price)}</b><span>{o.status === 'paid' ? (to ? '열기 ›' : '결제 완료') : '환불'}</span></div>
+                  </>
                 );
+                return <li key={o.orderId}>{to ? <Link to={to} className="lib-pay-row">{body}</Link> : body}</li>;
               })}
             </ul>
           ) : <Empty icon="file-text" text={<>결제 내역이 없어요.</>} />}

@@ -26,6 +26,8 @@ import { generateTarot, type TarotInput } from './services/tarot.ts';
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
+
+const payReturnUrl = (orderId: string) => `${API()}/pay/payapp/return?order=${orderId}`;
 const API = () => process.env.API_ORIGIN || `http://localhost:${process.env.PORT || 8791}`;
 const UPLOADS = fileURLToPath(new URL('../.data/uploads', import.meta.url));
 
@@ -304,7 +306,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       try {
         const r = await payappRebillRegist({
           orderId: o.id, amount, goodName: `나만의 운세 ${p.title}`, phone,
-          returnUrl: `${WEB()}/pay/return?order=${o.id}`, feedbackUrl: `${API()}/pay/payapp/feedback`, failUrl: `${API()}/pay/payapp/rebill-fail`,
+          returnUrl: payReturnUrl(o.id), feedbackUrl: `${API()}/pay/payapp/feedback`, failUrl: `${API()}/pay/payapp/rebill-fail`,
         }, env, http);
         await db.update(S.orders).set({ providerRef: `R${r.rebillNo}` }).where(eq(S.orders.id, o.id)); // 1회차 승인 통보가 오면 결제번호(mul_no)로 바뀜
         return { ...o, providerRef: `R${r.rebillNo}`, payUrl: r.payUrl, autoRenew: true };
@@ -317,7 +319,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     try {
       const r = await payappRequest({
         orderId: o.id, amount, goodName: `나만의 운세 ${p.title}`, phone,
-        returnUrl: `${WEB()}/pay/return?order=${o.id}`, feedbackUrl: `${API()}/pay/payapp/feedback`,
+        returnUrl: payReturnUrl(o.id), feedbackUrl: `${API()}/pay/payapp/feedback`,
         openpaytype: b.inApp ? 'kakaopay' : ['kakaopay', 'naverpay'].includes(b.method ?? '') ? b.method : undefined, // 카카오톡·인스타 안 브라우저는 카드창이 막혀서 카카오페이로
       }, env, http);
       await db.update(S.orders).set({ providerRef: r.mulNo }).where(eq(S.orders.id, o.id));
@@ -335,6 +337,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     return o ?? rep.code(404).send({ error: '주문이 없어요' });
   });
   // PayApp 결제 통보 — 아이디·연동키·연동값 검증 → 금액 대조 → 확정/취소. 응답은 반드시 SUCCESS(재전송 멈춤)
+  /* 결제창에서 돌아오는 주소 — 2026-10-29 대표님 실결제 제보: 결제는 됐는데 풀이·부적이 안 열리고 결제창에 "잘못된 경로" 경고.
+     PayApp(헥토 결제창)은 returnurl 로 POST 로 돌아오는데, 웹(www)은 정적 파일 서버라 POST 에 405 를 돌려줘서
+     결제 확인 화면(/pay/return)이 아예 열리지 않았다. → 서버가 GET·POST 를 모두 받아 웹 확인 화면으로 303(GET) 넘겨 준다. */
+  app.route({ method: ['GET', 'POST'], url: '/pay/payapp/return', handler: async (req, rep) => {
+    const q = req.query as { order?: string };
+    const order = /^[A-Za-z0-9_-]{1,64}$/.test(q.order ?? '') ? q.order! : '';
+    return rep.redirect(order ? `${WEB()}/pay/return?order=${order}` : `${WEB()}/box`, 303);
+  } });
   app.post('/pay/payapp/feedback', { logLevel: 'warn' }, async (req, rep) => {
     const env = payappEnv();
     const f = env ? parsePayappFeedback((req.body ?? {}) as Record<string, unknown>, env, (m) => req.log.warn(m)) : null;
@@ -546,7 +556,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const userId = await needUser(req, rep);
     if (!userId) return;
     const subs = await db.select().from(S.subscriptions).where(eq(S.subscriptions.userId, userId)).orderBy(desc(S.subscriptions.expiresAt));
-    const owned = await db.select({ productId: S.orders.productId, orderId: S.orders.id }).from(S.orders).where(and(eq(S.orders.userId, userId), eq(S.orders.status, 'paid')));
+    const owned = await db.select({ productId: S.orders.productId, orderId: S.orders.id, profileId: S.orders.profileId, kind: S.orders.kind, amount: S.orders.amount, createdAt: S.orders.createdAt }).from(S.orders).where(and(eq(S.orders.userId, userId), eq(S.orders.status, 'paid')));
     return { premium: await isPremium(userId), subscription: subs[0] ?? null, owned };
   });
 

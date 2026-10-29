@@ -72,7 +72,14 @@ describe('PayApp 웹 결제', () => {
     expect(o.payUrl).toMatch(/^https:\/\/www\.payapp\.kr\//);
     expect(price).toBeGreaterThan(1000); // 화면이 보낸 금액(1원)은 무시
     const sent = calls.at(-1)!;
-    expect(sent.get('returnurl')).toBe(`https://web.example.kr/pay/return?order=${orderId}`);
+    expect(sent.get('returnurl')).toBe(`https://api.example.kr/pay/payapp/return?order=${orderId}`);
+    // 결제창은 POST 로 돌아온다 — 서버가 받아 웹 확인 화면으로 303(GET) 넘김(웹 정적 서버는 POST 에 405)
+    for (const method of ['POST', 'GET'] as const) {
+      const back = await app.inject({ method, url: `/pay/payapp/return?order=${orderId}`, headers: { 'content-type': 'application/x-www-form-urlencoded' }, payload: method === 'POST' ? 'state=1' : undefined });
+      expect(back.statusCode).toBe(303);
+      expect(back.headers.location).toBe(`https://web.example.kr/pay/return?order=${orderId}`);
+    }
+    expect((await app.inject({ url: '/pay/payapp/return?order=../evil' })).headers.location).toBe('https://web.example.kr/box');
     expect(sent.get('feedbackurl')).toBe('https://api.example.kr/pay/payapp/feedback');
     expect(sent.get('recvphone')).toBe('01011112222');
     expect(sent.get('price')).toBe(String(price));
@@ -95,6 +102,7 @@ describe('PayApp 웹 결제', () => {
     expect(o.status).toBe('paid');
     const ent = (await app.inject({ url: '/me/entitlements', headers: auth(token) })).json();
     expect(ent.owned.filter((x: any) => x.orderId === orderId)).toHaveLength(1);
+    expect(ent.owned.find((x: any) => x.orderId === orderId)).toMatchObject({ kind: expect.any(String), amount: expect.any(Number) }); // 운세함 복구용 정보
     // 이미 확정된 주문에 다른 금액의 통보가 다시 와도(재전송·오류) 결제완료가 '실패'로 뒤집히지 않음
     expect((await feedback(orderId, 100)).body).toBe('SUCCESS');
     expect((await app.inject({ url: `/orders/${orderId}`, headers: auth(token) })).json().status).toBe('paid');

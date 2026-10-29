@@ -104,7 +104,8 @@ export const webProvider: PaymentProvider = {
   purchase: (productId, profileId, opts) => payapp(productId, profileId, productId.startsWith('ts_') ? 'talisman' : 'reading', opts),
   subscribe: (planId, opts) => payapp(planId, '', 'subscription', opts),
   async restore() {
-    try { return (await apiAuth<{ owned: { productId: string }[] }>('/me/entitlements')).owned.map((x) => x.productId); } catch { return []; }
+    const e = await syncEntitlements(); // 운세함에 빠진 풀이·부적도 함께 채움
+    return (e?.owned ?? []).map((x) => x.productId);
   },
 };
 
@@ -134,14 +135,25 @@ export const savePhone = (v: string) => { try { localStorage.setItem(PHONE, v); 
 export const phoneOk = (v: string) => /^01[016789]\d{7,8}$/.test(v.replace(/\D/g, ''));
 
 // 프리미엄 여부·기간·자동결제는 서버가 기준(이용권 만료·환불·해지 반영)
-type Ent = { premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string; autoRenew?: boolean; channel?: string } | null };
+type Owned = { productId: string; orderId: string; profileId?: string | null; kind?: string; amount?: number; createdAt?: string };
+type Ent = { premium: boolean; subscription: { plan: 'monthly' | 'yearly'; expiresAt: string; autoRenew?: boolean; channel?: string } | null; owned?: Owned[] };
 export async function syncEntitlements(): Promise<Ent | null> {
   const e = await apiAuth<Ent>('/me/entitlements').catch(() => null);
   if (!e) return null;
   const s = e.subscription;
   useApp.setState({ plan: e.premium ? s?.plan ?? 'monthly' : null, planUntil: e.premium && s ? s.expiresAt.slice(0, 10) : null, planAuto: !!(e.premium && s?.autoRenew) });
+  // 서버에 결제 완료로 남아 있는데 이 기기 운세함에 없는 풀이·부적을 채워 넣는다
+  // (2026-10-29: 결제 후 돌아오는 화면이 열리지 않아 운세함에 안 보이던 주문 복구 · 다른 기기·로그인 후에도 보이게)
+  const have = new Set(useApp.getState().purchases.map((x) => x.orderId));
+  const add = (e.owned ?? []).filter((o) => o.kind && o.kind !== 'subscription' && !have.has(o.orderId)).map((o) => ({
+    orderId: o.orderId, productId: o.productId, profileId: o.profileId ?? '', price: o.amount ?? 0,
+    createdAt: o.createdAt ?? new Date().toISOString(), kind: (o.kind === 'talisman' ? 'talisman' : 'reading') as 'talisman' | 'reading', status: 'paid' as const,
+  }));
+  if (add.length) useApp.setState((st) => ({ purchases: [...add, ...st.purchases].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }));
   return e;
 }
+/** 이 기기의 게스트 토큰(로그인 직후 게스트 기록을 계정으로 합칠 때 씀) */
+export const guestToken = () => readGuest().token ?? null;
 // 웹 월 자동결제 해지 — 다음 달부터 결제되지 않고, 이미 낸 기간까지는 프리미엄 유지
 export async function cancelAutoRenew(): Promise<{ ok: boolean; message?: string; code?: string }> {
   if (MOCK_MODE) { useApp.setState({ planAuto: false }); return { ok: true }; }
