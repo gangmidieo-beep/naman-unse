@@ -137,11 +137,13 @@ export async function generateReading(product: { id: string; title: string }, pe
 /* ---------- 워커: 3초마다 대기 풀이를 최대 2개씩(장편은 한 건에 AI 호출 십수 번 — 호출 수는 READING_CONCURRENCY 로 제한) ---------- */
 const MAX_ATTEMPTS = 3;
 export function startReadingWorker(db: Db, log: { warn: (m: string) => void }, http?: typeof fetch) {
-  let busy = false;
+  let busy = false, booted = false;
   const tick = async () => {
     if (busy) return;
     busy = true;
     try {
+      // 서버가 막 켜졌다면(배포·재시작) 쓰던 중이던 풀이는 이 서버가 쓰는 게 아니므로 40분 기다리지 않고 바로 이어 쓴다(서버 1대 기준)
+      if (!booted) { booted = true; await db.update(S.readings).set({ status: 'queued' }).where(eq(S.readings.status, 'generating')); }
       // 운영 중 AI 가 꺼져 있으면(키 없음·READING_AI!=live) 결제된 풀이를 예시 내용으로 끝내지 않고 대기열에 둔다 — 키를 넣으면 이어서 생성
       if (!liveAI() && !mockMode()) return;
       // 40분 넘게 generating 이면 멈춘 것으로 보고 다시 대기열로(서버 재시작 등). 끝난 장은 content 에 남아 있어 이어서 쓴다
