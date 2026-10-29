@@ -23,9 +23,12 @@ import { fcmConfigured, sendPush } from './services/push/fcm.ts';
 import { runDailyPush, runExpiryReminders } from './services/push/daily.ts';
 import { costCap, liveAI } from './services/reading/generate.ts';
 import { generateTarot, type TarotInput } from './services/tarot.ts';
+import brand from '../../brand.config.json' with { type: 'json' };
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
 const WEB = () => process.env.PUBLIC_WEB_ORIGIN || 'http://localhost:5391';
+// 회원가(관리자가 따로 정하지 않은 상품) = 정가 × (1 − 할인율), 100원 단위 내림. 할인율은 brand.config.json
+const memberPrice = (price: number) => Math.floor((price * (1 - ((brand as any).subscription?.memberDiscountRate ?? 0.1))) / 100) * 100;
 
 const payReturnUrl = (orderId: string) => `${API()}/pay/payapp/return?order=${orderId}`;
 const API = () => process.env.API_ORIGIN || `http://localhost:${process.env.PORT || 8791}`;
@@ -36,7 +39,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   const MOCK = opts.mock ?? mockMode();
   if (MOCK && (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production')) console.warn('[경고] 운영 환경인데 MOCK_MODE=true — 결제 없이 상품이 지급됩니다. Railway 변수 MOCK_MODE 를 false 로 바꾸세요.');
   const http = opts.http ?? fetch;
-  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024 });
+  // trustProxy: Railway 프록시 뒤라 손님 IP 를 X-Forwarded-For 에서 읽어야 함(없으면 모든 손님이 같은 IP → 요청 제한이 사이트 전체 합계가 됨)
+  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024, trustProxy: true });
+  // 서버 오류 문구(SQL 등)를 손님에게 보이지 않게 — 기록은 로그에만
+  app.setErrorHandler((err: any, req, rep) => {
+    const code = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
+    if (code >= 500) { req.log.error(err); return rep.code(code).send({ error: '잠시 후 다시 시도해 주세요' }); }
+    return rep.code(code).send({ error: code === 429 ? '요청이 많아요. 잠시 후 다시 시도해 주세요' : err.message });
+  });
   const db = opts.db ?? (await openDb()).db;
   await seedBase(db);
   if (opts.demo) await seedDemo(db);
@@ -83,23 +93,24 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     return { token: await signUser(u.id), userId: u.id, deviceId: dev };
   });
 
-  const finishLogin = async (rep: FastifyReply, provider: string, info: { providerId: string; name: string; email: string | null }, back: string) => {
+  const finishLogin = async (rep: FastifyReply, provider: string, info: { providerId: string; name: string; email: string | null }, back: string, nonce = '') => {
     let [u] = await db.select().from(S.users).where(and(eq(S.users.provider, provider), eq(S.users.providerId, info.providerId)));
     if (!u) [u] = await db.insert(S.users).values({ id: newId('u_'), provider, providerId: info.providerId, name: info.name, email: info.email }).returning();
     const token = await signUser(u.id);
-    const q = new URLSearchParams({ token, provider, name: u.name ?? info.name, uid: u.id, back });
+    const q = new URLSearchParams({ token, provider, name: u.name ?? info.name, uid: u.id, back, ...(nonce ? { nonce } : {}) });
     return rep.redirect(`${WEB()}/auth/callback?${q}`);
   };
   app.get('/auth/:provider/start', async (req, rep) => {
     const { provider } = req.params as { provider: string };
-    const { redirect = WEB() } = req.query as { redirect?: string };
+    const { redirect = WEB(), nonce: rawNonce = '' } = req.query as { redirect?: string; nonce?: string };
+    const nonce = /^[A-Za-z0-9_-]{8,64}$/.test(rawNonce) ? rawNonce : '';
     if (!isProvider(provider)) return rep.code(404).send({ error: '지원하지 않는 로그인' });
     const back = (() => { try { const u = new URL(redirect); return u.pathname + u.search; } catch { return '/box'; } })();
     if (!isConfigured(provider)) {
       if (!MOCK) return rep.code(503).send({ error: `${provider} 로그인 키가 아직 없어요` });
-      return finishLogin(rep, provider, { providerId: `mock-${provider}`, name: `${provider} 테스트 계정`, email: null }, back);
+      return finishLogin(rep, provider, { providerId: `mock-${provider}`, name: `${provider} 테스트 계정`, email: null }, back, nonce);
     }
-    return rep.redirect(startUrl(provider, `${API()}/auth/${provider}/callback`, back));
+    return rep.redirect(startUrl(provider, `${API()}/auth/${provider}/callback`, back, nonce));
   });
   app.get('/auth/:provider/callback', async (req, rep) => {
     const { provider } = req.params as { provider: string };
@@ -108,11 +119,19 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!isProvider(provider) || !code || !st) return rep.redirect(`${WEB()}/auth/callback?error=1`);
     try {
       const info = await exchange(provider, code, `${API()}/auth/${provider}/callback`, state!);
-      return await finishLogin(rep, provider, info, st.redirect);
+      return await finishLogin(rep, provider, info, st.redirect, st.nonce);
     } catch (e) { // 제공자 쪽 오류(코드 만료·키 불일치 등) — 500 대신 로그인 화면으로
       req.log.warn(`[oauth ${provider}] ${(e as Error).message}`);
       return rep.redirect(`${WEB()}/auth/callback?error=1`);
     }
+  });
+  // 로그인 연장 — 쓰는 동안은 30일마다 다시 로그인하지 않게(화면이 하루 한 번 부름). 탈퇴·합쳐진 계정은 안 됨
+  app.post('/auth/refresh', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const id = await needUser(req, rep);
+    if (!id) return;
+    const [u] = await db.select().from(S.users).where(eq(S.users.id, id));
+    if (!u || u.deletedAt || u.mergedInto) return rep.code(401).send({ error: '다시 로그인해 주세요' });
+    return { token: await signUser(id) };
   });
   // 게스트로 쓰던 사주·구매·부적·구독·이벤트를 로그인 계정으로 합치기
   app.post('/auth/merge', async (req, rep) => {
@@ -122,6 +141,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const g = guestToken ? await verify<UserClaims>(guestToken) : null;
     if (!g || g.sub === userId) return { merged: 0 };
     const guestId = g.sub;
+    // 합칠 수 있는 건 '로그인 안 한 게스트'뿐 — 다른 회원 계정·이미 합쳐진·탈퇴한 계정의 기록은 옮기지 않는다
+    const [gu] = await db.select().from(S.users).where(eq(S.users.id, guestId));
+    if (!gu || gu.provider || gu.mergedInto || gu.deletedAt) return { merged: 0 };
     let merged = 0;
     for (const t of [S.profiles, S.orders, S.talismans, S.subscriptions] as const) {
       const r = await db.update(t as any).set({ userId }).where(eq((t as any).userId, guestId)).returning();
@@ -178,15 +200,21 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.post('/profiles', async (req, rep) => {
     const id = await needUser(req, rep);
     if (!id) return;
-    const b = req.body as any;
+    const b = (req.body ?? {}) as any;
+    const y = +b.year, m = +b.month, d = +b.day, hh = b.hour == null || b.hour === '' ? null : +b.hour;
+    if (!String(b.name ?? '').trim() || !Number.isInteger(y) || y < 1900 || y > 2100 || !Number.isInteger(m) || m < 1 || m > 12 || !Number.isInteger(d) || d < 1 || d > 31 || (hh != null && (!Number.isInteger(hh) || hh < 0 || hh > 23)))
+      return rep.code(400).send({ error: '이름·생년월일을 확인해 주세요', code: 'profile_invalid' });
+    if (b.id != null && !/^[A-Za-z0-9_-]{1,40}$/.test(String(b.id))) return rep.code(400).send({ error: '사주 정보를 확인해 주세요', code: 'profile_invalid' });
     const count = (await db.select({ id: S.profiles.id }).from(S.profiles).where(eq(S.profiles.userId, id))).length;
     const exists = b.id && (await db.select({ id: S.profiles.id }).from(S.profiles).where(and(eq(S.profiles.id, b.id), eq(S.profiles.userId, id))))[0];
     // 저장 가능한 사주: 일반 2개 / 프리미엄 무제한
     if (!exists && count >= 2 && !(await isPremium(id))) return rep.code(402).send({ error: '일반 회원은 사주를 2개까지 저장할 수 있어요', code: 'profile_limit' });
+    // 같은 id 가 다른 계정 것이면(같은 폰을 여러 사람이 쓴 경우) 덮어쓰지 않고 새 id 로 저장 — 화면이 돌려받은 id 로 바꾼다
+    const taken = !exists && b.id && (await db.select({ id: S.profiles.id }).from(S.profiles).where(eq(S.profiles.id, b.id)))[0];
     const v = {
-      id: b.id ?? newId('p_'), userId: id, name: String(b.name).slice(0, 20), relation: b.relation ?? null, gender: b.gender === 'M' ? 'M' : 'F',
-      birthYear: +b.year, birthMonth: +b.month, birthDay: +b.day, calendar: b.calendar === 'lunar' ? 'lunar' : 'solar', leap: !!b.leap,
-      birthHour: b.hour == null ? null : +b.hour, bloodType: b.bloodType ?? null, mbti: b.mbti ?? null, isMain: !!b.isMain,
+      id: taken || !b.id ? newId('p_') : String(b.id), userId: id, name: String(b.name).trim().slice(0, 20), relation: b.relation ? String(b.relation).slice(0, 20) : null, gender: b.gender === 'M' ? 'M' : 'F',
+      birthYear: y, birthMonth: m, birthDay: d, calendar: b.calendar === 'lunar' ? 'lunar' : 'solar', leap: !!b.leap,
+      birthHour: hh, bloodType: b.bloodType ? String(b.bloodType).slice(0, 4) : null, mbti: b.mbti ? String(b.mbti).slice(0, 4) : null, isMain: !!b.isMain,
     };
     if (exists) await db.update(S.profiles).set(v).where(eq(S.profiles.id, v.id));
     else await db.insert(S.profiles).values(v);
@@ -264,8 +292,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const b = (req.body ?? {}) as { productId: string; profileId?: string; method?: string; channel?: string; phone?: string; inApp?: boolean };
     const [p] = await db.select().from(S.products).where(eq(S.products.id, String(b.productId)));
     if (!p || !p.visible) return rep.code(404).send({ error: '없는 상품이에요' });
+    // 풀이에 쓸 사주는 반드시 이 계정에 저장된 것 — 남의 사주 id 로 풀이를 받거나, 저장 실패한 사주로 결제돼 풀이가 안 써지는 일 막기
+    const pids = String(b.profileId ?? '').split('+').filter(Boolean);
+    if (pids.length) {
+      const own = await db.select({ id: S.profiles.id }).from(S.profiles).where(and(inArray(S.profiles.id, pids), eq(S.profiles.userId, userId)));
+      if (own.length < new Set(pids).size) return rep.code(400).send({ error: '사주 정보가 저장되지 않았어요. 사주를 다시 저장한 뒤 결제해 주세요.', code: 'profile_missing' });
+    }
     const premium = await isPremium(userId);
-    const amount = p.kind !== 'subscription' && premium ? p.memberPrice ?? Math.floor((p.price * 0.9) / 100) * 100 : p.price;
+    const amount = p.kind !== 'subscription' && premium ? p.memberPrice ?? memberPrice(p.price) : p.price;
     const kind = p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading';
     const channel = MOCK ? 'mock' : b.channel === 'google' ? 'google' : 'pg';
     const base = { id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind, amount, discount: p.price - amount, method: b.method ?? (channel === 'google' ? 'google' : 'card'), channel, status: 'pending' as const };
@@ -450,7 +484,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const member = playId.endsWith('_m');
     const [p] = await db.select().from(S.products).where(eq(S.products.id, member ? playId.slice(0, -2) : playId));
     if (!p || (member && p.kind === 'subscription')) return rep.code(404).send({ error: '없는 상품이에요' });
-    const amount = member ? p.memberPrice ?? Math.floor((p.price * 0.9) / 100) * 100 : p.price;
+    // 싼 상품 구매로 비싼 주문을 여는 것 막기 — 주문과 Play 상품이 같아야 함
+    if (o && (o.productId !== p.id || o.channel !== 'google' || o.status !== 'pending')) return rep.code(409).send({ error: '주문과 구매 상품이 달라요' });
+    if (member && !(await isPremium(userId))) return rep.code(402).send({ error: '프리미엄 회원가는 회원만 구매할 수 있어요' });
+    const amount = member ? p.memberPrice ?? memberPrice(p.price) : p.price;
     const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount, discount: p.price - amount, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
     try {
       if (p.kind === 'subscription') {
@@ -603,10 +640,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const userId = await userOf(req);
     const list = ((req.body as any)?.events ?? []).slice(0, 50) as any[];
     if (!list.length) return { saved: 0 };
+    // 화면이 보낸 값은 길이·시각을 제한(통계 조작·DB 부풀리기 막기). 시각은 지금 기준 하루 안쪽만 믿음
+    const str = (v: unknown, n: number) => (v == null ? null : String(v).slice(0, n));
+    const when = (v: unknown) => { const t = v ? Date.parse(String(v)) : NaN; return Number.isFinite(t) && Math.abs(Date.now() - t) < 86400_000 ? new Date(t) : new Date(); };
+    const props = (v: unknown) => { if (v == null || typeof v !== 'object') return null; const j = JSON.stringify(v); return j.length <= 2000 ? v : null; };
     await db.insert(S.events).values(list.map((e) => ({
-      userId, sessionId: String(e.sessionId ?? '').slice(0, 64) || null, name: String(e.name).slice(0, 40), props: e.props ?? null,
-      utmSource: e.utm_source ?? null, utmMedium: e.utm_medium ?? null, utmCampaign: e.utm_campaign ?? null, referrer: e.referrer ?? null, platform: e.platform ?? null,
-      createdAt: e.at ? new Date(e.at) : new Date(),
+      userId, sessionId: str(e.sessionId, 64) || null, name: String(e.name ?? '').slice(0, 40), props: props(e.props) as any,
+      utmSource: str(e.utm_source, 100), utmMedium: str(e.utm_medium, 100), utmCampaign: str(e.utm_campaign, 100), referrer: str(e.referrer, 300), platform: str(e.platform, 20),
+      createdAt: when(e.at),
     })));
     return { saved: list.length };
   });

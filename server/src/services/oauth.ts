@@ -25,10 +25,12 @@ export const isConfigured = (p: Provider) => !!CFG[p].id;
 export const isProvider = (p: string): p is Provider => p in CFG;
 
 // state 는 서버 메모리에 10분 보관(돌아올 곳 포함). ponytail: 서버 1대 기준 — 여러 대로 늘리면 DB/Redis 로
-const states = new Map<string, { redirect: string; at: number }>();
-export function startUrl(p: Provider, callbackUrl: string, redirect: string) {
+// nonce = 로그인을 시작한 브라우저 탭 표시(화면이 sessionStorage 에 둔 값). 돌아올 때 그대로 돌려줘서, 남이 만든 로그인 링크를 눌러도 로그인되지 않게
+const states = new Map<string, { redirect: string; nonce: string; at: number }>();
+export function startUrl(p: Provider, callbackUrl: string, redirect: string, nonce = '') {
   const state = randomBytes(12).toString('hex');
-  states.set(state, { redirect, at: Date.now() });
+  if (states.size > 5000) states.clear(); // 메모리 보호(10분 안에 5천 건 넘는 로그인 시작은 비정상)
+  states.set(state, { redirect, nonce, at: Date.now() });
   for (const [k, v] of states) if (Date.now() - v.at > 600_000) states.delete(k);
   const c = CFG[p];
   const q = new URLSearchParams({ response_type: 'code', client_id: c.id!, redirect_uri: callbackUrl, state });

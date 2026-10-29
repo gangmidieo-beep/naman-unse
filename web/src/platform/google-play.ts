@@ -54,7 +54,10 @@ async function buy(baseId: string, profileId = '', opts: PayOpts = {}): Promise<
   // 화면이 회원가로 계산했으면 회원가 상품으로(등록 안 돼 있으면 정가 상품 — 결제 전 Google 창에 실제 금액이 표시됨)
   const member = !!base && !!opts.amount && opts.amount < base.price && !!s.get(`${baseId}${MEMBER}`)?.getOffer();
   const productId = member ? `${baseId}${MEMBER}` : baseId;
-  if (profileId) { profileFor.set(productId, profileId); await syncProfiles(profileId); }
+  if (profileId) {
+    try { profileId = await syncProfiles(profileId); } catch (e: any) { return { status: 'failed', orderId: '', message: e.message, code: e.code }; }
+    profileFor.set(productId, profileId);
+  }
   const offer = s.get(productId)?.getOffer();
   if (!offer) return { status: 'failed', orderId: '', message: '판매 준비 중인 상품이에요' };
   return new Promise((resolve) => {

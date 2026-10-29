@@ -1,7 +1,7 @@
 // 이벤트 추적 — MOCK_MODE 면 localStorage 로그만, 서버 연결 시 5초마다(또는 화면을 떠날 때) /events 로 묶어서 보낸다.
 // 첫 방문의 utm·referrer 는 기억해 두었다가 모든 이벤트에 붙인다(유입 경로 통계).
 export type EventName = 'product_view' | 'checkout_open' | 'pay_start' | 'pay_success' | 'pay_cancel' | 'pay_fail' | 'share' | 'page_view'
-  | 'share_click' | 'share_link_open' | 'share_to_signup' | 'share_to_purchase' | 'content_view' | 'dream_search' | 'ad_rewarded' | 'login';
+  | 'share_click' | 'share_link_open' | 'share_to_signup' | 'share_to_purchase' | 'content_view' | 'dream_search' | 'ad_rewarded' | 'login' | 'screen_error';
 const KEY = 'naman-unse-events';
 const MOCK = __MOCK_MODE__;
 const API = __API_ORIGIN__;

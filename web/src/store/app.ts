@@ -56,11 +56,13 @@ type State = {
   addTalisman: (t: MyTalisman) => void;
   removeOrder: (orderId: string) => void;
   setAccount: (a: Account | null) => void;
+  signOut: () => void; // 로그아웃·로그인 만료 — 계정에 딸린 정보(사주·구매·부적·구독)를 이 기기에서 지움(같은 폰을 다른 사람이 써도 안 보이게)
   noteAdView: () => void;
   unlock: (key: string) => void;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// 한국 날짜(오늘의 운세·광고 횟수 기준과 같게). 예전엔 UTC 라 아침 9시에 '오늘'이 바뀌어 열어 둔 상세가 다시 잠겼다
+const today = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 
 export const useApp = create<State>()(
   persist(
@@ -105,6 +107,10 @@ export const useApp = create<State>()(
       addTalisman: (t) => set((s) => (s.talismans.some((x) => x.orderId === t.orderId) ? s : { talismans: [t, ...s.talismans] })),
       removeOrder: (orderId) => set((s) => ({ purchases: s.purchases.filter((x) => x.orderId !== orderId), talismans: s.talismans.filter((x) => x.orderId !== orderId) })),
       setAccount: (account) => set({ account }),
+      signOut: () => {
+        try { localStorage.removeItem('naman-guest'); localStorage.removeItem('naman-pay-pending'); } catch { /* 저장소 막힘 */ }
+        set({ account: null, profiles: [], mainId: null, purchases: [], talismans: [], plan: null, planUntil: null, planAuto: false, unlocked: {} });
+      },
       noteAdView: () =>
         set((s) => ({ adViews: { date: today(), count: (s.adViews.date === today() ? s.adViews.count : 0) + 1, last: Date.now() } })),
       unlock: (key) => set((s) => ({ unlocked: { ...s.unlocked, [key]: today() } })),

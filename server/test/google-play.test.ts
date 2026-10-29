@@ -44,10 +44,22 @@ describe('Google Play 검증', () => {
   });
   it('회원가 상품(<id>_m): 같은 상품으로 기록, 금액은 회원가, Google 에는 _m 으로 조회', async () => {
     const t = await guest('gp-3');
+    expect((await verify(t, 'jeongtong_m', 'tok-2')).statusCode).toBe(402); // 회원 아니면 회원가 상품 못 씀
+    expect((await verify(t, 'premium_monthly', 'tok-sub-gp3')).json().status).toBe('paid');
     const r = await verify(t, 'jeongtong_m', 'tok-2');
     expect(r.json()).toMatchObject({ status: 'paid', productId: 'jeongtong', amount: 26000, discount: 3000 });
     expect(seen.some((x) => x.includes('/purchases/products/jeongtong_m/tokens/tok-2'))).toBe(true);
     expect((await verify(t, 'premium_monthly_m', 'tok-3')).statusCode).toBe(404);
+  });
+  it('싼 상품 구매 토큰으로 비싼 주문을 열 수 없다', async () => {
+    Object.assign(process.env, { READING_AI: 'live', ANTHROPIC_API_KEY: 'k', ANTHROPIC_MODEL: 'm' }); // 유료 풀이 판매 켜짐
+    const t = await guest('gp-swap');
+    const prof = (await app.inject({ method: 'POST', url: '/profiles', headers: auth(t), payload: { name: '갑', gender: 'M', year: 1970, month: 1, day: 2, calendar: 'solar' } })).json();
+    const o = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'jeongtong', profileId: prof.id, channel: 'google' } })).json();
+    expect(o.status).toBe('pending');
+    const r = await app.inject({ method: 'POST', url: '/billing/google/verify', headers: auth(t), payload: { orderId: o.id, productId: 't_wealth', purchaseToken: 'tok-cheap' } });
+    for (const k of ['READING_AI', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL']) delete process.env[k];
+    expect(r.statusCode).toBe(409);
   });
   it('취소된 결제는 거부', async () => {
     expect((await verify(await guest('gp-4'), 't_wealth', 'tok-cancel')).statusCode).toBe(402);

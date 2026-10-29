@@ -79,6 +79,28 @@ describe('공개 API', () => {
     expect((await app.inject({ url: '/profiles', headers: auth(userToken) })).json()).toHaveLength(3);
     expect((await app.inject({ url: '/me/entitlements', headers: auth(userToken) })).json().premium).toBe(true);
   });
+  it('로그인 링크 보안: nonce 를 돌려주고, 회원 계정은 합치기 대상이 아니다', async () => {
+    const r = await app.inject({ url: '/auth/naver/start?redirect=http://localhost:5391/box&nonce=abcDEF123456' });
+    const loc = new URL(r.headers.location as string);
+    expect(loc.searchParams.get('nonce')).toBe('abcDEF123456');
+    const victim = loc.searchParams.get('token')!;
+    const r2 = await app.inject({ url: '/auth/google/start?redirect=http://localhost:5391/box' });
+    const attacker = new URL(r2.headers.location as string).searchParams.get('token')!;
+    // 회원 토큰을 '게스트'로 넘겨도 그 회원의 기록은 옮겨지지 않음
+    expect((await app.inject({ method: 'POST', url: '/auth/merge', headers: auth(attacker), payload: { guestToken: victim } })).json().merged).toBe(0);
+  });
+  it('남의 사주 id 로는 주문할 수 없고, 잘못된 생년월일은 400', async () => {
+    const a = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: 'own-a' } })).json().token;
+    const b = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: 'own-b' } })).json().token;
+    const pa = (await app.inject({ method: 'POST', url: '/profiles', headers: auth(a), payload: profile('본인') })).json();
+    const res = await app.inject({ method: 'POST', url: '/orders', headers: auth(b), payload: { productId: 'wealth', profileId: pa.id } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('profile_missing');
+    expect((await app.inject({ method: 'POST', url: '/profiles', headers: auth(b), payload: { ...profile('x'), year: 'abc' } })).statusCode).toBe(400);
+    // 같은 id 를 다른 계정이 올리면 새 id 로 저장(남의 사주를 덮어쓰지 않음)
+    const pb = (await app.inject({ method: 'POST', url: '/profiles', headers: auth(b), payload: { ...profile('남'), id: pa.id } })).json();
+    expect(pb.id).not.toBe(pa.id);
+  });
   it('이벤트 배치 + 공유 링크 OG·카드 이미지', async () => {
     expect((await app.inject({ method: 'POST', url: '/events', payload: { events: [{ name: 'content_view', props: { content: 'tarot' } }] } })).json().saved).toBe(1);
     const s = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'today', path: '/today', title: '오늘의 운세', text: '94점 — 좋은 날이에요' } })).json();

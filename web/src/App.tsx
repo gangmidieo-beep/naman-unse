@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { exitApp, initNative } from './platform/native';
 import { useApp, usePremium } from './store/app';
@@ -30,6 +30,27 @@ const Admin = lazy(() => import('./admin/Admin')); // 관리자는 따로 불러
 // 하단 탭을 숨기는 화면(입력·결제·풀이·부적 작성·상세)
 const NO_TAB = ['/intro', '/profile', '/checkout', '/reading', '/dev', '/product/', '/login', '/auth'];
 const noTab = (path: string) => NO_TAB.some((p) => path.startsWith(p)) || /^\/talisman\/[^/]+/.test(path);
+
+// 화면 하나가 오류로 그려지지 못해도 하얀 화면만 남지 않게 — 다시 열기·운세함·홈 버튼(주소가 바뀌면 새로 그림)
+class ErrorBoundary extends Component<{ children: ReactNode }, { err: boolean }> {
+  state = { err: false };
+  static getDerivedStateFromError() { return { err: true }; }
+  componentDidCatch(e: unknown) { try { track('screen_error', { message: String((e as Error)?.message ?? e).slice(0, 120), path: location.pathname }); } catch { /* */ } }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <main className="screen no-tab">
+        <h1 className="h2 center mt24">화면을 여는 중 문제가 생겼어요</h1>
+        <p className="muted center">결제하신 풀이·부적은 안전하게 보관되어 있어요.</p>
+        <div className="pad mt14" style={{ display: 'grid', gap: 10 }}>
+          <button className="btn gold" onClick={() => location.reload()}>다시 열기</button>
+          <a className="btn line" href="/box">나의 운세함으로</a>
+          <a className="btn line" href="/">홈으로</a>
+        </div>
+      </main>
+    );
+  }
+}
 
 // 앱 종료 확인(안드로이드 홈에서 뒤로가기) — 일반 회원은 종료 팝업 광고(관리자 "앱 종료 팝업" 배너 이미지가 있으면 그 이미지·링크, 없으면 AdMob 자리)
 function ExitSheet() {
@@ -78,6 +99,7 @@ export function App() {
     <ToastProvider>
       <ExitSheet />
       <div className="app">
+        <ErrorBoundary key={loc.pathname}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/intro" element={<Intro />} />
@@ -121,6 +143,7 @@ export function App() {
           <Route path="/fun/tarot" element={<Navigate to="/tarot" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ErrorBoundary>
         {!noTab(loc.pathname) && <TabBar />}
       </div>
     </ToastProvider>

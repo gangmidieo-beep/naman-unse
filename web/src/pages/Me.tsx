@@ -13,7 +13,7 @@ import { BottomSheet, Button, ProductThumb, TalismanPaper, useToast } from '../c
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
 import { BRAND, CHAR, charOf, displayTitle, isPhoto, isTarot, productById, thumbOf, won, type Product, type Talisman } from '../lib/catalog';
 import { api, MOCK_MODE } from '../lib/api';
-import { apiAuth, getPayments, hideOrder, syncEntitlements } from '../platform/payments';
+import { apiAuth, deleteProfileOnServer, getPayments, hideOrder, syncEntitlements } from '../platform/payments';
 import { enablePush, syncPushPrefs } from '../platform/native';
 import { birthLabel, hourLabel } from './ProfileNew';
 
@@ -188,7 +188,7 @@ export default function Box() {
           <li><button className="mrow" onClick={() => setSheet('terms')}><span>이용약관 · 개인정보처리방침</span><span className="v">›</span></button></li>
           <li><button className="mrow" onClick={() => setSheet('biz')}><span>사업자 정보</span><span className="v">›</span></button></li>
           <li><button className="mrow" onClick={() => setSheet('contact')}><span>문의하기</span><span className="v">›</span></button></li>
-          {s.account && <li><button className="mrow" onClick={() => { s.setAccount(null); toast('로그아웃했어요'); }}><span>로그아웃</span><span className="v">›</span></button></li>}
+          {s.account && <li><button className="mrow" onClick={() => { s.signOut(); toast('로그아웃했어요. 다시 로그인하면 운세함이 그대로 돌아와요'); }}><span>로그아웃</span><span className="v">›</span></button></li>}
           {s.account && <li><button className="mrow" onClick={() => setSheet('withdraw')}><span>회원 탈퇴</span><span className="v">›</span></button></li>}
           <li><div className="mrow"><span>버전</span><span className="v">{VERSION}</span></div></li>
         </ul>
@@ -250,7 +250,7 @@ export default function Box() {
         <p>지운 정보는 되살릴 수 없어요. 구매한 풀이는 그대로 남아요.</p>
         <div className="btn-row">
           <Button kind="line" onClick={() => setConfirmDel(null)}>취소</Button>
-          <Button kind="ink" onClick={() => { if (confirmDel) s.removeProfile(confirmDel); setConfirmDel(null); toast('지웠어요'); }}>지우기</Button>
+          <Button kind="ink" onClick={() => { if (confirmDel) { s.removeProfile(confirmDel); void deleteProfileOnServer(confirmDel); } setConfirmDel(null); toast('지웠어요'); }}>지우기</Button>
         </div>
       </BottomSheet>
     </>
