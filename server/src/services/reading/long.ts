@@ -188,8 +188,10 @@ export function parseLooseJson(text: string): any | null {
   }
   try { return JSON.parse(out.replace(/,\s*([}\]])/g, '$1')); } catch { return null; }
 }
-export class AiFormatError extends Error { constructor(public truncated: boolean) { super('AI 응답 형식 오류'); } }
+// 잘린·깨진 응답도 요금은 나가므로 쓴 토큰을 함께 들고 간다(관리자 원가가 콘솔 사용량과 맞도록)
+export class AiFormatError extends Error { constructor(public truncated: boolean, public tokensIn = 0, public tokensOut = 0) { super('AI 응답 형식 오류'); } }
 export async function callClaudeLong(system: string, user: string, maxTokens: number, http: typeof fetch, model = process.env.ANTHROPIC_MODEL) {
+  let paidIn = 0, paidOut = 0; // 형식 오류로 버린 응답의 토큰(요금은 이미 나감)
   for (let attempt = 0; ; attempt++) {
     const r = await slot(() => http('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -202,9 +204,11 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       const j = (await r.json()) as any;
       const text = (j.content ?? []).map((c: any) => c.text ?? '').join('');
       const json = parseLooseJson(text);
-      if (json) return { json, tokensIn: j.usage?.input_tokens ?? 0, tokensOut: j.usage?.output_tokens ?? 0, stop: j.stop_reason };
+      const tin = j.usage?.input_tokens ?? 0, tout = j.usage?.output_tokens ?? 0;
+      if (json) return { json, tokensIn: paidIn + tin, tokensOut: paidOut + tout, stop: j.stop_reason };
+      paidIn += tin; paidOut += tout;
       // 글자 수 한도(max_tokens)에서 잘린 응답은 같은 요청을 다시 보내도 또 잘린다 → 바로 알려서 장을 나눠 쓰게
-      if (j.stop_reason === 'max_tokens' || attempt >= 1) throw new AiFormatError(j.stop_reason === 'max_tokens');
+      if (j.stop_reason === 'max_tokens' || attempt >= 1) throw new AiFormatError(j.stop_reason === 'max_tokens', paidIn, paidOut);
       continue;
     }
     const retryable = [0, 408, 429, 500, 502, 503, 504, 529].includes(r.status);
@@ -301,6 +305,7 @@ export async function generateLong(
       res = await callClaudeLong(system, userPrompt(product, people, plan.sections, batch, facts, plan.parts, extras), maxTokens, http);
     } catch (e) {
       if (!(e instanceof AiFormatError)) throw e;
+      tokensIn += e.tokensIn; tokensOut += e.tokensOut;
       short.push(...batch); // 묶음이 깨지면 감정서 전체를 멈추지 않고 한 장씩 나눠서 다시 쓴다
     }
     if (res) {
@@ -320,7 +325,7 @@ export async function generateLong(
       const lone = (n: number) => callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, s.id === batch[0].id ? extras : ''), n, http);
       let one: Awaited<ReturnType<typeof callClaudeLong>>;
       try { one = await lone(Math.min(16000, Math.ceil(s.len * 3.4) + 2500)); }
-      catch (e) { if (!(e instanceof AiFormatError)) throw e; one = await lone(Math.min(32000, Math.ceil(s.len * 5) + 4000)); }
+      catch (e) { if (!(e instanceof AiFormatError)) throw e; tokensIn += e.tokensIn; tokensOut += e.tokensOut; one = await lone(Math.min(32000, Math.ceil(s.len * 5) + 4000)); }
       tokensIn += one.tokensIn; tokensOut += one.tokensOut;
       if (wantIntro && !intro && one.json.intro) intro = String(one.json.intro);
       if (wantTips && !tips.length && Array.isArray(one.json.tips)) tips = one.json.tips.map(String).slice(0, 3);

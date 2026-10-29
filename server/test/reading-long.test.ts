@@ -136,6 +136,9 @@ describe('장편 생성', () => {
     expect(g.content.intro).toContain('김현재');
     expect(g.content.closing.tips).toHaveLength(3);
     expect(log.some((x) => !x.includes(','))).toBe(true); // 한 장씩 다시 요청
+    // 잘린 응답도 요금이 나가므로 원가에 포함(묶음 수 × 잘린 응답 9000 토큰 이상)
+    const multi = log.filter((x) => x.includes(',')).length;
+    expect(g.tokensOut).toBeGreaterThanOrEqual(multi * 9000 + (log.length - multi) * 5000);
   });
   it('문자열 안 줄바꿈이 섞인 JSON 도 읽는다', async () => {
     expect(parseLooseJson('앞말 {"a":"첫 줄\n둘째 줄","b":[1,2,]} 뒷말')).toEqual({ a: '첫 줄\n둘째 줄', b: [1, 2] });
