@@ -33,9 +33,9 @@ export function LoginButtons({ after }: { after?: () => void }) {
       return;
     }
     // 서버 OAuth 시작 — 끝나면 /auth/callback?token=&nonce= 으로 돌아온다.
-    // nonce: 이 탭에서 로그인을 시작했다는 표시. 남이 보낸 로그인 링크(그 사람 계정 토큰)를 눌러도 내 기록이 그 계정으로 넘어가지 않게
+    // nonce: 이 브라우저에서 로그인을 시작했다는 표시. 남이 보낸 로그인 링크(그 사람 계정 토큰)를 눌러도 내 기록이 그 계정으로 넘어가지 않게
     const nonce = newId() + newId();
-    try { sessionStorage.setItem(NONCE, JSON.stringify({ v: nonce, at: Date.now() })); } catch { /* 저장소 막힘 */ }
+    try { localStorage.setItem(NONCE, JSON.stringify({ v: nonce, at: Date.now() })); } catch { /* 저장소 막힘 */ } // 카카오·네이버 앱을 거쳐 새 탭으로 돌아와도 같은 브라우저면 확인되게(10분 유효)
     location.href = `${__API_ORIGIN__}/auth/${p}/start?redirect=${encodeURIComponent(location.href)}&nonce=${nonce}`;
   };
   // 3차 요청: 회원가입·로그인 버튼(카카오·네이버·구글)을 늘 보여 준다. 대표님이 로그인 키를 아직 등록하지 않은 곳은 눌렀을 때 안내만
@@ -79,10 +79,10 @@ export default function Login() {
 // 2026-10-29 대표님 제보: 카카오 로그인 후 "로그인 중이에요…"에서 멈춤 — 화면이 붙기 전에(렌더 중) 이동을 시도해서
 // 라우터가 이동을 무시했다(저장된 사주가 없으면 바로 이동 → 무시됨). 이동은 화면이 붙은 뒤(useEffect)에, 실패해도 몇 초 뒤 운세함으로.
 const NONCE = 'naman-login-nonce';
-// 이 탭에서 10분 안에 로그인을 시작했는지 + 돌아온 nonce 가 같은지. (서버가 nonce 를 안 돌려주는 예전 버전이면 시작 기록만 확인)
+// 이 브라우저에서 10분 안에 로그인을 시작했는지 + 돌아온 nonce 가 같은지. (서버가 nonce 를 안 돌려주는 예전 버전이면 시작 기록만 확인)
 function loginStartedHere(nonce: string | null) {
   try {
-    const s = JSON.parse(sessionStorage.getItem(NONCE) || 'null') as { v: string; at: number } | null; // 지우기는 로그인 처리 때(개발 모드 이중 실행 대비)
+    const s = JSON.parse(localStorage.getItem(NONCE) || 'null') as { v: string; at: number } | null; // 지우기는 로그인 처리 때(개발 모드 이중 실행 대비)
     if (!s || Date.now() - s.at > 600_000) return false;
     return nonce ? nonce === s.v : true;
   } catch { return false; }
@@ -97,7 +97,7 @@ export function AuthCallback() {
   useEffect(() => {
     if (!token || ran.current) return;
     ran.current = true;
-    try { sessionStorage.removeItem(NONCE); } catch { /* */ } // 한 번 쓴 표시는 버림(같은 링크로 다시 들어와도 로그인 안 됨)
+    try { localStorage.removeItem(NONCE); } catch { /* */ } // 한 번 쓴 표시는 버림(같은 링크로 다시 들어와도 로그인 안 됨)
     const { setAccount, profiles, account: before } = useApp.getState();
     // 다른 계정이 이 기기에 로그인돼 있었다면 그 사람 정보는 새 계정으로 올리지 않는다
     if (before?.token && before.id !== sp.get('uid')) useApp.getState().signOut();

@@ -50,7 +50,9 @@ export async function fulfillOrder(db: Db, order: Order, opts: { ref?: string; m
 // 이미 환불·취소된 주문에 늦게 온 통보는 상태를 바꾸지 않는다(관리자 환불 후 PayApp 취소 통보로 '환불'이 '취소'로 바뀌던 문제)
 export async function revokeOrder(db: Db, order: Order, status: 'cancelled' | 'refunded') {
   if (order.status === status || order.status === 'refunded' || order.status === 'cancelled') return order;
-  const [o] = await db.update(S.orders).set({ status, refundStatus: status === 'refunded' ? 'done' : order.refundStatus }).where(eq(S.orders.id, order.id)).returning();
+  // 상태가 그대로일 때만 바꾼다 — 관리자 환불과 PayApp 환불 통보가 동시에 와도 기간을 두 번 빼지 않게
+  const [o] = await db.update(S.orders).set({ status, refundStatus: status === 'refunded' ? 'done' : order.refundStatus }).where(and(eq(S.orders.id, order.id), eq(S.orders.status, order.status))).returning();
+  if (!o) { const [cur] = await db.select().from(S.orders).where(eq(S.orders.id, order.id)); return cur; }
   if (order.status === 'paid' && o.kind === 'subscription') {
     const subs = await db.select().from(S.subscriptions).where(and(eq(S.subscriptions.userId, o.userId), eq(S.subscriptions.channel, o.channel), gt(S.subscriptions.expiresAt, new Date())));
     for (const s of subs) {

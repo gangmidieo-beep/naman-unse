@@ -64,7 +64,7 @@ export async function apiAuth<T>(path: string, init: RequestInit = {}, retried =
   }
   // 로그인이 만료(30일)되면 화면엔 로그인된 것처럼 보이는데 아무것도 안 되던 문제 → 로그아웃 처리하고 다시 로그인 안내
   if (r.status === 401 && useApp.getState().account?.token === token) {
-    useApp.getState().signOut();
+    useApp.getState().signOut(true); // 사주 정보는 남김(다시 로그인하면 계정으로 다시 올라감)
     throw Object.assign(new Error('로그인이 만료됐어요. 다시 로그인해 주세요.'), { code: 'login_expired' });
   }
   if (!r.ok) throw Object.assign(new Error(j.error ?? '잠시 후 다시 시도해 주세요'), { code: j.code, status: r.status });
@@ -104,8 +104,18 @@ export async function pullProfiles() {
     return { profiles, mainId: s.mainId && profiles.some((p) => p.id === s.mainId) ? s.mainId : main ?? profiles[0]?.id ?? null };
   });
 }
+/** 로그아웃 전에 이 기기 사주를 계정에 올려 둠(로그인 중에 새로 저장한 가족 사주가 사라지지 않게). 실패해도 진행 */
+export async function uploadAllProfiles() {
+  const { profiles, mainId, account } = useApp.getState();
+  if (!account?.token) return;
+  for (const x of profiles) await apiAuth('/profiles', { method: 'POST', body: JSON.stringify({ ...x, isMain: x.id === mainId }) }).catch(() => null);
+}
 /** 사주 지우기를 계정에도(다른 기기·다시 로그인 때 되살아나지 않게). 실패해도 이 기기에서는 지움 */
-export const deleteProfileOnServer = (id: string) => (useApp.getState().account?.token ? apiAuth(`/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null) : Promise.resolve(null));
+// 반환: 지우면 안 되는 이유(쓰는 중인 풀이가 있음) — 없으면 null
+export async function deleteProfileOnServer(id: string): Promise<string | null> {
+  try { await apiAuth(`/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }); return null; }
+  catch (e: any) { return e?.code === 'profile_in_use' ? e.message : null; }
+}
 async function payapp(productId: string, profileId: string, kind: Pending['kind'], opts: PayOpts = {}): Promise<PayResult> {
   try {
     if (profileId) profileId = await syncProfiles(profileId);
@@ -213,7 +223,7 @@ export async function refreshLogin() {
   try { if (Date.now() - +(localStorage.getItem(REFRESHED) || 0) < 86400_000) return; } catch { /* */ }
   const r = await fetch(`${__API_ORIGIN__}/auth/refresh`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${acc.token}` }, body: '{}' }).catch(() => null);
   if (!r) return;
-  if (r.status === 401) { useApp.getState().signOut(); return; }
+  if (r.status === 401) { useApp.getState().signOut(true); return; }
   const j = await r.json().catch(() => null);
   if (j?.token && useApp.getState().account?.token === acc.token) useApp.getState().setAccount({ ...acc, token: j.token });
   try { localStorage.setItem(REFRESHED, String(Date.now())); } catch { /* */ }

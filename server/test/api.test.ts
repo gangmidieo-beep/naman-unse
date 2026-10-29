@@ -97,6 +97,12 @@ describe('공개 API', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().code).toBe('profile_missing');
     expect((await app.inject({ method: 'POST', url: '/profiles', headers: auth(b), payload: { ...profile('x'), year: 'abc' } })).statusCode).toBe(400);
+    // 쓰는 중인 풀이의 사주는 지울 수 없음(결제한 풀이가 멈추지 않게)
+    const oa = await app.inject({ method: 'POST', url: '/orders', headers: auth(a), payload: { productId: 'wealth', profileId: pa.id } });
+    expect(oa.statusCode).toBe(200);
+    const del = await app.inject({ method: 'DELETE', url: `/profiles/${pa.id}`, headers: auth(a) });
+    expect(del.statusCode).toBe(409);
+    expect(del.json().code).toBe('profile_in_use');
     // 같은 id 를 다른 계정이 올리면 새 id 로 저장(남의 사주를 덮어쓰지 않음)
     const pb = (await app.inject({ method: 'POST', url: '/profiles', headers: auth(b), payload: { ...profile('남'), id: pa.id } })).json();
     expect(pb.id).not.toBe(pa.id);
@@ -164,6 +170,9 @@ describe('관리자 API', () => {
     expect(img.headers['content-type']).toContain('image/png');
     expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(boss), payload: { price: 0 } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(boss), payload: { memberPrice: 999999 } })).statusCode).toBe(400);
+    // 무료 상품(오늘의 운세 등)은 가격 칸(0원)을 함께 보내도 저장됨
+    const free = (await app.inject({ url: '/products' })).json().find((x: any) => x.price === 0);
+    expect((await app.inject({ method: 'PATCH', url: `/admin/api/products/${free.id}`, headers: auth(boss), payload: { title: free.title, price: 0, memberPrice: null, listPrice: null } })).statusCode).toBe(200);
     const list = (await app.inject({ url: '/admin/api/payments?q=zzz-none', headers: auth(staff) })).json();
     expect(list).toEqual([]);
     const all = (await app.inject({ url: '/admin/api/payments?limit=5', headers: auth(staff) })).json();

@@ -40,7 +40,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   if (MOCK && (process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production')) console.warn('[경고] 운영 환경인데 MOCK_MODE=true — 결제 없이 상품이 지급됩니다. Railway 변수 MOCK_MODE 를 false 로 바꾸세요.');
   const http = opts.http ?? fetch;
   // trustProxy: Railway 프록시 뒤라 손님 IP 를 X-Forwarded-For 에서 읽어야 함(없으면 모든 손님이 같은 IP → 요청 제한이 사이트 전체 합계가 됨)
-  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024, trustProxy: true });
+  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 6 * 1024 * 1024, trustProxy: (_a: string, hop: number) => hop === 0 }); // 1단계(Railway 프록시)만 믿음 — 손님이 X-Forwarded-For 를 꾸며 요청 제한을 피하지 못하게
   // 서버 오류 문구(SQL 등)를 손님에게 보이지 않게 — 기록은 로그에만
   app.setErrorHandler((err: any, req, rep) => {
     const code = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
@@ -223,6 +223,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.delete('/profiles/:pid', async (req, rep) => {
     const id = await needUser(req, rep);
     if (!id) return;
+    // 아직 쓰는 중인 풀이(대기·작성 중·재시도)의 사주는 지우지 않는다 — 지우면 결제한 풀이가 '사주 정보 없음'으로 멈춤
+    const pid = String((req.params as any).pid);
+    const busy = await db.select({ id: S.readings.id }).from(S.readings).where(and(inArray(S.readings.status, ['queued', 'generating', 'failed', 'waiting']), or(eq(S.readings.profileId, pid), sql`${S.readings.profileId} like ${pid + '+%'}`, sql`${S.readings.profileId} like ${'%+' + pid}`)));
+    if (busy.length) return rep.code(409).send({ error: '이 사주로 쓰는 중인 풀이가 있어 지금은 지울 수 없어요. 풀이가 끝난 뒤 지워 주세요.', code: 'profile_in_use' });
     await db.delete(S.profiles).where(and(eq(S.profiles.id, (req.params as any).pid), eq(S.profiles.userId, id)));
     return { ok: true };
   });
@@ -301,7 +305,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     // 풀이에 쓸 사주는 반드시 이 계정에 저장된 것 — 남의 사주 id 로 풀이를 받거나, 저장 실패한 사주로 결제돼 풀이가 안 써지는 일 막기
     const pids = String(b.profileId ?? '').split('+').filter(Boolean);
     if (pids.length) {
-      const own = await db.select({ id: S.profiles.id }).from(S.profiles).where(and(inArray(S.profiles.id, pids), eq(S.profiles.userId, userId)));
+      // 내 것 + (이 게스트가 로그인 계정으로 합쳐졌다면) 그 계정의 사주 — 예전 앱 화면이 합쳐진 게스트 표시로 주문하는 경우
+      const [me] = await db.select({ mergedInto: S.users.mergedInto }).from(S.users).where(eq(S.users.id, userId));
+      const owners = me?.mergedInto ? [userId, me.mergedInto] : [userId];
+      const own = await db.select({ id: S.profiles.id }).from(S.profiles).where(and(inArray(S.profiles.id, pids), inArray(S.profiles.userId, owners)));
       if (own.length < new Set(pids).size) return rep.code(400).send({ error: '사주 정보가 저장되지 않았어요. 사주를 다시 저장한 뒤 결제해 주세요.', code: 'profile_missing' });
     }
     const premium = await isPremium(userId);
@@ -523,7 +530,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!p || (member && p.kind === 'subscription')) return rep.code(404).send({ error: '없는 상품이에요' });
     // 싼 상품 구매로 비싼 주문을 여는 것 막기 — 주문과 Play 상품이 같아야 함
     if (o && (o.productId !== p.id || o.channel !== 'google' || o.status !== 'pending')) return rep.code(409).send({ error: '주문과 구매 상품이 달라요' });
-    if (member && !(await isPremium(userId))) return rep.code(402).send({ error: '프리미엄 회원가는 회원만 구매할 수 있어요' });
+    // 회원가 상품을 회원이 아닌데 샀다면(기간이 막 끝난 경우 등) 이미 Google 에서 돈이 나갔으므로 막지 않고 낸 금액으로 기록
+    if (member && !(await isPremium(userId))) req.log.warn(`[google] 회원 아닌 사용자의 회원가 구매 user=${userId} product=${playId}`);
     const amount = member ? p.memberPrice ?? memberPrice(p.price) : p.price;
     const order = o ?? (await db.insert(S.orders).values({ id: newId('O'), userId, profileId: b.profileId ?? null, productId: p.id, kind: p.kind === 'talisman' ? 'talisman' : p.kind === 'subscription' ? 'subscription' : 'reading', amount, discount: p.price - amount, channel: 'google', method: 'google', status: 'pending' }).returning())[0];
     try {
@@ -841,11 +849,13 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     // 가격 검사 — 빈 칸이 0원으로 저장돼 공짜로 팔리는 사고 막기(유료 상품은 1,000원 이상)
     const [curP] = await db.select().from(S.products).where(eq(S.products.id, id));
     if (!curP) return rep.code(404).send({ error: '없는 상품이에요' });
+    // 바뀐 값만 검사(관리자 화면은 저장할 때 가격 칸을 늘 함께 보냄). 원래 무료(0원)인 상품은 0원 그대로 저장 가능
     const int = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000_000;
-    if ('price' in b && (!int(b.price) || (curP.kind !== 'fun' && b.price < 1000))) return rep.code(400).send({ error: '가격은 1,000원 이상 숫자로 적어 주세요' });
+    const changed = (k: 'price' | 'memberPrice' | 'listPrice') => k in b && b[k] !== curP[k];
+    if (changed('price') && (!int(b.price) || (curP.price > 0 && b.price < 1000))) return rep.code(400).send({ error: '가격은 1,000원 이상 숫자로 적어 주세요' });
     const price = 'price' in b ? b.price : curP.price;
-    if ('memberPrice' in b && b.memberPrice != null && (!int(b.memberPrice) || b.memberPrice > price)) return rep.code(400).send({ error: '회원가는 정가보다 크지 않은 숫자로 적어 주세요' });
-    if ('listPrice' in b && b.listPrice != null && (!int(b.listPrice) || b.listPrice < price)) return rep.code(400).send({ error: '정가(할인 전)는 판매가보다 작을 수 없어요' });
+    if (changed('memberPrice') && b.memberPrice != null && (!int(b.memberPrice) || b.memberPrice > price)) return rep.code(400).send({ error: '회원가는 정가보다 크지 않은 숫자로 적어 주세요' });
+    if (changed('listPrice') && b.listPrice != null && (!int(b.listPrice) || b.listPrice < price)) return rep.code(400).send({ error: '정가(할인 전)는 판매가보다 작을 수 없어요' });
     const [p] = await db.update(S.products).set({ ...b, updatedAt: new Date() }).where(eq(S.products.id, id)).returning();
     await audit(req, 'product.update', id, b);
     return p;
@@ -955,8 +965,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       const [same] = await db.select({ id: S.pushCampaigns.id }).from(S.pushCampaigns).where(and(eq(S.pushCampaigns.title, b.title), eq(S.pushCampaigns.body, b.body), eq(S.pushCampaigns.target, b.target ?? 'all'), gt(S.pushCampaigns.createdAt, new Date(Date.now() - 120_000))));
       if (same) return rep.code(409).send({ error: '같은 알림을 방금 보냈어요. 두 번 보내지 않도록 막았어요.' });
     }
-    const [c] = await db.insert(S.pushCampaigns).values({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all',
-      scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : new Date(), status: now ? 'sent' : 'scheduled', sentCount: now ? await deliver({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all' }) : 0, createdBy: req.admin!.email }).returning();
+    // 기록을 먼저 남기고(동시에 두 번 눌러도 두 번째는 위 검사에 걸림) 그다음 보낸다
+    const [c0] = await db.insert(S.pushCampaigns).values({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all',
+      scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : new Date(), status: now ? 'sending' : 'scheduled', sentCount: 0, createdBy: req.admin!.email }).returning();
+    const c = now ? (await db.update(S.pushCampaigns).set({ status: 'sent', sentCount: await deliver({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all' }).catch(() => 0) }).where(eq(S.pushCampaigns.id, c0.id)).returning())[0] : c0;
     await audit(req, now ? 'push.send' : 'push.schedule', String(c.id), b);
     return c;
   });

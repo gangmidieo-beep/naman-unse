@@ -99,12 +99,12 @@ export function sampleContent(product: { id: string; title: string }, people: Pe
   };
 }
 
-export async function generateReading(product: { id: string; title: string }, people: Person[], opts: { focus?: string; http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent, u: { tokensIn: number; tokensOut: number; costKrw: number }) => Promise<void> } = {}) {
+export async function generateReading(product: { id: string; title: string }, people: Person[], opts: { focus?: string; http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent, u: { tokensIn: number; tokensOut: number; costKrw: number }) => Promise<void>; isAborted?: () => boolean } = {}) {
   const ps = people.length ? people : [samplePerson()];
   const titles = chaptersFor(product.id, product.title);
   if (!liveAI()) return { content: { ...sampleContent(product, ps), ...reportsFor(ps, opts.now) } as ReadingContent, tokensIn: 0, tokensOut: 0, costKrw: 0, issues: [] as string[] };
   if (process.env.READING_LONG !== 'off') { // A4 40~50장 정통 감정서(기본). READING_LONG=off 면 예전 9장짜리
-    const g = await generateLong(product, groupOf(product.id), characterOf(product.id), ps, { http: opts.http, now: opts.now, prev: opts.prev, onProgress: opts.onProgress });
+    const g = await generateLong(product, groupOf(product.id), characterOf(product.id), ps, { http: opts.http, now: opts.now, prev: opts.prev, onProgress: opts.onProgress, isAborted: opts.isAborted });
     return { content: g.content as any, tokensIn: g.tokensIn, tokensOut: g.tokensOut, costKrw: g.costKrw, issues: g.content.issues ?? [] };
   }
   const sajus = ps.map((p) => calcSaju({ ...p, leapMonth: p.leap, timeUnknown: p.hour == null }));
@@ -191,17 +191,21 @@ export async function runOne(db: Db, r: typeof S.readings.$inferSelect, http?: t
   }));
   const base = { tokensIn: r.tokensIn ?? 0, tokensOut: r.tokensOut ?? 0, costKrw: r.costKrw ?? 0 };
   const prev = (r.content as any)?.version === 2 ? (r.content as Partial<LongContent>) : null;
-  // 진행 저장 = 끝난 장 + 지금까지 원가 + 살아 있음 표시(startedAt). 원가 상한을 넘으면 그 자리에서 멈춘다
+  // 진행 저장 = 끝난 장 + 지금까지 원가. 원가 상한을 넘으면 멈춤 표시(나머지 묶음도 새 AI 호출을 하지 않음)
+  let aborted = false;
   const save = async (c: LongContent, u?: { tokensIn: number; tokensOut: number; costKrw: number }) => {
     await db.update(S.readings).set({ content: c as any, startedAt: new Date(), ...(u ? { tokensIn: base.tokensIn + u.tokensIn, tokensOut: base.tokensOut + u.tokensOut, costKrw: base.costKrw + u.costKrw } : {}) }).where(mine);
-    if (u && base.costKrw + u.costKrw >= costCap() * 1.5) throw new StopError(`원가 상한 초과(${base.costKrw + u.costKrw}원) — 관리자 확인 필요`);
+    if (u && base.costKrw + u.costKrw >= costCap() * 1.5) { aborted = true; throw new StopError(`원가 상한 초과(${base.costKrw + u.costKrw}원) — 관리자 확인 필요`); }
   };
+  // 살아 있음 표시 — AI 한 번이 몇 분씩 걸려도 1분마다 startedAt 을 갱신(다른 서버가 '멈춘 건'으로 보고 같은 건을 또 쓰지 않게)
+  const beat = setInterval(() => { void db.update(S.readings).set({ startedAt: new Date() }).where(mine).catch(() => {}); }, 60_000);
+  beat.unref?.();
   try {
     // 사주 정보가 하나라도 없으면 예시 인물(홍길동)로 쓰지 않는다 — AI 비용만 나가고 엉뚱한 풀이가 됨
     if (liveAI() && (!ids.length || people.length < ids.length)) throw new StopError('사주 정보 없음(삭제됐거나 저장 실패) — 다시 결제·문의 필요');
     if (base.costKrw >= costCap() * 1.5) throw new StopError(`원가 상한 초과(${base.costKrw}원) — 관리자 확인 필요`);
     // 결제한 날 기준으로 쓴다(11월 1일에 해가 바뀐 뒤 이어 쓰면 올해·내년 내용이 섞이던 문제)
-    const g = await generateReading({ id: r.productId, title: p?.title ?? r.productId }, people, { http, prev, now: r.createdAt ?? undefined, onProgress: save });
+    const g = await generateReading({ id: r.productId, title: p?.title ?? r.productId }, people, { http, prev, now: r.createdAt ?? undefined, onProgress: save, isAborted: () => aborted });
     await db.update(S.readings).set({
       status: 'done', content: { ...g.content, issues: g.issues } as any, model: g.content.generatedBy === 'ai' ? process.env.ANTHROPIC_MODEL ?? null : 'sample',
       tokensIn: base.tokensIn + g.tokensIn, tokensOut: base.tokensOut + g.tokensOut, costKrw: base.costKrw + g.costKrw, doneAt: new Date(),
@@ -216,5 +220,5 @@ export async function runOne(db: Db, r: typeof S.readings.$inferSelect, http?: t
       ...(e.tokensIn !== undefined ? { tokensIn: base.tokensIn + (e.tokensIn ?? 0), tokensOut: base.tokensOut + (e.tokensOut ?? 0), costKrw: base.costKrw + (e.costKrw ?? 0) } : {}),
     }).where(mine);
     throw e;
-  }
+  } finally { clearInterval(beat); }
 }

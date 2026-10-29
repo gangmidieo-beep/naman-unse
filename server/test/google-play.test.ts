@@ -44,8 +44,7 @@ describe('Google Play 검증', () => {
   });
   it('회원가 상품(<id>_m): 같은 상품으로 기록, 금액은 회원가, Google 에는 _m 으로 조회', async () => {
     const t = await guest('gp-3');
-    expect((await verify(t, 'jeongtong_m', 'tok-2')).statusCode).toBe(402); // 회원 아니면 회원가 상품 못 씀
-    expect((await verify(t, 'premium_monthly', 'tok-sub-gp3')).json().status).toBe('paid');
+    // 회원 기간이 막 끝난 사람이 회원가로 샀어도 Google 에서 이미 결제됐으므로 지급(기록만 남김)
     const r = await verify(t, 'jeongtong_m', 'tok-2');
     expect(r.json()).toMatchObject({ status: 'paid', productId: 'jeongtong', amount: 26000, discount: 3000 });
     expect(seen.some((x) => x.includes('/purchases/products/jeongtong_m/tokens/tok-2'))).toBe(true);

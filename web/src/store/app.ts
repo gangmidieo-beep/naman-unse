@@ -56,7 +56,7 @@ type State = {
   addTalisman: (t: MyTalisman) => void;
   removeOrder: (orderId: string) => void;
   setAccount: (a: Account | null) => void;
-  signOut: () => void; // 로그아웃·로그인 만료 — 계정에 딸린 정보(사주·구매·부적·구독)를 이 기기에서 지움(같은 폰을 다른 사람이 써도 안 보이게)
+  signOut: (keepProfiles?: boolean) => void; // 로그아웃 — 계정에 딸린 정보(사주·구매·부적·구독)를 이 기기에서 지움(같은 폰 다른 사람). 로그인 만료는 사주를 남김
   noteAdView: () => void;
   unlock: (key: string) => void;
 };
@@ -107,9 +107,9 @@ export const useApp = create<State>()(
       addTalisman: (t) => set((s) => (s.talismans.some((x) => x.orderId === t.orderId) ? s : { talismans: [t, ...s.talismans] })),
       removeOrder: (orderId) => set((s) => ({ purchases: s.purchases.filter((x) => x.orderId !== orderId), talismans: s.talismans.filter((x) => x.orderId !== orderId) })),
       setAccount: (account) => set({ account }),
-      signOut: () => {
+      signOut: (keepProfiles = false) => {
         try { localStorage.removeItem('naman-guest'); localStorage.removeItem('naman-pay-pending'); } catch { /* 저장소 막힘 */ }
-        set({ account: null, profiles: [], mainId: null, purchases: [], talismans: [], plan: null, planUntil: null, planAuto: false, unlocked: {} });
+        set({ account: null, purchases: [], talismans: [], plan: null, planUntil: null, planAuto: false, unlocked: {}, ...(keepProfiles ? {} : { profiles: [], mainId: null }) });
       },
       noteAdView: () =>
         set((s) => ({ adViews: { date: today(), count: (s.adViews.date === today() ? s.adViews.count : 0) + 1, last: Date.now() } })),

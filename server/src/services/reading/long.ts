@@ -270,7 +270,7 @@ function chapterOf(s: Section, x: any): LongChapter {
 
 export async function generateLong(
   product: { id: string; title: string }, group: string, character: 'cheongung' | 'wolha', people: Person[],
-  opts: { http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent, u: { tokensIn: number; tokensOut: number; costKrw: number }) => Promise<void> } = {},
+  opts: { http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent, u: { tokensIn: number; tokensOut: number; costKrw: number }) => Promise<void>; isAborted?: () => boolean } = {},
 ) {
   const http = opts.http ?? fetch;
   const plan = buildPlan(product, group, people, opts.now);
@@ -308,6 +308,7 @@ export async function generateLong(
     const short: Section[] = [];
     let res: Awaited<ReturnType<typeof callClaudeLong>> | null = null;
     try {
+      if (opts.isAborted?.()) throw new Error('원가 상한 초과 — 중단');
       res = await callClaudeLong(system, userPrompt(product, people, plan.sections, batch, facts, plan.parts, extras), maxTokens, http);
     } catch (e) {
       if (!(e instanceof AiFormatError)) throw e;
@@ -328,6 +329,7 @@ export async function generateLong(
     }
     // 빠졌거나 많이 짧거나 묶음이 깨진 장은 한 장씩(넉넉한 한도로) — 한 장이 끝날 때마다 진행률 저장
     for (const s of short) {
+      if (opts.isAborted?.()) throw new Error('원가 상한 초과 — 중단');
       const lone = (n: number) => callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, s.id === batch[0].id ? extras : ''), n, http);
       let one: Awaited<ReturnType<typeof callClaudeLong>>;
       try { one = await lone(Math.min(16000, Math.ceil(s.len * 3.4) + 2500)); }

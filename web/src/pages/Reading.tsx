@@ -96,9 +96,13 @@ export default function ReadingPage() {
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (!live) return;
-    let stop = false, timer = 0, fails = 0;
+    let stop = false, timer = 0, fails = 0, inFlight = false;
     const poll = async () => {
-      if (stop) return;
+      if (stop || inFlight) return; // 화면 복귀와 예약 확인이 겹쳐 확인이 여러 갈래로 늘지 않게
+      inFlight = true;
+      try { await pollOnce(); } finally { inFlight = false; }
+    };
+    const pollOnce = async () => {
       let r: any;
       try { r = await apiAuth<any>(`/readings/${encodeURIComponent(orderId)}`); fails = 0; }
       catch (e: any) {

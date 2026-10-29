@@ -205,6 +205,17 @@ describe('PayApp 웹 결제', () => {
     const ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
     expect((new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5).toBeGreaterThan(300);
   });
+  it('같은 환불이 동시에 두 번 와도 이용 기간은 한 번만 줄어든다', async () => {
+    const t = await guest('pay-twice');
+    const y1 = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_yearly', phone: '01055551212' } })).json();
+    await feedback(y1.id, y1.amount, '4', { mul_no: 'TW1' });
+    const y2 = (await app.inject({ method: 'POST', url: '/orders', headers: auth(t), payload: { productId: 'premium_yearly', phone: '01055551212' } })).json();
+    await feedback(y2.id, y2.amount, '4', { mul_no: 'TW2' });
+    await Promise.all([feedback(y2.id, y2.amount, '9', { mul_no: 'TW2' }), feedback(y2.id, y2.amount, '9', { mul_no: 'TW2' })]);
+    const ent = (await app.inject({ url: '/me/entitlements', headers: auth(t) })).json();
+    expect(ent.premium).toBe(true);
+    expect((new Date(ent.subscription.expiresAt).getTime() - Date.now()) / 864e5).toBeGreaterThan(300);
+  });
   it('부분 환불은 이용을 막지 않고 기록만', async () => {
     const t = await guest('pay-part');
     const tal = (await app.inject({ url: '/products' })).json().find((p: any) => p.kind === 'talisman');
