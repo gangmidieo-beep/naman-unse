@@ -80,4 +80,70 @@ describe('결제 → 풀이 생성 → 결과 조회 (예시 모드)', () => {
     const other = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: 'rd-2' } })).json().token;
     expect((await app.inject({ url: `/readings/${o.id}`, headers: { authorization: `Bearer ${other}` } })).statusCode).toBe(404);
   });
+
+  // 2026-10-29 실서버 비용 사고(감정서 1건 약 10달러) 재발 방지
+  const S = () => import('../src/db/schema.ts');
+  const order = async (dev: string, withProfile = true) => {
+    const t = (await app.inject({ method: 'POST', url: '/auth/guest', payload: { deviceId: dev } })).json().token;
+    const h = { authorization: `Bearer ${t}` };
+    const prof = withProfile ? (await app.inject({ method: 'POST', url: '/profiles', headers: h, payload: { ...ME, isMain: true } })).json() : null;
+    const o = (await app.inject({ method: 'POST', url: '/orders', headers: h, payload: { productId: 'wealth', ...(prof ? { profileId: prof.id } : {}) } })).json();
+    return { h, o, prof };
+  };
+  const live = (calls: { n: number }) => {
+    Object.assign(process.env, { READING_AI: 'live', ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'test-model', READING_LONG: 'off' });
+    return (async (_u: string, init: any) => {
+      calls.n++;
+      const titles = [...JSON.parse(init.body).messages[0].content.matchAll(/\d+\. ([^/\n]+?)(?= \/|$)/gm)].map((m) => m[1]);
+      const text = JSON.stringify({ intro: '김현재 님', chapters: titles.map((t) => ({ title: t, say: '요약', body: '김현재 님의 '.repeat(60), highlight: '한 줄' })), closing: { title: '마무리 조언', body: '김현재 님 '.repeat(30), tips: ['a', 'b', 'c'] } });
+      await new Promise((r) => setTimeout(r, 30));
+      return new Response(JSON.stringify({ content: [{ type: 'text', text }], usage: { input_tokens: 1000, output_tokens: 2000 } }));
+    }) as unknown as typeof fetch;
+  };
+  const off = () => { for (const k of ['READING_AI', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', 'READING_LONG']) delete process.env[k]; };
+
+  it('두 워커가 동시에 돌아도 한 건은 한 번만 쓴다(AI 호출 2번)', async () => {
+    const { h, o } = await order('rd-dup');
+    const calls = { n: 0 };
+    const http = live(calls);
+    const [w1, w2] = [startReadingWorker(db, { warn: () => {} }, http), startReadingWorker(db, { warn: () => {} }, http)];
+    await Promise.all([w1.tick(), w2.tick()]); w1.stop(); w2.stop(); off();
+    expect(calls.n).toBe(2);
+    const r = (await app.inject({ url: `/readings/${o.id}`, headers: h })).json();
+    expect(r.status).toBe('done');
+  });
+  it('환불된 주문은 AI 를 부르지 않고 cancelled', async () => {
+    const { o } = await order('rd-ref');
+    const { orders, readings } = await S();
+    const { eq } = await import('drizzle-orm');
+    await db.update(orders).set({ status: 'refunded' }).where(eq(orders.id, o.id));
+    const calls = { n: 0 };
+    const w = startReadingWorker(db, { warn: () => {} }, live(calls));
+    await w.tick(); w.stop(); off();
+    expect(calls.n).toBe(0);
+    const [r] = await db.select().from(readings).where(eq(readings.orderId, o.id));
+    expect(r.status).toBe('cancelled');
+  });
+  it('사주 정보가 없으면 예시 인물로 쓰지 않고 실패, 자동 재시도도 안 함', async () => {
+    const { o, prof } = await order('rd-noprof');
+    const { profiles, readings } = await S();
+    const { eq } = await import('drizzle-orm');
+    await db.delete(profiles).where(eq(profiles.id, prof.id));
+    const calls = { n: 0 };
+    const w = startReadingWorker(db, { warn: () => {} }, live(calls));
+    await w.tick(); w.stop(); off();
+    expect(calls.n).toBe(0);
+    const [r] = await db.select().from(readings).where(eq(readings.orderId, o.id));
+    expect(r.status).toBe('failed');
+    expect(r.attempts).toBe(3);
+  });
+  it('원가 상한을 넘은 실패 건은 [다시 시도] 해도 다시 쓰지 않는다', async () => {
+    const { h, o } = await order('rd-cap');
+    const { readings } = await S();
+    const { eq } = await import('drizzle-orm');
+    await db.update(readings).set({ status: 'failed', costKrw: 9000, attempts: 1 }).where(eq(readings.orderId, o.id));
+    const res = await app.inject({ method: 'POST', url: `/readings/${o.id}/retry`, headers: h, payload: {} });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe('cost_cap');
+  });
 });

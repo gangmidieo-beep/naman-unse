@@ -16,7 +16,7 @@ const write = (id: string, len: number, name: string) => {
   while (t.length < len) t += `${name} 님의 ${id} 장 ${i++}번째 문장은 원국의 근거를 들어 새롭게 풀이한 내용입니다. `;
   return t;
 };
-function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: string[]; truncateBatches?: boolean; rawNewlines?: boolean } = {}) {
+function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: string[]; truncateBatches?: boolean; rawNewlines?: boolean; timeoutBatches?: boolean } = {}) {
   let calls = 0, limited = false;
   const fn = (async (_u: string, init: any) => {
     calls++;
@@ -26,6 +26,7 @@ function fakeAI(opts: { failIds?: string[]; rateLimitFirst?: boolean; log?: stri
     const items = [...u.matchAll(/- id "([^"]+)" · 제목 "[^"]*" · 목표 (\d+)자/g)].map((m) => ({ id: m[1], len: +m[2] }));
     opts.log?.push(items.map((x) => x.id).join(','));
     if (items.some((x) => opts.failIds?.includes(x.id))) return new Response('{}', { status: 500 });
+    if (opts.timeoutBatches && items.length > 1) throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
     // 여러 장 묶음이 글자 수 한도에서 잘려 JSON 이 깨진 경우(2026-10-29 실서버)
     if (opts.truncateBatches && items.length > 1) return new Response(JSON.stringify({ content: [{ type: 'text', text: '{"sections":[{"id":"' + items[0].id + '","body":"잘린 글' }], usage: { input_tokens: 3000, output_tokens: 9000 }, stop_reason: 'max_tokens' }));
     const name = u.match(/사람: ([^(]+)\(/)?.[1] ?? '';
@@ -139,6 +140,15 @@ describe('장편 생성', () => {
     // 잘린 응답도 요금이 나가므로 원가에 포함(묶음 수 × 잘린 응답 9000 토큰 이상)
     const multi = log.filter((x) => x.includes(',')).length;
     expect(g.tokensOut).toBeGreaterThanOrEqual(multi * 9000 + (log.length - multi) * 5000);
+  });
+  it('묶음 응답이 시간 초과되면 같은 요청을 다시 보내지 않고 한 장씩 나눠 쓴다', async () => {
+    env();
+    const log: string[] = [];
+    const g = await generateLong({ id: 'wealth', title: '재물운' }, 'theme', 'cheongung', [ME], { http: fakeAI({ timeoutBatches: true, log }).fn, now: NOW });
+    clear();
+    expect(g.content.chapters.length + 1).toBe(g.plan.sections.length);
+    const multi = log.filter((x) => x.includes(','));
+    expect(new Set(multi).size).toBe(multi.length); // 같은 묶음을 두 번 보내지 않음
   });
   it('문자열 안 줄바꿈이 섞인 JSON 도 읽는다', async () => {
     expect(parseLooseJson('앞말 {"a":"첫 줄\n둘째 줄","b":[1,2,]} 뒷말')).toEqual({ a: '첫 줄\n둘째 줄', b: [1, 2] });

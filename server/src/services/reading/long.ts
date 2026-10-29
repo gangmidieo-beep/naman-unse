@@ -3,7 +3,7 @@
 // 2) reading-outline-long.json 목차를 사람·대운·세운·월운에 맞게 펼침(약 35~45장)
 // 3) 장들을 4천 자 안팎 묶음으로 나눠 AI 를 동시에 여러 번 호출, 장마다 "이 장에서만 다룰 내용"과 전체 목차를 같이 줘 중복을 막음
 // 4) 묶음이 끝날 때마다 진행분을 저장(화면에 "N/M장 작성 중"), 실패하면 끝난 장은 두고 남은 장만 다시 씀
-import { recordAiFailure, recordAiOk } from '../env.ts';
+import { aiCostKrw, recordAiFailure, recordAiOk } from '../env.ts';
 import { analyzeSaju, calcSaju, solarToLunar, tojeong, STEMS, BRANCHES, type SajuReport, type SajuResult } from '@naman/engine';
 import longOutline from '../../../../packages/content/data/reading-outline-long.json' with { type: 'json' };
 
@@ -190,6 +190,8 @@ export function parseLooseJson(text: string): any | null {
 }
 // 잘린·깨진 응답도 요금은 나가므로 쓴 토큰을 함께 들고 간다(관리자 원가가 콘솔 사용량과 맞도록)
 export class AiFormatError extends Error { constructor(public truncated: boolean, public tokensIn = 0, public tokensOut = 0) { super('AI 응답 형식 오류'); } }
+// 응답을 기다리는 시간 — 긴 글은 몇 분 걸린다(초당 약 50~80토큰). 예전 300초 고정이면 큰 묶음이 시간 초과 → 같은 요청을 여러 번 다시 보내 비용만 나갔다
+export const timeoutFor = (maxTokens: number) => Math.max(300_000, maxTokens * 45 + 60_000);
 export async function callClaudeLong(system: string, user: string, maxTokens: number, http: typeof fetch, model = process.env.ANTHROPIC_MODEL) {
   let paidIn = 0, paidOut = 0; // 형식 오류로 버린 응답의 토큰(요금은 이미 나감)
   for (let attempt = 0; ; attempt++) {
@@ -197,8 +199,10 @@ export async function callClaudeLong(system: string, user: string, maxTokens: nu
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY!, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
-      signal: AbortSignal.timeout(300_000),
+      signal: AbortSignal.timeout(timeoutFor(maxTokens)),
     }).catch((e) => ({ ok: false, status: 0, headers: new Headers(), json: async () => ({}), err: e }) as any));
+    // 시간 초과는 같은 요청을 다시 보내도 또 초과 → 잘린 것처럼 알려서 장을 나눠 쓰게(재전송 금지)
+    if ((r as any).err?.name === 'TimeoutError') { await recordAiFailure(null, '응답 시간 초과(장을 나눠 다시 씀)'); throw new AiFormatError(true, paidIn, paidOut); }
     if (r.ok) {
       recordAiOk();
       const j = (await r.json()) as any;
@@ -265,7 +269,7 @@ function chapterOf(s: Section, x: any): LongChapter {
 
 export async function generateLong(
   product: { id: string; title: string }, group: string, character: 'cheongung' | 'wolha', people: Person[],
-  opts: { http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent) => Promise<void> } = {},
+  opts: { http?: typeof fetch; now?: Date; prev?: Partial<LongContent> | null; onProgress?: (c: LongContent, u: { tokensIn: number; tokensOut: number; costKrw: number }) => Promise<void> } = {},
 ) {
   const http = opts.http ?? fetch;
   const plan = buildPlan(product, group, people, opts.now);
@@ -276,6 +280,7 @@ export async function generateLong(
   let intro = opts.prev?.intro ?? '';
   let tips: string[] = opts.prev?.closing?.tips ?? [];
   let tokensIn = 0, tokensOut = 0;
+  const usage = () => ({ tokensIn, tokensOut, costKrw: aiCostKrw(tokensIn, tokensOut) });
   const system = systemPrompt();
 
   const snapshot = (): LongContent => {
@@ -318,28 +323,27 @@ export async function generateLong(
         if (!x?.body || String(x.body).length < s.len * 0.5) { short.push(s); continue; }
         done.set(s.id, chapterOf(s, x));
       }
-      await opts.onProgress?.(snapshot());
+      await opts.onProgress?.(snapshot(), usage());
     }
     // 빠졌거나 많이 짧거나 묶음이 깨진 장은 한 장씩(넉넉한 한도로) — 한 장이 끝날 때마다 진행률 저장
     for (const s of short) {
       const lone = (n: number) => callClaudeLong(system, userPrompt(product, people, plan.sections, [s], factLines(s.facts, s, people, plan.sajus, plan.reports, plan.tojeong), plan.parts, s.id === batch[0].id ? extras : ''), n, http);
       let one: Awaited<ReturnType<typeof callClaudeLong>>;
       try { one = await lone(Math.min(16000, Math.ceil(s.len * 3.4) + 2500)); }
-      catch (e) { if (!(e instanceof AiFormatError)) throw e; tokensIn += e.tokensIn; tokensOut += e.tokensOut; one = await lone(Math.min(32000, Math.ceil(s.len * 5) + 4000)); }
+      catch (e) { if (!(e instanceof AiFormatError)) throw e; tokensIn += e.tokensIn; tokensOut += e.tokensOut; one = await lone(Math.min(32000, Math.ceil(s.len * 5) + 4000)).catch((e2) => { if (e2 instanceof AiFormatError) { tokensIn += e2.tokensIn; tokensOut += e2.tokensOut; } throw e2; }); }
       tokensIn += one.tokensIn; tokensOut += one.tokensOut;
       if (wantIntro && !intro && one.json.intro) intro = String(one.json.intro);
       if (wantTips && !tips.length && Array.isArray(one.json.tips)) tips = one.json.tips.map(String).slice(0, 3);
       const x = (one.json.sections ?? [])[0];
       if (x?.body) done.set(s.id, chapterOf(s, x));
-      await opts.onProgress?.(snapshot());
+      await opts.onProgress?.(snapshot(), usage());
     }
   };
   // 묶음들을 동시에(호출 수는 READING_CONCURRENCY 로 제한). 하나가 실패해도 나머지는 끝까지 쓰고 마지막에 오류
   const results = await Promise.allSettled(todo.map(runBatch));
   const failed = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
   const content = snapshot();
-  const rate = { inp: +(process.env.AI_PRICE_IN_PER_M ?? 2), out: +(process.env.AI_PRICE_OUT_PER_M ?? 10) };
-  const costKrw = Math.round(((tokensIn * rate.inp + tokensOut * rate.out) / 1e6) * 1400);
+  const costKrw = aiCostKrw(tokensIn, tokensOut);
   if (failed || done.size < plan.sections.length) {
     throw Object.assign(new Error(failed ? (failed.reason as Error).message : `미완성 ${done.size}/${plan.sections.length}`), { partial: content, tokensIn, tokensOut, costKrw });
   }

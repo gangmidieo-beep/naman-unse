@@ -3,6 +3,7 @@
 // AI 가 꺼져 있거나 실패하면 화면이 카드 기본 문장으로 대신 보여 준다(무료 예비 풀이).
 import { tarotSpread, tarotSide } from '@naman/content';
 import { callClaudeLong } from './reading/long.ts';
+import { aiCostKrw } from './env.ts';
 
 export type TarotInput = { question?: string; a?: string; b?: string };
 export type TarotAI = {
@@ -73,6 +74,5 @@ export async function generateTarot(p: { id: string; title: string; positions: s
     ...(str(j.answer) ? { answer: str(j.answer) } : {}),
   };
   if (ai.positions.some((x) => !x.text) || !ai.summary.text) throw new Error('AI 응답이 비어 있어요');
-  const rate = { inp: +(process.env.AI_PRICE_IN_PER_M ?? 2), out: +(process.env.AI_PRICE_OUT_PER_M ?? 10) };
-  return { ai, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costKrw: Math.round(((r.tokensIn * rate.inp + r.tokensOut * rate.out) / 1e6) * 1400) };
+  return { ai, tokensIn: r.tokensIn, tokensOut: r.tokensOut, costKrw: aiCostKrw(r.tokensIn, r.tokensOut) };
 }

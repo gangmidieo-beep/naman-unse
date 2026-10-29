@@ -54,6 +54,11 @@ export async function recordAiFailure(r: { status: number; text?: () => Promise<
   message = message.replace(/sk-ant-[A-Za-z0-9_-]+/g, 'sk-ant-***').slice(0, 200); // independence-ok
   aiDiag.lastError = { at: new Date().toISOString(), status: r?.status ?? 0, type, message };
 }
+/** AI 원가(원) — 단가(USD/1M 토큰)·환율은 환경변수로. 관리자 원가 표시·비용 상한에 쓴다 */
+export function aiCostKrw(tokensIn: number, tokensOut: number, env: NodeJS.ProcessEnv = process.env) {
+  const inp = +(env.AI_PRICE_IN_PER_M ?? 2), out = +(env.AI_PRICE_OUT_PER_M ?? 10), fx = +(env.AI_KRW_PER_USD ?? 1400);
+  return Math.round(((tokensIn * inp + tokensOut * out) / 1e6) * fx);
+}
 export const recordAiOk = () => { aiDiag.lastOkAt = new Date().toISOString(); };
 /** 대표님이 바로 알아볼 수 있게 흔한 오류를 한국어로 */
 export function aiErrorHint(e: AiErr | null) {

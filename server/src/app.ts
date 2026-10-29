@@ -21,7 +21,7 @@ import { nextRebillDate, normalizePhone, parsePayappFeedback, payappCancel, paya
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
 import { runDailyPush, runExpiryReminders } from './services/push/daily.ts';
-import { liveAI } from './services/reading/generate.ts';
+import { costCap, liveAI } from './services/reading/generate.ts';
 import { generateTarot, type TarotInput } from './services/tarot.ts';
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
@@ -496,6 +496,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (!userId) return;
     const [o] = await db.select().from(S.orders).where(and(eq(S.orders.id, (req.params as any).oid), eq(S.orders.userId, userId)));
     if (!o || o.status !== 'paid') return rep.code(404).send({ error: '결제된 풀이가 없어요' });
+    // 원가 상한을 넘은 건은 손님이 계속 눌러도 다시 쓰지 않는다(관리자 확인 후 환불·재생성) — 2026-10-29 1건 10달러 사고 재발 방지
+    const [cur] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
+    if (cur?.status === 'failed' && (cur.costKrw ?? 0) >= costCap()) return rep.code(409).send({ error: '풀이를 쓰는 데 문제가 있어 확인 중이에요. 고객센터로 문의해 주시면 바로 도와드릴게요.', code: 'cost_cap' });
     const [r] = await db.update(S.readings).set({ status: 'queued', attempts: 0 }).where(and(eq(S.readings.orderId, o.id), eq(S.readings.status, 'failed'))).returning();
     return { status: r ? 'queued' : 'unchanged' };
   });
