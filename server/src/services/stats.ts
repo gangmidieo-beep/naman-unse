@@ -145,13 +145,18 @@ export async function memberDetail(db: Db, id: string) {
   };
 }
 
-export async function payments(db: Db, q: { kind?: string; status?: string; from?: string; to?: string; limit?: number }) {
+export async function payments(db: Db, q: { kind?: string; status?: string; from?: string; to?: string; limit?: number; q?: string }) {
   const r = q.from && q.to ? { from: q.from, to: q.to } : null;
   const kindCond = q.kind && (BUCKETS as readonly string[]).includes(q.kind) ? sql`and ${BUCKET} = ${q.kind}` : sql``;
+  // 검색: 주문번호·회원 이름·회원 번호 일부
+  const term = (q.q ?? '').trim().slice(0, 40);
+  const search = term ? sql`and (o.id ilike ${'%' + term + '%'} or u.name ilike ${'%' + term + '%'} or o.user_id ilike ${'%' + term + '%'})` : sql``;
+  // cost_krw = 그 주문 풀이의 AI 원가(원) · reading_status = 풀이 상태(대기·작성 중·완료·실패) — 비용 이상·멈춘 풀이를 관리자가 바로 보게
   return rows<any>(db, sql`
-    select o.id, o.created_at, o.user_id, u.name as user_name, o.product_id, p.title, o.amount, o.discount, o.method, o.channel, o.status, o.refund_status, ${BUCKET} as bucket
-    from orders o left join products p on p.id = o.product_id left join users u on u.id = o.user_id
-    where true ${kindCond} ${q.status ? sql`and o.status = ${q.status}` : sql``} ${r ? sql`and ${inRange(sql`o.created_at`, r)}` : sql``}
+    select o.id, o.created_at, o.user_id, u.name as user_name, o.product_id, p.title, o.amount, o.discount, o.method, o.channel, o.status, o.refund_status, ${BUCKET} as bucket,
+      rd.cost_krw, rd.status as reading_status
+    from orders o left join products p on p.id = o.product_id left join users u on u.id = o.user_id left join readings rd on rd.order_id = o.id
+    where true ${kindCond} ${search} ${q.status ? sql`and o.status = ${q.status}` : sql``} ${r ? sql`and ${inRange(sql`o.created_at`, r)}` : sql``}
     order by o.created_at desc limit ${q.limit ?? 100}`);
 }
 export async function subscriptionStats(db: Db, r: { from: string; to: string }) {

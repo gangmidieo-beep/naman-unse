@@ -156,6 +156,19 @@ describe('관리자 API', () => {
     expect(st.dreamTop.length).toBeGreaterThan(0);
     expect(st.shares.length).toBeGreaterThan(0);
   });
+  it('업로드 이미지는 DB 에 보관(배포해도 남음) · 가격 0원·빈 칸 저장 거부 · 결제 검색·원가 칸', async () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const up = (await app.inject({ method: 'POST', url: '/admin/api/upload', headers: auth(staff), payload: { dataUrl: `data:image/png;base64,${png}` } })).json();
+    const img = await app.inject({ url: new URL(up.url).pathname });
+    expect(img.statusCode).toBe(200);
+    expect(img.headers['content-type']).toContain('image/png');
+    expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(boss), payload: { price: 0 } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PATCH', url: '/admin/api/products/wealth', headers: auth(boss), payload: { memberPrice: 999999 } })).statusCode).toBe(400);
+    const list = (await app.inject({ url: '/admin/api/payments?q=zzz-none', headers: auth(staff) })).json();
+    expect(list).toEqual([]);
+    const all = (await app.inject({ url: '/admin/api/payments?limit=5', headers: auth(staff) })).json();
+    expect(all[0]).toHaveProperty('cost_krw');
+  });
   it('브라우저 사전 요청(CORS) — 관리자 저장(PATCH)·광고(PUT)·삭제(DELETE) 허용', async () => {
     const origin = 'https://localhost'; // 앱(Capacitor) 출처 — 웹 출처도 같은 설정을 씀
     for (const [method, url] of [['PATCH', '/admin/api/products/wealth'], ['PUT', '/admin/api/ads/home_banner'], ['DELETE', '/admin/api/banners/x'], ['DELETE', '/profiles/x']]) {

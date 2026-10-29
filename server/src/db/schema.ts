@@ -169,6 +169,14 @@ export const shareLinks = pgTable('share_links', {
   createdAt: now(),
 });
 
+// 관리자 업로드 이미지(base64) — Railway 서버 디스크는 배포마다 초기화되므로 DB 에 둔다
+export const uploads = pgTable('uploads', {
+  id: text().primaryKey(),
+  mime: text().notNull(),
+  data: text().notNull(),
+  createdAt: now(),
+});
+
 // 홈 롤링 배너 / 이벤트 팝업 / 앱 종료 팝업
 export const banners = pgTable('banners', {
   id: text().primaryKey(),

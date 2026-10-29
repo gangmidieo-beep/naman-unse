@@ -23,12 +23,15 @@ export async function dailyMessage(db: Db, userId: string, day: string) {
   }
 }
 
+// 'HH:MM' 에서 분 빼기(0시 이전은 00:00)
+const hmMinus = (hm: string, min: number) => { const t = Math.max(0, +hm.slice(0, 2) * 60 + +hm.slice(3) - min); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 export async function runDailyPush(db: Db, http: typeof fetch, now = new Date()) {
   if (!fcmConfigured()) return { sent: 0, skipped: true };
   const { day, hm } = kstNow(now);
   const due = await db.select({ id: S.users.id, token: S.users.pushToken }).from(S.users).where(and(
     eq(S.users.pushConsent, true), isNotNull(S.users.pushToken), isNull(S.users.deletedAt), isNull(S.users.mergedInto),
-    hm === '07:00' ? or(eq(S.users.pushTime, hm), isNull(S.users.pushTime)) : eq(S.users.pushTime, hm),
+    // 정확히 그 분만 보던 방식은 배포·재시작·느린 1분에 걸리면 그날 알림이 빠졌다 → 받을 시각이 지난 2시간 안이고 오늘 아직 안 보낸 사람
+    or(and(sql`${S.users.pushTime} <= ${hm}`, sql`${S.users.pushTime} >= ${hmMinus(hm, 120)}`), and(isNull(S.users.pushTime), sql`${'07:00'} <= ${hm}`, sql`${'07:00'} >= ${hmMinus(hm, 120)}`)),
     or(isNull(S.users.lastDailyPush), ne(S.users.lastDailyPush, day)),
   )).limit(5000);
   if (!due.length) return { sent: 0 };

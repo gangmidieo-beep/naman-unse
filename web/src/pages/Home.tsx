@@ -30,6 +30,36 @@ function useBanners() {
 // 인기 풀이 6 (대표님 지정 순서·배지) — 그림은 인물 없는 상품 그림
 const POPULAR = BRAND.popular.map((x) => ({ p: productById(x.id) as Product, badge: x.badge })).filter((x) => x.p && x.p.visible !== false);
 
+// 관리자 › 배너·팝업의 '이벤트 팝업' — 홈에서 하루 한 번(‘오늘 하루 보지 않기’). 예전엔 관리자에서 만들어도 화면에 나오지 않았다
+type Popup = { id: string; title: string; copy: string | null; link: string | null; imageUrl: string | null };
+function EventPopup() {
+  const [p, setP] = useState<Popup | null>(null);
+  const key = (id: string) => `naman-popup:${id}`;
+  const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+  useEffect(() => {
+    if (MOCK_MODE) return;
+    api<Popup[]>('/banners?slot=event_popup').then((list) => {
+      const b = list.find((x) => { try { return localStorage.getItem(key(x.id)) !== today; } catch { return true; } });
+      if (b) setP(b);
+    }).catch(() => {});
+  }, []);
+  if (!p) return null;
+  const hide = (forToday: boolean) => { if (forToday) try { localStorage.setItem(key(p.id), today); } catch { /* */ } setP(null); };
+  const inner = p.imageUrl ? <img src={p.imageUrl} alt={p.title} style={{ width: '100%', borderRadius: 10 }} /> : <><h2 className="h2 center">{p.title}</h2>{p.copy && <p className="muted center">{p.copy}</p>}</>;
+  const external = !!p.link && /^https?:/.test(p.link);
+  return (
+    <div className="sheet-bg" role="dialog" aria-modal="true" aria-label={p.title} onClick={() => hide(false)}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        {p.link ? (external ? <a href={p.link} target="_blank" rel="noreferrer" onClick={() => hide(false)}>{inner}</a> : <Link to={p.link} onClick={() => hide(false)}>{inner}</Link>) : inner}
+        <div className="mt14" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <button className="btn line" onClick={() => hide(true)}>오늘 하루 보지 않기</button>
+          <button className="btn gold" onClick={() => hide(false)}>닫기</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { profile, isSample } = useMainProfile();
   const premium = usePremium();
@@ -40,6 +70,7 @@ export default function Home() {
   return (
     <>
       <AppHeader />
+      <EventPopup />
       <main className="screen home4">
         {/* 처음이면 "자세히 보기" → 사주 정보 1회 입력(푸시 동의 포함) → 오늘의 운세 */}
         <TodayCard name={profile.name} isSample={isSample} date={`${kstMonthDay()} · ${f.dayPillar.text}일`} total={f.total} stars={f.stars} line={f.oneLine} brief={f.brief}

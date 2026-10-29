@@ -295,8 +295,8 @@ export function Banners() {
           <label>이미지<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => upload(e.target.files?.[0])} /></label>
           {edit.imageUrl && <img className="ad-preview" src={edit.imageUrl} alt="" />}
           <div className="ad-row2">
-            <label>시작<input type="datetime-local" value={edit.startsAt?.slice(0, 16) ?? ''} onChange={(e) => setEdit({ ...edit, startsAt: e.target.value || null })} /></label>
-            <label>끝<input type="datetime-local" value={edit.endsAt?.slice(0, 16) ?? ''} onChange={(e) => setEdit({ ...edit, endsAt: e.target.value || null })} /></label>
+            <label>시작<input type="datetime-local" value={toLocalInput(edit.startsAt)} onChange={(e) => setEdit({ ...edit, startsAt: e.target.value ? new Date(e.target.value).toISOString() : null })} /></label>
+            <label>끝<input type="datetime-local" value={toLocalInput(edit.endsAt)} onChange={(e) => setEdit({ ...edit, endsAt: e.target.value ? new Date(e.target.value).toISOString() : null })} /></label>
           </div>
           <div className="ad-row2">
             <label>노출 순서<input type="number" value={edit.sort} onChange={(e) => setEdit({ ...edit, sort: +e.target.value })} /></label>
@@ -309,14 +309,30 @@ export function Banners() {
   );
 }
 
+// 서버 시각(UTC ISO) ↔ 입력칸(한국 시각 'YYYY-MM-DDTHH:mm') — 예전엔 9시간 늦게 시작·종료됐다
+const toLocalInput = (iso?: string | null) => { if (!iso) return ''; const d = new Date(iso); if (isNaN(+d)) return ''; return new Date(+d - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16); };
+
 /* ---------- 5 결제·구독 ---------- */
 const PAY_TABS = [['', '전체 결제'], ['fate', '운명·사주'], ['love', '연애·궁합'], ['photo', '사진운세'], ['tarot', '타로'], ['talisman', '부적'], ['subscription', '프리미엄 구독']] as const;
 export function Payments() {
   const [kind, setKind] = useState('');
-  const { data, err, reload } = useLoad(() => adminApi<any[]>(`/payments?limit=300&kind=${kind}`), [kind]);
+  const [q, setQ] = useState('');
+  const [find, setFind] = useState('');
+  const { data, err, reload } = useLoad(() => adminApi<any[]>(`/payments?limit=300&kind=${kind}&q=${encodeURIComponent(find)}`), [kind, find]);
+  const [busy, setBusy] = useState('');
+  const [note, setNote] = useState('');
   const { qs, ui } = usePeriod('month');
   const subs = useLoad(() => (kind === 'subscription' ? adminApi<any>(`/subscriptions/stats?${qs}`) : Promise.resolve(null)), [kind, qs]);
-  const refund = async (id: string) => { if (confirm('환불 처리할까요? (결제사 환불은 별도로 진행)')) { await adminApi(`/payments/${id}/refund`, { method: 'POST' }); reload(); } };
+  // 결제 수단별로 실제로 일어나는 일을 그대로 안내 — 웹(PayApp)은 여기서 카드 취소까지, 앱(구글)은 이용만 막고 돈은 Play Console 에서
+  const refund = async (o: any) => {
+    const how = o.channel === 'pg' ? 'PayApp 결제가 바로 취소되어 손님께 환불돼요.' : o.channel === 'google' ? '이용 권한만 회수돼요. 돈은 Google Play Console › 주문 관리에서 따로 환불해 주세요.' : '테스트 주문이에요.';
+    if (!confirm(`${won(o.amount)} 환불할까요?\n${how}`)) return;
+    setBusy(o.id); setNote('');
+    try { const r = await adminApi<any>(`/payments/${o.id}/refund`, { method: 'POST' }); setNote(r.warning ?? '환불했어요'); reload(); }
+    catch (e) { setNote(`환불하지 못했어요: ${(e as Error).message}`); }
+    finally { setBusy(''); }
+  };
+  const RS: Record<string, string> = { queued: '대기', generating: '작성 중', done: '완료', failed: '실패', waiting: '사진 대기', cancelled: '중단' };
   const STATUS: Record<string, string> = { paid: '결제완료', pending: '대기', failed: '실패', cancelled: '취소', refunded: '환불' };
   return (
     <>
@@ -334,12 +350,18 @@ export function Payments() {
         </>
       )}
       {err && <p className="ad-err">{err}</p>}
+      {note && <p className={note.startsWith('환불하지') ? 'ad-err' : 'ad-ok'}>{note}</p>}
+      <form className="ad-period" onSubmit={(e) => { e.preventDefault(); setFind(q.trim()); }}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="주문번호·회원 이름으로 찾기" aria-label="결제 검색" />
+        <button type="submit">찾기</button>{find && <button type="button" onClick={() => { setQ(''); setFind(''); }}>전체 보기</button>}
+      </form>
       <table className="ad-table">
-        <thead><tr><th>결제일</th><th>회원</th><th>상품</th><th>결제금액</th><th>할인금액</th><th>결제수단</th><th>결제상태</th><th>환불상태</th><th /></tr></thead>
+        <thead><tr><th>결제일</th><th>회원</th><th>상품</th><th>결제금액</th><th>할인금액</th><th>결제수단</th><th>결제상태</th><th>환불상태</th><th>풀이·AI 원가</th><th /></tr></thead>
         <tbody>{data?.map((o) => (
           <tr key={o.id}><td>{dt(o.created_at)}</td><td>{o.user_name ?? o.user_id?.slice(0, 8)}</td><td>{o.title ?? o.product_id}</td><td>{won(o.amount)}</td><td>{won(o.discount)}</td>
-            <td>{o.method ?? '-'} <span className="ad-muted">({o.channel})</span></td><td>{STATUS[o.status] ?? o.status}</td><td>{o.refund_status === 'done' ? '환불완료' : o.refund_status ?? '-'}</td>
-            <td>{isSuper() && o.status === 'paid' && <button className="ad-btn line sm" onClick={() => refund(o.id)}>환불</button>}</td></tr>
+            <td>{o.method ?? '-'} <span className="ad-muted">({o.channel})</span></td><td>{STATUS[o.status] ?? o.status}</td><td>{o.refund_status === 'done' ? '환불완료' : o.refund_status === 'partial' ? '부분환불' : o.refund_status ?? '-'}</td>
+            <td>{o.reading_status ? `${RS[o.reading_status] ?? o.reading_status}${o.cost_krw ? ` · ${won(o.cost_krw)}` : ''}` : '-'}</td>
+            <td>{isSuper() && o.status === 'paid' && <button className="ad-btn line sm" disabled={busy === o.id} onClick={() => refund(o)}>{busy === o.id ? '처리 중…' : '환불'}</button>}</td></tr>
         ))}</tbody>
       </table>
     </>
@@ -353,12 +375,16 @@ export function Push() {
   const { data, reload } = useLoad(() => adminApi<any[]>('/push'), []);
   const [f, setF] = useState({ title: '오늘 재물운이 좋은 시간은 언제일까요?', body: '[오늘의 운세 확인하기]', deepLink: '/today', target: 'all', when: 'now', at: '' });
   const [msg, setMsg] = useState('');
+  const [sending, setSending] = useState(false);
   const send = async () => {
+    if (sending) return;
+    if (f.when === 'now' && !confirm(`'${TARGETS.find((t) => t[0] === f.target)?.[1]}' 대상에게 지금 보낼까요? 보낸 알림은 되돌릴 수 없어요.`)) return;
+    setSending(true);
     try {
       const r = await adminApi<any>('/push', { method: 'POST', json: { title: f.title, body: f.body, deepLink: f.deepLink, target: f.target, scheduledAt: f.when === 'later' ? new Date(f.at).toISOString() : undefined } });
       setMsg(r.status === 'sent' ? `${r.sentCount.toLocaleString('ko-KR')}명에게 보냈어요(앱 푸시 연결 전에는 기록만)` : '예약했어요');
       reload();
-    } catch (e) { setMsg((e as Error).message); }
+    } catch (e) { setMsg((e as Error).message); } finally { setSending(false); }
   };
   return (
     <>
@@ -373,7 +399,7 @@ export function Push() {
           <div className="ad-period"><button className={f.when === 'now' ? 'on' : ''} onClick={() => setF({ ...f, when: 'now' })}>즉시 발송</button><button className={f.when === 'later' ? 'on' : ''} onClick={() => setF({ ...f, when: 'later' })}>예약 발송</button>
             {f.when === 'later' && <input type="datetime-local" value={f.at} onChange={(e) => setF({ ...f, at: e.target.value })} />}</div>
           {msg && <p className="ad-ok">{msg}</p>}
-          <button className="ad-btn gold" onClick={send} disabled={!f.title || (f.when === 'later' && !f.at)}>{f.when === 'now' ? '지금 보내기' : '예약하기'}</button>
+          <button className="ad-btn gold" onClick={send} disabled={sending || !f.title || (f.when === 'later' && !f.at)}>{sending ? '보내는 중…' : f.when === 'now' ? '지금 보내기' : '예약하기'}</button>
         </section>
         <section className="ad-phone" aria-label="미리보기">
           <div className="ad-notif"><b><span className="seal">運</span>나만의 운세 · 지금</b><strong>{f.title}</strong><p>{f.body}</p><small>→ {f.deepLink}</small></div>

@@ -6,7 +6,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import bcrypt from 'bcryptjs';
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, extname } from 'node:path';
 import { openDb, schema as S, type Db } from './db/index.ts';
@@ -730,10 +730,16 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     return shareCard({ title: l.title, text: l.text, url: `${WEB()}${l.path}`, size });
   });
   app.get('/uploads/:file', async (req, rep) => {
-    const f = join(UPLOADS, String((req.params as any).file).replace(/[^\w.-]/g, ''));
-    if (!existsSync(f)) return rep.code(404).send();
-    rep.type({ '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' }[extname(f)] ?? 'application/octet-stream');
-    return readFileSync(f);
+    const name = String((req.params as any).file).replace(/[^\w.-]/g, '');
+    const f = join(UPLOADS, name);
+    if (existsSync(f)) { // 예전에 디스크에 올린 파일
+      rep.type({ '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp' }[extname(f)] ?? 'application/octet-stream');
+      return readFileSync(f);
+    }
+    const [u] = await db.select().from(S.uploads).where(eq(S.uploads.id, name.replace(/\.\w+$/, '')));
+    if (!u) return rep.code(404).send();
+    rep.type(u.mime).header('cache-control', 'public, max-age=31536000, immutable');
+    return Buffer.from(u.data, 'base64');
   });
 
   /* ================= 관리자 API ================= */
@@ -826,6 +832,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const allowed = ['title', 'cardCopy', 'detail', 'badge', 'visible', 'sort', 'imageUrl', 'category', 'showDiscount', 'buttonLabel', 'resultTitle', 'recommend', 'detailCopy',
       ...(req.admin!.role === 'super' ? ['price', 'memberPrice', 'listPrice', 'googleProductId'] : [])];
     if (Object.keys(b).some((k) => !allowed.includes(k))) return rep.code(403).send({ error: '가격 변경은 최고관리자만 할 수 있어요' });
+    // 가격 검사 — 빈 칸이 0원으로 저장돼 공짜로 팔리는 사고 막기(유료 상품은 1,000원 이상)
+    const [curP] = await db.select().from(S.products).where(eq(S.products.id, id));
+    if (!curP) return rep.code(404).send({ error: '없는 상품이에요' });
+    const int = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000_000;
+    if ('price' in b && (!int(b.price) || (curP.kind !== 'fun' && b.price < 1000))) return rep.code(400).send({ error: '가격은 1,000원 이상 숫자로 적어 주세요' });
+    const price = 'price' in b ? b.price : curP.price;
+    if ('memberPrice' in b && b.memberPrice != null && (!int(b.memberPrice) || b.memberPrice > price)) return rep.code(400).send({ error: '회원가는 정가보다 크지 않은 숫자로 적어 주세요' });
+    if ('listPrice' in b && b.listPrice != null && (!int(b.listPrice) || b.listPrice < price)) return rep.code(400).send({ error: '정가(할인 전)는 판매가보다 작을 수 없어요' });
     const [p] = await db.update(S.products).set({ ...b, updatedAt: new Date() }).where(eq(S.products.id, id)).returning();
     await audit(req, 'product.update', id, b);
     return p;
@@ -841,9 +855,10 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const { dataUrl } = req.body as { dataUrl: string };
     const m = /^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(dataUrl ?? '');
     if (!m) return rep.code(400).send({ error: 'PNG·JPG·WEBP 이미지만 올릴 수 있어요' });
-    mkdirSync(UPLOADS, { recursive: true });
-    const file = `${newId()}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`;
-    writeFileSync(join(UPLOADS, file), Buffer.from(m[2], 'base64'));
+    if (m[2].length > 5_500_000) return rep.code(413).send({ error: '이미지가 너무 커요(4MB 이하로 줄여 주세요)' });
+    const id = newId();
+    const file = `${id}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`;
+    await db.insert(S.uploads).values({ id, mime: `image/${m[1]}`, data: m[2] }); // 배포해도 사라지지 않게 DB 에 보관
     await audit(req, 'upload', file);
     return { url: `${API()}/uploads/${file}` };
   });
@@ -865,7 +880,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   // 5 결제·구독
   app.get(`${A}/payments`, { preHandler: guard() }, async (req, rep) => {
     const q = req.query as any;
-    const list = await payments(db, { kind: q.kind, status: q.status, from: q.from, to: q.to, limit: Math.min(+q.limit || 100, 1000) });
+    const list = await payments(db, { kind: q.kind, status: q.status, from: q.from, to: q.to, q: q.q, limit: Math.min(+q.limit || 100, 1000) });
     if (q.format === 'csv') { rep.type('text/csv; charset=utf-8').header('content-disposition', 'attachment; filename="payments.csv"'); return toCsv(list); }
     return list;
   });
@@ -873,8 +888,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const q = req.query as any;
     return subscriptionStats(db, range(q.period ?? 'month', q.from, q.to));
   });
+  const refunding = new Set<string>(); // 환불 버튼을 두 번 눌러도 결제사 취소는 한 번만
   app.post(`${A}/payments/:id/refund`, { preHandler: guard('super') }, async (req: Req, rep) => {
     const id = (req.params as any).id;
+    if (refunding.has(id)) return rep.code(409).send({ error: '환불을 처리하고 있어요. 잠시 후 목록을 새로 고쳐 주세요.' });
+    refunding.add(id);
+    try { return await refundOne(req, rep, id); } finally { refunding.delete(id); }
+  });
+  async function refundOne(req: Req, rep: FastifyReply, id: string) {
     const [cur] = await db.select().from(S.orders).where(eq(S.orders.id, id));
     if (!cur) return rep.code(404).send({ error: '주문이 없어요' });
     if (cur.status !== 'paid') return rep.code(409).send({ error: '결제 완료된 주문만 환불할 수 있어요' });
@@ -892,7 +913,7 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const o = await revokeOrder(db, cur, 'refunded');
     await audit(req, 'order.refund', id);
     return warning ? { ...o, warning } : o;
-  });
+  }
   // 6 푸시 — 문구 → 딥링크 → 대상 → 즉시/예약. FCM 키가 있으면 실제 발송, 없으면 대상 수만 기록
   const DEEP_LINKS = ['/today', '/today?tab=week', '/unse', '/unse?cat=fate', '/unse?cat=love', '/tarot', '/talisman', '/box', '/premium', '/zodiac', '/fun/dream', '/fun/small', '/fun/oneline', ...(await db.select({ id: S.products.id }).from(S.products).where(inArray(S.products.kind, ['reading', 'tarot', 'photo']))).map((p) => `/product/${p.id}`)];
   app.get(`${A}/push/links`, { preHandler: guard() }, async () => DEEP_LINKS);
@@ -923,6 +944,11 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const b = req.body as any;
     if (!b.title || !b.body || !DEEP_LINKS.includes(b.deepLink)) return rep.code(400).send({ error: '문구·연결 화면을 확인해 주세요' });
     const now = !b.scheduledAt;
+    // '지금 보내기'를 두 번 눌러 전체 회원에게 두 번 가는 것 막기 — 같은 문구·대상을 2분 안에 다시 보내면 거절
+    if (now) {
+      const [same] = await db.select({ id: S.pushCampaigns.id }).from(S.pushCampaigns).where(and(eq(S.pushCampaigns.title, b.title), eq(S.pushCampaigns.body, b.body), eq(S.pushCampaigns.target, b.target ?? 'all'), gt(S.pushCampaigns.createdAt, new Date(Date.now() - 120_000))));
+      if (same) return rep.code(409).send({ error: '같은 알림을 방금 보냈어요. 두 번 보내지 않도록 막았어요.' });
+    }
     const [c] = await db.insert(S.pushCampaigns).values({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all',
       scheduledAt: b.scheduledAt ? new Date(b.scheduledAt) : new Date(), status: now ? 'sent' : 'scheduled', sentCount: now ? await deliver({ title: b.title, body: b.body, deepLink: b.deepLink, target: b.target ?? 'all' }) : 0, createdBy: req.admin!.email }).returning();
     await audit(req, now ? 'push.send' : 'push.schedule', String(c.id), b);
@@ -956,7 +982,9 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
       await runExpiryReminders(db, http).catch((e) => app.log.warn(`[expiry remind] ${(e as Error).message}`));
       const due = await db.select().from(S.pushCampaigns).where(and(eq(S.pushCampaigns.status, 'scheduled'), lte(S.pushCampaigns.scheduledAt, new Date())));
       for (const c of due) {
-        await db.update(S.pushCampaigns).set({ status: 'sending' }).where(eq(S.pushCampaigns.id, c.id)); // 두 번 보내지 않게 먼저 표시
+        // 두 번 보내지 않게 먼저 표시 — 'scheduled' 일 때만 가져감(서버가 두 대·배포 겹침이어도 한 번만)
+        const [mine] = await db.update(S.pushCampaigns).set({ status: 'sending' }).where(and(eq(S.pushCampaigns.id, c.id), eq(S.pushCampaigns.status, 'scheduled'))).returning();
+        if (!mine) continue;
         const sentCount = await deliver(c).catch((e) => { app.log.warn(`[push ${c.id}] ${(e as Error).message}`); return 0; });
         await db.update(S.pushCampaigns).set({ status: 'sent', sentCount }).where(eq(S.pushCampaigns.id, c.id));
       }
