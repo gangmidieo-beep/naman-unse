@@ -33,7 +33,7 @@ export function aiStatus(env: NodeJS.ProcessEnv = process.env) {
   const missing: string[] = [];
   if (!aiSwitchOn(env)) missing.push('READING_AI=off(판매 꺼짐)');
   if (!env.ANTHROPIC_API_KEY) missing.push('ANTHROPIC_API_KEY');
-  else if (!env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) missing.push('ANTHROPIC_API_KEY(sk-ant- 로 시작해야 함)');
+  else if (!env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) missing.push('ANTHROPIC_API_KEY(sk-ant- 로 시작해야 함)'); // independence-ok
   if (!env.ANTHROPIC_MODEL) missing.push('ANTHROPIC_MODEL');
   const claude = aiSwitchOn(env) && !!env.ANTHROPIC_API_KEY;
   return { reading: claude && !!env.ANTHROPIC_MODEL, photo: claude, baby: !!env.GEMINI_API_KEY, missing };
@@ -51,7 +51,7 @@ export async function recordAiFailure(r: { status: number; text?: () => Promise<
     type = String(j?.error?.type ?? '');
     message = String(j?.error?.message ?? message);
   } catch { /* 본문 없음 */ }
-  message = message.replace(/sk-ant-[A-Za-z0-9_-]+/g, 'sk-ant-***').slice(0, 200);
+  message = message.replace(/sk-ant-[A-Za-z0-9_-]+/g, 'sk-ant-***').slice(0, 200); // independence-ok
   aiDiag.lastError = { at: new Date().toISOString(), status: r?.status ?? 0, type, message };
 }
 export const recordAiOk = () => { aiDiag.lastOkAt = new Date().toISOString(); };

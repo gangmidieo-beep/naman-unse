@@ -26,7 +26,7 @@ export function AppHeader() {
     return (
       <header className="hdr hdr-banner">
         <Link to="/" className="brandbanner" aria-label="나만의 운세 홈">
-          <img src={banner.src} srcSet={banner.srcset} sizes="(min-width: 520px) 480px, 100vw" width={banner.w} height={banner.h} alt="나만의 운세" fetchPriority="high" />
+          <img src={banner.src} srcSet={banner.srcset} sizes="(min-width: 520px) 480px, 100vw" width={banner.w} height={banner.h} alt="나만의 운세" {...{ fetchpriority: "high" }} />
         </Link>
         <span className="chip-h on-banner l" aria-label={`오늘 음력 ${lunarPill()}`}>🌙 음 {lunarPill()}</span>
         <Link to={account ? '/box' : '/login'} className="chip-h on-banner r">{account ? '내 계정' : '로그인·가입'}</Link>

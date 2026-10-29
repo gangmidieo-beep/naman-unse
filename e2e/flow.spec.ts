@@ -67,19 +67,15 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
   await page.getByRole('button', { name: /결제하고 부적 받기/ }).click();
   await page.getByLabel('나의 소원').fill('올해 안에 내 집 마련하기');
   await page.getByRole('button', { name: '소원 담아 부적 쓰기' }).click();
-  // 부적 의식: 향 피우기 → 붓으로 그리기 → 인장 찍기 → 봉인(타로 테이블처럼 직접 누름)
-  await page.getByRole('button', { name: '향 피우기' }).click();
-  await page.getByRole('button', { name: /붓 들어 부적 그리기/ }).click({ timeout: 8_000 });
-  await expect(page.getByText(/소원을 담아 기운을 새기는/)).toBeVisible();
-  await page.getByRole('button', { name: /인장 찍기/ }).click({ timeout: 10_000 });
+  // 부적 쓰기: 조용한 진행 화면(약 5초) → 완성
   await expect(page.getByRole('heading', { name: /완성되었습니다/ })).toBeVisible({ timeout: 15_000 });
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: '휴대폰에 저장하기' }).click();
+  await page.getByRole('button', { name: '이미지로 저장' }).click();
   expect((await download).suggestedFilename()).toMatch(/\.png$/);
 
   // 나의 운세함 보관
   await page.goto('/box');
-  await expect(page.getByRole('link', { name: /^재물운/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^재물운/ }).first()).toBeVisible();
   await expect(page.getByText('금전재물부적').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: /나의 타로함/ })).toBeVisible();
   expect(errors).toEqual([]);

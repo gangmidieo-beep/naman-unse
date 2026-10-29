@@ -26,6 +26,7 @@ function walk(dir) {
     if (EXCLUDE_FILES.has(rel) || BINARY.test(name) || st.size > 5_000_000) continue;
     const lines = readFileSync(full, 'utf8').split(/\r?\n/);
     lines.forEach((line, i) => {
+      if (line.includes('independence-ok')) return; // 키 형식 검사·마스킹처럼 접두어만 쓰는 줄(실제 값 없음)
       const low = line.toLowerCase();
       for (const w of FORBIDDEN) if (low.includes(w.toLowerCase())) hits.push(`${rel}:${i + 1}  [${w.slice(0, 3)}…]`);
     });
