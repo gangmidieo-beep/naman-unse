@@ -10,9 +10,9 @@ test('v2 무료 → 유료 → 부적 흐름이 끝까지 에러 없이 간다',
 
   await page.goto('/');
   await expect(page).toHaveURL(/\/intro/);
-  // 첫 방문 인트로 영상(약 7초, 영상이 늦거나 못 틀면 바로 홈) 뒤 홈 — 들어갈 때 사주 입력 없음(대표님 요청 2026-10-12·10-15)
+  // 첫 방문 인트로 영상(약 11초, 영상이 늦거나 못 틀면 바로 홈) 뒤 홈 — 들어갈 때 사주 입력 없음(대표님 요청 2026-10-12·10-15)
   await expect(page.getByLabel('나만의 운세 인트로')).toBeVisible();
-  await expect(page).toHaveURL(/\/$/, { timeout: 12000 });
+  await expect(page).toHaveURL(/\/$/, { timeout: 20000 });
   await expect(page.getByText('예시', { exact: true }).first()).toBeVisible();
 
   // "오늘의 운세 자세히 보기"를 처음 누를 때 한 번만 사주 입력(푸시 동의 포함) → 오늘의 운세
