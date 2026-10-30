@@ -1,4 +1,4 @@
-// 첫 방문 인트로 영상 (대표님 요청 2026-10-15) — 보름달 밤, 1인칭으로 신당에 들어가는 6초 영상 →
+// 첫 방문 인트로 영상 (대표님 요청 2026-10-15, 10-30 수정: 문이 열리면 빈 신당 → 어둡게 바뀐 뒤 월하선녀 클로즈업, 약 11초) →
 // 금빛이 번지며 한지색 화면에 '나만의 운세' 로고 → 홈. 처음 방문할 때 한 번만(introSeen), 무음, 건너뛰기 버튼.
 // 영상이 늦게 뜨거나(LOAD_LIMIT_MS 안에 재생 시작 못 함) 자동 재생이 막히면 기다리지 않고 바로 홈으로.
 // 데이터 절약 모드·'동작 줄이기' 설정이면 영상 없이 로고만 잠깐 보여 주고 홈으로.
@@ -6,9 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../store/app';
 
-const VIDEO = '/intro/intro3.mp4'; // H.264 — 휴대폰·사파리·크롬
-const VIDEO_WEBM = '/intro/intro3.webm'; // VP9 — H.264 를 못 트는 브라우저용
-const POSTER = '/intro/intro3_poster.webp';
+const VIDEO = '/intro/intro4.mp4'; // H.264 — 휴대폰·사파리·크롬
+const VIDEO_WEBM = '/intro/intro4.webm'; // VP9 — H.264 를 못 트는 브라우저용
+const POSTER = '/intro/intro4_poster.webp';
 const LOGO = '/intro/intro_logo.webp';
 const LOAD_LIMIT_MS = 2500; // 이 안에 재생이 시작되지 않으면 홈으로
 const LOGO_BEFORE_END = 0.9; // 영상 끝나기 몇 초 전부터 금빛·로고를 띄울지
