@@ -72,6 +72,30 @@ export function TarotFace({ d }: { d: Drawn }) {
 
 // 실전 타로 테이블 — need 장을 직접 고른다. 다 고르면 자리마다 한 장씩 뒤집는다.
 const FAN = 22;
+// 카드 섞는 장면 — 그림 한 장(대표님 원본이 오면 /img/tarot/shuffle.webp 만 바꾸면 됨) + 문구 + 진행 표시
+const SHUFFLE_IMG = '/img/tarot/shuffle.webp';
+const SHUFFLE_MS = 3600;
+const SHUFFLE_TEXT = ['마음을 가라앉히고 질문을 떠올립니다', '카드를 섞고 있습니다', '당신에게 닿을 카드를 고르고 있습니다'];
+function ShuffleScene() {
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const t0 = Date.now();
+    const id = window.setInterval(() => setPct(Math.min(100, ((Date.now() - t0) / SHUFFLE_MS) * 100)), 80);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <div className="writing tshuffle" aria-live="polite">
+      <img src={SHUFFLE_IMG} alt="" className="writing-bg" draggable={false} />
+      <div className="writing-veil" aria-hidden />
+      <div className="writing-tx">
+        <b>카드를 섞는 중</b>
+        <p>{SHUFFLE_TEXT[Math.min(SHUFFLE_TEXT.length - 1, Math.floor(pct / 34))]}</p>
+        <div className="writing-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}><i style={{ width: `${pct}%` }} /></div>
+      </div>
+    </div>
+  );
+}
+
 export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: Drawn[]; need: number; positions?: string[]; onFlip?: (i: number) => void; onDone: () => void }) {
   const [phase, setPhase] = useState<'ready' | 'shuffle' | 'spread' | 'reveal'>('ready');
   const [picked, setPicked] = useState<number[]>([]); // 부채꼴 안의 위치
@@ -79,11 +103,11 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 배경음악: 테이블이 있는 동안만. 카드 섞기(첫 손짓)에 시작, 테이블을 떠나면 서서히 꺼짐
   useEffect(() => { music.acquire(); return () => music.release(); }, []);
+  // 카드 섞기 — 2026-10-30 대표님 요청: 카드가 튀는 가벼운 게임 느낌 대신 '카드를 섞는 중' 장면 그림 + 차분한 진행 표시만 보여 주고 펼친다
   const shuffle = () => {
     setPhase('shuffle');
     music.start();
-    sfx.shuffle();
-    setTimeout(() => { setPhase('spread'); sfx.spread(FAN); }, reduce ? 50 : 1500);
+    setTimeout(() => { setPhase('spread'); sfx.spread(); }, reduce ? 50 : SHUFFLE_MS);
   };
   const pickedRef = useRef<number[]>([]); // 빠르게 여러 번 눌러도 최신 값으로 센다
   const pick = (i: number) => {
@@ -115,9 +139,10 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   return (
     <div className={`ttable ph-${phase}${need === 1 ? ' one' : ''}`}>
       <SoundToggle />
+      {phase === 'shuffle' && <ShuffleScene />}
       {phase === 'ready' || phase === 'shuffle' ? (
         <div className="tdeck4">
-          <div className={`stack${phase === 'shuffle' ? ' go' : ''}`} aria-hidden>
+          <div className="stack" aria-hidden>
             {[0, 1, 2, 3, 4, 5].map((i) => <i key={i} style={{ ['--k' as string]: i }}><CardBack /></i>)}
           </div>
           <button className="tgold" onClick={shuffle} disabled={phase === 'shuffle'}>{phase === 'shuffle' ? '카드를 섞는 중…' : '카드 섞고 펼치기 ›'}</button>

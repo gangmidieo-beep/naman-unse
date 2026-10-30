@@ -1,6 +1,5 @@
 // 타로 테이블 소리 — 파일 없이 브라우저 소리 합성(WebAudio)으로 직접 만든 소리(저작권 걱정 없음).
-// 효과음: 섞기(리플 셔플 두 번 + 브리지), 펼치기(테이블 위로 카드가 차르륵 미끄러짐), 고르기(톡 + 작은 종), 내려놓기,
-//         뒤집기(스윽 + 맑은 종 / 역방향은 낮은 종), 마지막 종합(화음).
+// 효과음(2026-10-30 변경): 섞기는 소리 없음, 펼치기·고르기·뒤집기·결과는 싱잉볼·드론·숨결 같은 신비로운 울림.
 // 배경음악: 타로집 분위기의 잔잔한 앰비언트 — 낮은 드론 화음이 천천히 숨 쉬고, 가끔 맑은 종이 울림. 사용자가 카드를 섞을 때 시작, 테이블을 떠나면 서서히 꺼짐.
 // 효과음·배경음악은 따로 끄고 켤 수 있고, 이 기기에 기억한다.
 const KEY = 'naman-sound-off';
@@ -66,49 +65,78 @@ function bell(c: AudioContext, at: number, freq: number, dur: number, gain: numb
   tone(c, at, freq * 5.4, dur * 0.25, gain * 0.12, 'sine', out);
 }
 
+// 천천히 차오르는 소리(싱잉볼·드론) — 띠롱 하는 짧은 종 대신 신비로운 울림에 씀
+function swell(c: AudioContext, at: number, freq: number, attack: number, dur: number, gain: number, type: OscillatorType = 'sine', out: AudioNode = sfxBus!) {
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, at);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + attack + dur);
+  o.connect(g).connect(out);
+  o.start(at); o.stop(at + attack + dur + 0.1);
+}
+// 공기처럼 반짝이는 소리(높은 대역 숨결) — 천천히 일었다 사라짐
+function shimmer(c: AudioContext, at: number, dur: number, gain: number, freq = 5200) {
+  const len = Math.max(1, Math.floor(c.sampleRate * dur));
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((Math.PI * i) / len);
+  const src = c.createBufferSource(); src.buffer = buf;
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 0.6;
+  const g = c.createGain(); g.gain.value = gain;
+  src.connect(f).connect(g).connect(sfxBus!); src.start(at);
+}
+// 깊은 싱잉볼 — 기본음 + 살짝 어긋난 음(맥놀이) + 배음, 천천히 울림
+function bowl(c: AudioContext, at: number, freq: number, dur: number, gain: number) {
+  swell(c, at, freq, 0.08, dur, gain);
+  swell(c, at, freq * 1.007, 0.1, dur * 0.9, gain * 0.6);
+  swell(c, at, freq * 2.71, 0.06, dur * 0.45, gain * 0.18);
+}
+
+/* 타로 효과음 — 2026-10-30 대표님 요청: 카드를 고르고 결과가 나올 때 '띠롱띠롱' 게임 소리 대신 신비로운 느낌으로.
+   카드 섞기는 소리 없이 그림만(배경음악은 그대로 잔잔히) */
 export const sfx = {
-  // 리플 셔플: 카드 두 묶음이 차르르 섞이는 소리 두 번 + 가운데로 모으는 브리지 + 탁탁 정리
-  shuffle() {
+  shuffle() { /* 섞는 장면은 그림·진행 표시만(게임 같은 셔플 소리 없음) */ },
+  // 펼치기: 낮은 드론이 천천히 차오르고 반짝이는 숨결
+  spread() {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
-    for (const start of [0, 0.62]) {
-      for (let i = 0; i < 20; i++) noise(c, t + start + i * 0.021 + Math.random() * 0.008, 0.035, 2400 + Math.random() * 1800, 0.2, 2.4);
-      noise(c, t + start + 0.45, 0.12, 1400, 0.16, 0.9); // 브리지(카드가 휘며 떨어짐)
-    }
-    noise(c, t + 1.2, 0.07, 700, 0.26, 0.8); // 탁
-    noise(c, t + 1.33, 0.07, 650, 0.22, 0.8); // 탁
+    swell(c, t, 110, 0.9, 1.6, 0.05, 'triangle');
+    swell(c, t, 164.81, 1.1, 1.4, 0.03, 'triangle');
+    shimmer(c, t + 0.2, 1.8, 0.035);
   },
-  // 펼치기: 22장이 테이블 위로 차르륵 미끄러지는 소리(화면 애니메이션 28ms 간격에 맞춤) + 끝에 은은한 종
-  spread(count = 22) {
-    const c = ac(); if (!c) return;
-    const t = c.currentTime;
-    for (let i = 0; i < count; i++) noise(c, t + i * 0.028, 0.06, 1700 + i * 30, 0.1, 1.6);
-    noise(c, t, count * 0.028 + 0.2, 500, 0.05, 0.5); // 천 위로 쓸리는 낮은 소리
-    bell(c, t + count * 0.028 + 0.1, 880, 1.4, 0.03);
-  },
+  // 고르기: 부드러운 숨결 + 낮은 싱잉볼(고를 때마다 조금씩 다른 음)
   pick() {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
-    noise(c, t, 0.07, 1800, 0.18, 1.5);
-    tone(c, t + 0.01, 523.25 * (1 + Math.floor(Math.random() * 3) * 0.125), 0.25, 0.05, 'triangle');
+    shimmer(c, t, 0.9, 0.04, 4200);
+    bowl(c, t + 0.05, [196, 220, 246.94][Math.floor(Math.random() * 3)], 2.2, 0.05);
   },
+  // 고른 카드를 자리에 놓음: 아주 낮은 울림
   place() {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
-    noise(c, t, 0.09, 600, 0.22, 0.7);
-    noise(c, t + 0.12, 0.3, 2200, 0.06, 0.6); // 쓱 — 자리로 옮겨 놓음
+    swell(c, t, 73.42, 0.25, 1.6, 0.08);
+    shimmer(c, t + 0.1, 1.2, 0.025, 3000);
   },
+  // 뒤집기: 낮은 바람 소리 + 깊은 싱잉볼(역방향은 더 낮게)
   flip(reversed = false) {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
-    noise(c, t, 0.22, 3200, 0.16, 0.9);
-    if (reversed) { bell(c, t + 0.18, 659.25, 1.3, 0.055); bell(c, t + 0.3, 783.99, 1.0, 0.03); } // 낮고 차분한 종
-    else { bell(c, t + 0.18, 1318.5, 1.2, 0.055); tone(c, t + 0.18, 1975.5, 0.8, 0.022); }
+    noise(c, t, 0.5, 900, 0.07, 0.5);
+    bowl(c, t + 0.15, reversed ? 146.83 : 196, 3.2, 0.065);
+    shimmer(c, t + 0.2, 1.4, 0.03);
   },
+  // 결과: 깊은 징 + 천천히 차오르는 화음(빠른 아르페지오 없음)
   finale() {
     const c = ac(); if (!c) return;
     const t = c.currentTime;
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(c, t + i * 0.14, f, 2.0 - i * 0.2, 0.045));
+    swell(c, t, 65.41, 0.05, 4.5, 0.1);
+    swell(c, t, 98, 0.8, 3.6, 0.045, 'triangle');
+    swell(c, t, 146.83, 1.2, 3.2, 0.03, 'triangle');
+    swell(c, t, 196, 1.6, 2.8, 0.022);
+    shimmer(c, t + 0.6, 3, 0.04);
   },
 
   /* ---- 부적 의식 ---- */

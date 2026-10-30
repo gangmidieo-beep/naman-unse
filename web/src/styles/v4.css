@@ -873,3 +873,20 @@
 @keyframes writing-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes writing-zoom { from { transform: scale(1.06); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .writing, .writing-bg { animation: none; } }
+
+/* 타로 — 2026-10-30 대표님 요청: 섞기는 그림 장면(부적 쓰기와 같은 방식), 고르기는 카드가 천천히 떠오르며 금빛이 번지는 연출 */
+.tshuffle .writing-bg { animation-duration: 4s; }
+.tfan4 .fc { animation-duration: .9s; }
+.tfan4 .fc.sel { animation: tpick 1s cubic-bezier(.2, .8, .2, 1) both; filter: drop-shadow(0 0 16px rgba(242, 217, 142, .95)); }
+.tfan4 .fc.sel::after { content: ''; position: absolute; inset: -6px; border-radius: 12px; pointer-events: none; background: radial-gradient(closest-side, rgba(242, 217, 142, .55), transparent 75%); animation: tglow 1.6s ease-out both; }
+@keyframes tpick { 0% { transform: rotate(var(--r)) translateY(0) scale(1); } 60% { transform: rotate(var(--r)) translateY(-40px) scale(1.07); } 100% { transform: rotate(var(--r)) translateY(-34px) scale(1.04); } }
+@keyframes tglow { 0% { opacity: 0; transform: scale(.85); } 35% { opacity: 1; } 100% { opacity: .35; transform: scale(1.15); } }
+.ttable.one .tfan4 .fc.sel { animation-name: tpick1; }
+@keyframes tpick1 { 0% { transform: rotate(var(--r)) translateY(0) scale(1); } 60% { transform: rotate(var(--r)) translateY(-46px) scale(1.12); } 100% { transform: rotate(var(--r)) translateY(-40px) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .tfan4 .fc.sel, .tfan4 .fc.sel::after { animation: none; } }
+/* 섞기 장면: 가로 그림이 휴대폰 세로 화면에서 크게 잘리지 않게 가운데에 통째로 + 은은한 금빛, 천천히 숨 쉬듯 */
+.tshuffle { background: radial-gradient(120% 80% at 50% 40%, #2A1D3F 0%, #120C1A 60%, #08060C 100%); align-items: center; flex-direction: column; justify-content: center; gap: 28px; }
+.tshuffle .writing-bg { position: relative; inset: auto; width: min(88%, 440px); height: auto; aspect-ratio: auto; object-fit: contain; border-radius: 14px; box-shadow: 0 0 60px rgba(233, 201, 121, .28); animation: tbreathe 3.6s ease-in-out both; }
+.tshuffle .writing-veil { display: none; }
+.tshuffle .writing-tx { margin-bottom: 0; }
+@keyframes tbreathe { 0% { opacity: 0; transform: scale(.96); filter: brightness(.7); } 30% { opacity: 1; } 60% { transform: scale(1.02); filter: brightness(1.08); } 100% { transform: scale(1); filter: brightness(1); } }
