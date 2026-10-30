@@ -24,12 +24,15 @@ export function shareUrl(path: string, contentId: string) {
   return u.toString();
 }
 
-// 서버가 있으면 짧은 공유 링크(/s/:code — 미리보기 카드·클릭 집계), 없으면 콘텐츠 주소
-export async function shortLink(path: string, contentId: string, title: string, text: string) {
+// 서버가 있으면 짧은 공유 링크(/s/:code — 미리보기 카드(대표 썸네일+핵심 문장)·클릭 집계), 없으면 콘텐츠 주소.
+// 2026-10-30 대표님 제보: 공유 글 끝에 'undefined' — 서버가 로그인 표시를 요구하는데 보내지 않아 실패 → 주소가 undefined 였다. 이제 로그인 표시를 보내고, 실패해도 상품 주소로
+// image: 상품 대표 썸네일(/img/...) · source: 앱에서 공유하면 'app'(받은 사람은 Play 스토어 설치 화면으로), 웹이면 'web'(웹 상품 화면으로)
+export async function shortLink(path: string, contentId: string, title: string, text: string, image?: string) {
   if (__MOCK_MODE__ || !__API_ORIGIN__) return shareUrl(path, contentId);
   try {
-    const r = await fetch(`${__API_ORIGIN__}/share`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ contentId, path, title, text }) });
-    return (await r.json()).url as string;
+    const { apiAuth, isNativeApp } = await import('../platform/payments');
+    const r = await apiAuth<{ url?: string }>('/share', { method: 'POST', body: JSON.stringify({ contentId, path, title, text, image, source: isNativeApp() ? 'app' : 'web' }) });
+    return r.url || shareUrl(path, contentId);
   } catch { return shareUrl(path, contentId); }
 }
 
@@ -71,7 +74,7 @@ export async function kakaoShare(o: { title: string; text: string; url: string; 
   K.Share.sendDefault({
     objectType: 'feed',
     // 짧은 공유 링크(/s/:code)면 서버가 그린 카드(로고·날짜·점수·버튼)를 미리보기 그림으로
-    content: { title: o.title, description: o.text, imageUrl: o.imageUrl ?? (/\/s\/[\w-]+$/.test(o.url) ? `${o.url}/card.png` : `${location.origin}/img/share-default.png`), link: { mobileWebUrl: o.url, webUrl: o.url } },
+    content: { title: o.title, description: o.text, imageUrl: o.imageUrl ?? (/\/s\/[\w-]+$/.test(o.url) ? `${o.url}/thumb.jpg` : `${location.origin}/img/share-default.png`), link: { mobileWebUrl: o.url, webUrl: o.url } },
     buttons: [{ title: '나만의 운세 확인하러 가기', link: { mobileWebUrl: o.url, webUrl: o.url } }],
   });
   return 'shared';

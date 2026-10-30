@@ -107,6 +107,19 @@ describe('공개 API', () => {
     const pb = (await app.inject({ method: 'POST', url: '/profiles', headers: auth(b), payload: { ...profile('남'), id: pa.id } })).json();
     expect(pb.id).not.toBe(pa.id);
   });
+  it('공유: 대표 썸네일 미리보기 + 핵심 문장, 개인 정보 없이 (2026-10-30)', async () => {
+    const s = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'wealth', path: '/product/wealth', title: '재물운 · 나만의 운세', text: '돈이 들어오는 길이 넓어지는 해입니다.', image: '/img/thumb/thumb_wealth.webp', source: 'web' } })).json();
+    expect(s.url).toMatch(/\/s\/\w+$/);
+    const html = (await app.inject({ url: `/s/${s.code}` })).body;
+    expect(html).toContain(`/s/${s.code}/thumb.jpg`);
+    expect(html).toContain('/product/wealth');
+    // 남의 주소 그림은 받지 않음 → 기본 카드
+    const bad = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'x', path: '/today', title: 't', text: 't', image: 'https://evil.example/a.png' } })).json();
+    expect((await app.inject({ url: `/s/${bad.code}` })).body).toContain(`/s/${bad.code}/card.png`);
+    // 공유 문구: 이름 빼고 한 문장
+    const { pickShareLine } = await import('../src/services/reading/generate.ts');
+    expect(pickShareLine({ people: [{ name: '김현재' }], chapters: [{ highlight: '김현재 님의 재물은 늦게 피지만 크게 모이는 흐름입니다. 두 번째 문장.' }] })).toBe('재물은 늦게 피지만 크게 모이는 흐름입니다.');
+  });
   it('이벤트 배치 + 공유 링크 OG·카드 이미지', async () => {
     expect((await app.inject({ method: 'POST', url: '/events', payload: { events: [{ name: 'content_view', props: { content: 'tarot' } }] } })).json().saved).toBe(1);
     const s = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'today', path: '/today', title: '오늘의 운세', text: '94점 — 좋은 날이에요' } })).json();
@@ -121,11 +134,17 @@ describe('공개 API', () => {
     expect((await app.inject({ url: `/s/${s.code}`, headers: android })).body).not.toContain('intent://'); // 등록 전엔 웹으로
     process.env.PLAY_STORE_LIVE = '1';
     try {
-      const a = (await app.inject({ url: `/s/${s.code}`, headers: android })).body;
+      // 웹에서 공유한 링크는 Play 등록 뒤에도 웹 상품 화면으로
+      expect((await app.inject({ url: `/s/${s.code}`, headers: android })).body).not.toContain('intent://');
+      // 앱에서 공유한 링크: 안드로이드는 앱(없으면 Play 설치), 그 밖은 Play 설치 화면
+      const sa = (await app.inject({ method: 'POST', url: '/share', headers: auth(token), payload: { contentId: 'today', path: '/today', title: '오늘의 운세', text: '좋은 날', source: 'app' } })).json();
+      const a = (await app.inject({ url: `/s/${sa.code}`, headers: android })).body;
       expect(a).toContain('intent://open?path=%2Ftoday#Intent;scheme=namanunse;package=com.namanunse.app');
       expect(a).toContain(encodeURIComponent('https://play.google.com/store/apps/details?id=com.namanunse.app'));
       expect(a).toContain('og:image');
-      expect((await app.inject({ url: `/s/${s.code}`, headers: { 'user-agent': 'Mozilla/5.0 (iPhone)' } })).body).not.toContain('intent://');
+      const ip = (await app.inject({ url: `/s/${sa.code}`, headers: { 'user-agent': 'Mozilla/5.0 (iPhone)' } })).body;
+      expect(ip).not.toContain('intent://');
+      expect(ip).toContain('https://play.google.com/store/apps/details?id=com.namanunse.app');
     } finally { delete process.env.PLAY_STORE_LIVE; }
   });
 });

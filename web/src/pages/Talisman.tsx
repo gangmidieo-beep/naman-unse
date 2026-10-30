@@ -9,7 +9,7 @@ import { v4 } from '../assets/images';
 import { Button, ProductRow, TalismanPaper, talismanImg, useToast } from '../components/ui';
 import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
-import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, won, type Talisman } from '../lib/catalog';
+import { BRAND, CHAR, TALISMANS, buyLabel, charOf, memberPrice, productById, isTalisman, thumbOf, won, type Talisman } from '../lib/catalog';
 import { newId, useApp, useMainProfile, usePremium } from '../store/app';
 import { lastSaveMode, saveImage, saveTalismanImage } from '../lib/share';
 import { MOCK_MODE } from '../lib/api';
@@ -178,7 +178,8 @@ export function TalismanMake() {
         </div>
         <Link to="/box#talismans" className="textlink" style={{ color: 'var(--gold-light)', display: 'inline-flex', alignItems: 'center', marginTop: 10 }}>나의 부적함에서 보기 ›</Link>
       </div>
-      <ShareSheet open={share} onClose={() => setShare(false)} title={`${mine?.name}님이 ${t.title}을 선물했어요`} text={`마음을 담아 ${t.title}을 보내요 — “${mine?.wish}”`} path={`/talisman/${t.id}`} contentId={t.id} onDone={(m) => m && toast(m)} />
+      {/* 공유 = 부적 대표 그림 + 부적 소개 1문장 + 부적 상품 링크(이름·소원은 넣지 않음 — 개인 정보) */}
+      <ShareSheet open={share} onClose={() => setShare(false)} title={`${t.title} · 나만의 운세`} text={t.cardCopy} image={thumbOf(t).src ?? talismanImg(t.id)?.src} path={`/talisman/${t.id}`} contentId={t.id} onDone={(m) => m && toast(m)} />
     </main>
   );
 }

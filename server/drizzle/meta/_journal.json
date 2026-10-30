@@ -50,6 +50,13 @@
       "when": 1793347200000,
       "tag": "0006_uploads",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793433600000,
+      "tag": "0007_share_image",
+      "breakpoints": true
     }
   ]
 }

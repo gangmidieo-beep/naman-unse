@@ -165,6 +165,8 @@ export const shareLinks = pgTable('share_links', {
   title: text().notNull(),
   text: text().notNull(),
   userId: text(),
+  image: text(), // 공유 카드 그림 = 상품 대표 썸네일(/img/... 또는 관리자 업로드 주소)
+  source: text(), // 공유한 곳: web(웹 상품 화면으로) | app(앱 설치 페이지로)
   clicks: integer().default(0).notNull(),
   createdAt: now(),
 });

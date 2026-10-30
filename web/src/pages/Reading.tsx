@@ -16,7 +16,7 @@ import { Img } from '../components/Img';
 import { ShareSheet } from '../components/ShareSheet';
 import { ShareCard } from '../components/ShareCard';
 import { SAMPLE_PROFILE, useApp, type Profile } from '../store/app';
-import { CHAR, charOf, displayTitle, isPhoto, isTarot, productById, recommendFor, resultTitle, type Product } from '../lib/catalog';
+import { CHAR, charOf, displayTitle, isPhoto, isTarot, productById, recommendFor, resultTitle, thumbOf, type Product } from '../lib/catalog';
 import { TarotReading } from './Tarot';
 import { PhotoReading } from './Photo';
 import { optionalImg } from '../assets/images';
@@ -179,6 +179,13 @@ export default function ReadingPage() {
   const reports: { r: SajuReport; name: string; birth?: string }[] = v2
     ? v2.reports.map((rr: SajuReport, i: number) => ({ r: rr, name: v2.people[i]?.name ?? '', birth: v2.people[i]?.birth }))
     : [person, partner].filter(Boolean).map((x) => ({ r: analyzeSaju(sajuOf(x!)), name: x!.name, birth: `${birthLabel(x!)} · ${hourLabel(x!.hour)}` }));
+  // 핵심 해석 1문장 — 서버가 감정서를 다 쓸 때 저장해 둔 문장(없으면 상품 소개 문구). 이름은 빼고 씀
+  const strip = (t: string) => {
+    let s = t;
+    for (const n of [person?.name, partner?.name]) if (n) s = s.replaceAll(`${n} 님`, '').replaceAll(`${n}님`, '').replaceAll(n, '');
+    return s.replace(/^[\s,·:—-]+/, '').trim();
+  };
+  const shareText = strip(String(srv?.content?.shareLine || r.chapters.find((x: any) => x.highlight)?.highlight || (p as any).cardCopy || title));
   const savePdf = async () => {
     try {
       const { url } = await apiAuth<{ url: string }>(`/readings/${encodeURIComponent(orderId)}/pdf-link`, { method: 'POST', body: '{}' });
@@ -278,7 +285,8 @@ export default function ReadingPage() {
         </div>
         <TalismanRecommend p={p} />
       </main>
-      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${resultTitle(p)} · ${title}`} text={r.chapters.find((x: any) => x.highlight)?.highlight ? `“${r.chapters.find((x: any) => x.highlight)!.highlight}” — ${c.name}` : `${title} — ${c.name}`} path={`/product/${p.id}`} contentId={p.id} onDone={(m) => m && toast(m)} />
+      {/* 공유 = 대표 썸네일 + 핵심 해석 1문장 + 상품 링크(이름·생년월일·감정서 전문은 넣지 않음) — 2026-10-30 대표님 요청 */}
+      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${title} · 나만의 운세`} text={shareText} image={thumbOf(p).src} path={`/product/${p.id}`} contentId={p.id} onDone={(m) => m && toast(m)} />
       <ShareCard ref={cardRef} title={title} sub={c.name}>
         <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 24, lineHeight: 1.4 }}>{resultTitle(p)}</p>
         {r.chapters.find((x: any) => x.highlight) && <p style={{ fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.8, marginTop: 18 }}>“{r.chapters.find((x: any) => x.highlight)!.highlight}”</p>}

@@ -21,8 +21,9 @@ import { nextRebillDate, normalizePhone, parsePayappFeedback, payappCancel, paya
 import { playConfigured, readRtdn, subscriptionUsable, verifyProduct, verifyPubsubToken, verifySubscription } from './services/payments/google-play.ts';
 import { fcmConfigured, sendPush } from './services/push/fcm.ts';
 import { runDailyPush, runExpiryReminders } from './services/push/daily.ts';
-import { costCap, liveAI } from './services/reading/generate.ts';
+import { costCap, liveAI, pickShareLine } from './services/reading/generate.ts';
 import { generateTarot, type TarotInput } from './services/tarot.ts';
+import sharp from 'sharp';
 import brand from '../../brand.config.json' with { type: 'json' };
 import { analyzePhoto, babyLive, generateBaby, photoLive, sampleBaby, samplePhoto } from './services/photo.ts';
 
@@ -570,6 +571,8 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     const [r] = await db.select().from(S.readings).where(eq(S.readings.orderId, o.id));
     if (!r) return rep.code(404).send({ error: '풀이를 찾지 못했어요' });
     const { tokensIn, tokensOut, costKrw, model, ...pub } = r; void tokensIn; void tokensOut; void costKrw; void model; // 원가는 관리자만
+    // 공유 문구(핵심 해석 1문장) — 예전에 다 쓴 풀이는 여기서 만들어 줌
+    if (pub.status === 'done' && pub.content && !(pub.content as any).shareLine && (pub.content as any).chapters) return { ...pub, content: { ...(pub.content as any), shareLine: pickShareLine(pub.content) } };
     return pub;
   });
   // 실패한 풀이 다시 쓰기 — 자동 재시도 3번이 끝난 뒤(키·잔액 문제를 고친 다음 등) 손님 화면의 [다시 시도] 버튼. 끝난 장은 이어서 씀
@@ -699,12 +702,15 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
 
   /* ---------- 공유 링크 /s/:code ---------- */
   app.post('/share', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, rep) => {
-    const b = (req.body ?? {}) as { contentId?: string; path?: string; title?: string; text?: string };
+    const b = (req.body ?? {}) as { contentId?: string; path?: string; title?: string; text?: string; image?: string; source?: string };
     const userId = await userOf(req);
     if (!userId) return rep.code(401).send({ error: '로그인(게스트 포함)이 필요해요' });
     if (!b.contentId || !b.path || !String(b.path).startsWith('/') || String(b.path).startsWith('//')) return rep.code(400).send({ error: '공유할 화면이 없어요' });
+    // 공유 카드 그림: 이 사이트 그림(/img/...) 또는 관리자 업로드 주소만(남의 주소로 미리보기를 바꾸지 못하게)
+    const img = String(b.image ?? '');
+    const image = /^\/img\/[\w./-]+\.(webp|png|jpe?g)$/i.test(img) || img.startsWith(`${API()}/uploads/`) ? img.slice(0, 300) : null;
     const code = newId().slice(0, 10);
-    await db.insert(S.shareLinks).values({ code, contentId: String(b.contentId).slice(0, 60), path: String(b.path).slice(0, 200), title: String(b.title ?? '').slice(0, 80), text: String(b.text ?? '').slice(0, 200), userId });
+    await db.insert(S.shareLinks).values({ code, contentId: String(b.contentId).slice(0, 60), path: String(b.path).slice(0, 200), title: String(b.title ?? '').slice(0, 80), text: String(b.text ?? '').slice(0, 200), userId, image, source: b.source === 'app' ? 'app' : 'web' });
     return { code, url: `${API()}/s/${code}` };
   });
   app.get('/s/:code', async (req, rep) => {
@@ -717,14 +723,25 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     rep.type('text/html; charset=utf-8');
     // 3차 요청: 카톡 공유 카드를 누르면 앱이 있으면 앱으로, 없으면 Play 스토어 설치 화면으로(안드로이드).
     // Play 에 앱이 올라간 뒤 서버 변수 PLAY_STORE_LIVE=1 (+ APP_ID) 을 넣으면 켜진다. 그 전·아이폰·PC 는 지금처럼 웹으로.
+    // 2026-10-30 대표님 요청: 웹에서 공유한 링크 → 웹 상품 화면 / 앱에서 공유한 링크 → Play 스토어 '나만의 운세' 설치 화면(앱이 있으면 앱으로).
+    // Play 출시 전(PLAY_STORE_LIVE 없음)에는 앱 공유도 웹 상품 화면으로.
     const appId = process.env.APP_ID || 'com.namanunse.app';
     const android = /Android/i.test(String(req.headers['user-agent'] ?? ''));
-    if (process.env.PLAY_STORE_LIVE === '1' && android) {
+    const og = l.image ? { img: `${API()}/s/${l.code}/thumb.jpg`, w: 720, h: 480 } : { img: `${API()}/s/${l.code}/card.png`, w: 1200, h: 630 };
+    if (process.env.PLAY_STORE_LIVE === '1' && l.source === 'app' && !android) {
+      const play = `https://play.google.com/store/apps/details?id=${appId}&referrer=${encodeURIComponent(`utm_source=share&utm_content=${l.contentId}`)}`;
+      return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${e(l.title)}</title>
+<meta property="og:title" content="${e(l.title)}"><meta property="og:description" content="${e(l.text)}">
+<meta property="og:image" content="${og.img}"><meta property="og:image:width" content="${og.w}"><meta property="og:image:height" content="${og.h}">
+<meta property="og:url" content="${API()}/s/${l.code}"><meta property="og:site_name" content="나만의 운세"><meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=${e(play)}"></head><body><a href="${e(play)}">나만의 운세 앱 설치하기</a></body></html>`;
+    }
+    if (process.env.PLAY_STORE_LIVE === '1' && android && l.source === 'app') {
       const play = `https://play.google.com/store/apps/details?id=${appId}&referrer=${encodeURIComponent(`utm_source=share&utm_content=${l.contentId}`)}`;
       const intent = `intent://open?path=${encodeURIComponent(l.path)}#Intent;scheme=namanunse;package=${appId};S.browser_fallback_url=${encodeURIComponent(play)};end`;
       return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(l.title)}</title>
 <meta property="og:title" content="${e(l.title)}"><meta property="og:description" content="${e(l.text)}">
-<meta property="og:image" content="${API()}/s/${l.code}/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image" content="${og.img}"><meta property="og:image:width" content="${og.w}"><meta property="og:image:height" content="${og.h}">
 <meta property="og:url" content="${API()}/s/${l.code}"><meta property="og:site_name" content="나만의 운세"><meta name="twitter:card" content="summary_large_image">
 <style>body{margin:0;font-family:sans-serif;background:#F5EFE1;color:#1C1A17;display:grid;place-items:center;min-height:100vh;text-align:center}a{display:block;margin:10px auto;padding:14px 22px;border-radius:14px;font-weight:800;text-decoration:none;max-width:260px}.a{background:#1C1A17;color:#F2D98E}.b{color:#5A5249}</style></head>
 <body><div><p>나만의 운세 앱으로 이동하고 있어요…</p><a class="a" href="${e(intent)}">앱에서 보기</a><a class="b" href="${e(target)}">웹에서 계속 보기</a></div>
@@ -732,9 +749,35 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     }
     return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${e(l.title)}</title>
 <meta property="og:title" content="${e(l.title)}"><meta property="og:description" content="${e(l.text)}">
-<meta property="og:image" content="${API()}/s/${l.code}/card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image" content="${og.img}"><meta property="og:image:width" content="${og.w}"><meta property="og:image:height" content="${og.h}">
 <meta property="og:url" content="${API()}/s/${l.code}"><meta property="og:site_name" content="나만의 운세"><meta name="twitter:card" content="summary_large_image">
 <meta http-equiv="refresh" content="0;url=${e(target)}"></head><body><a href="${e(target)}">나만의 운세에서 보기</a></body></html>`;
+  });
+  // 공유 카드 그림 = 상품 대표 썸네일(카카오톡·밴드·페이스북 미리보기는 JPG 가 가장 확실해서 변환). 같은 그림은 메모리에 잠깐 보관
+  const thumbCache = new Map<string, Buffer>();
+  app.get('/s/:code/thumb.jpg', async (req, rep) => {
+    const [l] = await db.select().from(S.shareLinks).where(eq(S.shareLinks.code, (req.params as any).code));
+    if (!l?.image) return rep.redirect(`${API()}/s/${(req.params as any).code}/card.png`);
+    let jpg = thumbCache.get(l.image);
+    if (!jpg) {
+      try {
+        let src: Buffer;
+        if (l.image.startsWith(`${API()}/uploads/`)) {
+          const [u] = await db.select().from(S.uploads).where(eq(S.uploads.id, l.image.split('/').pop()!.replace(/\.\w+$/, '')));
+          if (!u) throw new Error('업로드 없음');
+          src = Buffer.from(u.data, 'base64');
+        } else {
+          const r = await http(`${WEB()}${l.image}`, { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) throw new Error(`그림 ${r.status}`);
+          src = Buffer.from(await r.arrayBuffer());
+        }
+        jpg = await sharp(src).resize(720, 480, { fit: 'cover' }).flatten({ background: '#F5EFE1' }).jpeg({ quality: 86 }).toBuffer();
+        thumbCache.set(l.image, jpg);
+        if (thumbCache.size > 60) thumbCache.delete(thumbCache.keys().next().value!);
+      } catch (e) { req.log.warn(`[share thumb] ${l.image} ${(e as Error).message}`); return rep.redirect(`${API()}/s/${l.code}/card.png`); }
+    }
+    rep.type('image/jpeg').header('cache-control', 'public, max-age=86400');
+    return jpg;
   });
   app.get('/s/:code/card.png', async (req, rep) => {
     const [l] = await db.select().from(S.shareLinks).where(eq(S.shareLinks.code, (req.params as any).code));

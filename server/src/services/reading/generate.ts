@@ -130,6 +130,23 @@ export async function generateReading(product: { id: string; title: string }, pe
   return { content, tokensIn, tokensOut, costKrw, issues: checkQuality(content, ps.map((p) => p.name), titles) };
 }
 
+/* ---------- 공유 문구: AI 감정 결과에서 핵심 해석 1문장 — 처음 다 쓸 때 저장해 두고 공유할 때 다시 씀(2026-10-30 대표님 요청)
+   이름·생년월일 같은 개인 정보는 빼고, 너무 짧거나 긴 문장은 건너뜀 ---------- */
+export function pickShareLine(content: any): string {
+  if (!content) return '';
+  if (typeof content.shareLine === 'string' && content.shareLine) return content.shareLine;
+  const names: string[] = (content.people ?? []).map((p: any) => String(p?.name ?? '')).filter(Boolean);
+  const clean = (t: unknown) => {
+    let s = String(t ?? '').replace(/\s+/g, ' ').trim();
+    for (const n of names) s = s.replaceAll(`${n} 님의 `, '').replaceAll(`${n}님의 `, '').replaceAll(`${n} 님은 `, '').replaceAll(`${n} 님`, '').replaceAll(`${n}님`, '').replaceAll(n, '');
+    s = s.replace(/\d{4}\s*년\s*\d{1,2}\s*월\s*\d{1,2}\s*일/g, '').replace(/^[\s,·:—-]+/, '').replace(/\s{2,}/g, ' ').trim();
+    const first = s.split(/(?<=[.!?。])\s/)[0] ?? s; // 한 문장만
+    return first.trim();
+  };
+  const cands = [...(content.chapters ?? []).flatMap((c: any) => [c?.highlight, c?.say]), content.closing?.tips?.[0]].map(clean);
+  return cands.find((x) => x.length >= 12 && x.length <= 90) ?? cands.find((x) => x.length >= 8)?.slice(0, 90) ?? '';
+}
+
 /* ---------- 워커: 3초마다 대기 풀이를 최대 2개씩(장편은 한 건에 AI 호출 십수 번 — 호출 수는 READING_CONCURRENCY 로 제한)
    2026-10-29 실서버: 같은 감정서를 여러 번 다시 쓰며 1건에 약 10달러가 나갔다 → 아래 안전장치
    ① 한 건씩 원자적으로 가져감(두 서버·두 틱이 같은 건을 동시에 쓰지 않게) ② 쓰는 동안 진행·원가를 저장하며 startedAt 을 갱신(살아 있음 표시)
@@ -207,7 +224,7 @@ export async function runOne(db: Db, r: typeof S.readings.$inferSelect, http?: t
     // 결제한 날 기준으로 쓴다(11월 1일에 해가 바뀐 뒤 이어 쓰면 올해·내년 내용이 섞이던 문제)
     const g = await generateReading({ id: r.productId, title: p?.title ?? r.productId }, people, { http, prev, now: r.createdAt ?? undefined, onProgress: save, isAborted: () => aborted });
     await db.update(S.readings).set({
-      status: 'done', content: { ...g.content, issues: g.issues } as any, model: g.content.generatedBy === 'ai' ? process.env.ANTHROPIC_MODEL ?? null : 'sample',
+      status: 'done', content: { ...g.content, issues: g.issues, shareLine: pickShareLine(g.content) } as any, model: g.content.generatedBy === 'ai' ? process.env.ANTHROPIC_MODEL ?? null : 'sample',
       tokensIn: base.tokensIn + g.tokensIn, tokensOut: base.tokensOut + g.tokensOut, costKrw: base.costKrw + g.costKrw, doneAt: new Date(),
     }).where(mine);
   } catch (e: any) {

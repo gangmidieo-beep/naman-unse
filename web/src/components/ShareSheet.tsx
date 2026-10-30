@@ -6,13 +6,13 @@ import { BottomSheet } from './ui';
 import { lastSaveMode, saveImage, shareLink, shortLink, kakaoShare, CHANNELS, type Channel } from '../lib/share';
 import { track } from '../lib/track';
 
-export function ShareSheet({ open, onClose, card, title, text, path, contentId, onDone, imageName }: {
+export function ShareSheet({ open, onClose, card, title, text, path, contentId, onDone, imageName, image }: {
   open: boolean; onClose: () => void; card?: RefObject<HTMLDivElement>; title: string; text: string; path: string; contentId: string;
-  onDone?: (msg?: string) => void; imageName?: string;
+  onDone?: (msg?: string) => void; imageName?: string; image?: string; // image: 공유 카드 그림(상품 대표 썸네일)
 }) {
   const go = async (c: Channel) => {
     track('share_click', { channel: c, contentId });
-    const url = c === 'image' ? '' : await shortLink(path, contentId, title, text);
+    const url = c === 'image' ? '' : await shortLink(path, contentId, title, text, image);
     if (c === 'kakao') {
       const r = await kakaoShare({ title, text, url });
       onDone?.(r === 'copied' ? '카카오톡 연결 전이라 링크를 복사했어요. 카카오톡에 붙여 넣어 보내세요' : undefined);

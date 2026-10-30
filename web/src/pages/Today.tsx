@@ -117,7 +117,7 @@ export default function Today() {
       </main>
       {modal}
       {/* 3차 요청 공유 형식: 로고 · 2026. 10. 13. 오늘의 운세 · OOO 님의 오늘의 운세 · 90점 ★★★★★ · [나만의 운세 확인하러 가기] */}
-      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title={`${profile.name} 님의 오늘의 운세`}
+      <ShareSheet open={share} onClose={() => setShare(false)} card={cardRef} title="나만의 운세 · 오늘의 운세"
         text={`${dotDate} 오늘의 운세\n${f.total}점 ${starStr(f.stars)}`} path="/today" contentId="today" onDone={(msg) => msg && toast(msg)} />
       <ShareCard ref={cardRef} title="나만의 운세" sub={`${dotDate} 오늘의 운세`}>
         <p style={{ fontFamily: 'var(--serif)', fontWeight: 900, fontSize: 30, textAlign: 'center', marginTop: 6 }}>{profile.name} 님의 오늘의 운세</p>
