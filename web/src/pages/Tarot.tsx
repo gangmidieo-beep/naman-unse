@@ -14,7 +14,7 @@ import { TAROTS, BRAND, displayTitle, productById, type TarotProduct } from '../
 import { isUnlockedToday, useApp, useMainProfile, usePremium } from '../store/app';
 import { koDate } from '../lib/dates';
 import { track } from '../lib/track';
-import { music, sfx } from '../lib/sound';
+import { music, preloadTarotSounds, sfx } from '../lib/sound';
 import { SoundToggle } from '../components/SoundToggle';
 import { apiAuth } from '../platform/payments';
 import { MOCK_MODE } from '../lib/api';
@@ -72,6 +72,9 @@ export function TarotFace({ d }: { d: Drawn }) {
 
 // 실전 타로 테이블 — need 장을 직접 고른다. 다 고르면 자리마다 한 장씩 뒤집는다.
 const FAN = 22;
+// 카드가 뒤집혀 펼쳐질 때 아래에서 위로 올라오는 반짝이(위치·크기·시작 시각을 조금씩 다르게)
+const SPARKS = Array.from({ length: 20 }, (_, i) => ({ x: 4 + ((i * 37) % 92), d: (i % 8) * 110, s: 6 + (i % 4) * 2, h: 130 + ((i * 29) % 110) }));
+
 // 카드 섞는 장면 — 그림 한 장(대표님 원본이 오면 /img/tarot/shuffle.webp 만 바꾸면 됨) + 문구 + 진행 표시
 const SHUFFLE_IMG = '/img/tarot/shuffle.webp';
 const SHUFFLE_MS = 3600;
@@ -102,7 +105,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const [open, setOpen] = useState(0);
   const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // 배경음악: 테이블이 있는 동안만. 카드 섞기(첫 손짓)에 시작, 테이블을 떠나면 서서히 꺼짐
-  useEffect(() => { music.acquire(); return () => music.release(); }, []);
+  useEffect(() => { music.acquire(); preloadTarotSounds(); return () => music.release(); }, []);
   // 카드 섞기 — 2026-10-30 대표님 요청: 카드가 튀는 가벼운 게임 느낌 대신 '카드를 섞는 중' 장면 그림 + 차분한 진행 표시만 보여 주고 펼친다
   const shuffle = () => {
     setPhase('shuffle');
@@ -123,7 +126,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const flip = (k: number) => {
     if (k !== openRef.current) return;
     openRef.current = k + 1;
-    sfx.flip(cards[k]?.reversed);
+    sfx.flip(cards[k]?.reversed, k + 1 === need);
     onFlip?.(k);
     const n = k + 1;
     setOpen(n);
@@ -132,7 +135,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
   const flipAll = () => {
     for (let k = openRef.current; k < need; k++) onFlip?.(k);
     openRef.current = need;
-    sfx.flip(false);
+    sfx.flip(false, true);
     setOpen(need);
     setTimeout(() => { sfx.finale(); onDone(); }, 700);
   };
@@ -172,6 +175,7 @@ export function TarotTable({ cards, need, positions, onFlip, onDone }: { cards: 
               <button key={k} className={`slot${k < open ? ' open' : ''}${k === open ? ' next' : ''}`} onClick={() => flip(k)} disabled={k !== open}
                 aria-label={k < open ? `${positions?.[k] ?? ''} ${d.card.nameKo}${d.reversed ? ' 역방향' : ''}` : `${positions?.[k] ?? `${k + 1}번째`} 카드 뒤집기`}>
                 <div className="flipper"><div className="back"><CardBack /></div><div className="front">{k < open && <TarotFace d={d} />}</div></div>
+                {k < open && <span className="tspark" aria-hidden>{SPARKS.map((s, i) => <i key={i} style={{ ['--x' as string]: `${s.x}%`, ['--d' as string]: `${s.d}ms`, ['--s' as string]: `${s.s}px`, ['--h' as string]: `${s.h}px` }} />)}</span>}
                 {positions?.[k] && <em>{positions[k]}</em>}
               </button>
             ))}

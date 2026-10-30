@@ -87,11 +87,23 @@ function shimmer(c: AudioContext, at: number, dur: number, gain: number, freq = 
   const g = c.createGain(); g.gain.value = gain;
   src.connect(f).connect(g).connect(sfxBus!); src.start(at);
 }
-// 깊은 싱잉볼 — 기본음 + 살짝 어긋난 음(맥놀이) + 배음, 천천히 울림
-function bowl(c: AudioContext, at: number, freq: number, dur: number, gain: number) {
-  swell(c, at, freq, 0.08, dur, gain);
-  swell(c, at, freq * 1.007, 0.1, dur * 0.9, gain * 0.6);
-  swell(c, at, freq * 2.71, 0.06, dur * 0.45, gain * 0.18);
+
+/* 대표님이 주신 효과음 파일(상업용 사용 가능 확인, 2026-10-30) — /sound/*.mp3. 처음 한 번 받아 두고 재생 */
+const SAMPLES = { pick: '/sound/tarot-pick.mp3', reveal: '/sound/tarot-reveal.mp3', reveal2: '/sound/tarot-reveal2.mp3' } as const;
+type Sample = keyof typeof SAMPLES;
+const decoded = new Map<Sample, Promise<AudioBuffer | null>>();
+function load(name: Sample) {
+  const c = base(); if (!c) return Promise.resolve(null);
+  if (!decoded.has(name)) decoded.set(name, fetch(SAMPLES[name]).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).catch(() => null));
+  return decoded.get(name)!;
+}
+export const preloadTarotSounds = () => { (Object.keys(SAMPLES) as Sample[]).forEach((k) => void load(k)); };
+async function play(name: Sample, volume = 1) {
+  const c = ac(); if (!c || !sfxBus) return;
+  const buf = await load(name); if (!buf) return;
+  const src = c.createBufferSource(); src.buffer = buf;
+  const g = c.createGain(); g.gain.value = volume / (2.4 * 2.2); // 합성음용으로 키워 둔 음량(효과음 버스·전체)을 되돌려 원본 크기로
+  src.connect(g).connect(sfxBus); src.start();
 }
 
 /* 타로 효과음 — 2026-10-30 대표님 요청: 카드를 고르고 결과가 나올 때 '띠롱띠롱' 게임 소리 대신 신비로운 느낌으로.
@@ -106,13 +118,8 @@ export const sfx = {
     swell(c, t, 164.81, 1.1, 1.4, 0.03, 'triangle');
     shimmer(c, t + 0.2, 1.8, 0.035);
   },
-  // 고르기: 부드러운 숨결 + 낮은 싱잉볼(고를 때마다 조금씩 다른 음)
-  pick() {
-    const c = ac(); if (!c) return;
-    const t = c.currentTime;
-    shimmer(c, t, 0.9, 0.04, 4200);
-    bowl(c, t + 0.05, [196, 220, 246.94][Math.floor(Math.random() * 3)], 2.2, 0.05);
-  },
+  // 고르기(3장·10장 고를 때마다): 대표님 효과음 2번
+  pick() { void play('pick'); },
   // 고른 카드를 자리에 놓음: 아주 낮은 울림
   place() {
     const c = ac(); if (!c) return;
@@ -120,24 +127,10 @@ export const sfx = {
     swell(c, t, 73.42, 0.25, 1.6, 0.08);
     shimmer(c, t + 0.1, 1.2, 0.025, 3000);
   },
-  // 뒤집기: 낮은 바람 소리 + 깊은 싱잉볼(역방향은 더 낮게)
-  flip(reversed = false) {
-    const c = ac(); if (!c) return;
-    const t = c.currentTime;
-    noise(c, t, 0.5, 900, 0.07, 0.5);
-    bowl(c, t + 0.15, reversed ? 146.83 : 196, 3.2, 0.065);
-    shimmer(c, t + 0.2, 1.4, 0.03);
-  },
-  // 결과: 깊은 징 + 천천히 차오르는 화음(빠른 아르페지오 없음)
-  finale() {
-    const c = ac(); if (!c) return;
-    const t = c.currentTime;
-    swell(c, t, 65.41, 0.05, 4.5, 0.1);
-    swell(c, t, 98, 0.8, 3.6, 0.045, 'triangle');
-    swell(c, t, 146.83, 1.2, 3.2, 0.03, 'triangle');
-    swell(c, t, 196, 1.6, 2.8, 0.022);
-    shimmer(c, t + 0.6, 3, 0.04);
-  },
+  // 결과 카드를 하나씩 뒤집을 때: 대표님 효과음 1번, 마지막 카드(또는 한 번에 모두)는 3번
+  flip(reversed = false, last = false) { void play(last ? 'reveal2' : 'reveal', reversed ? 0.9 : 1); },
+  // 종합 메시지: 마지막 카드 소리가 이어지므로 따로 소리 없음
+  finale() { /* 마지막 뒤집기 효과음(3번)이 결과까지 이어짐 */ },
 
   /* ---- 부적 의식 ---- */
   // 향 피우기: 성냥 긋는 소리(치익) + 불 붙는 소리 + 낮은 징

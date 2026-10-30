@@ -890,3 +890,12 @@
 .tshuffle .writing-veil { display: none; }
 .tshuffle .writing-tx { margin-bottom: 0; }
 @keyframes tbreathe { 0% { opacity: 0; transform: scale(.96); filter: brightness(.7); } 30% { opacity: 1; } 60% { transform: scale(1.02); filter: brightness(1.08); } 100% { transform: scale(1); filter: brightness(1); } }
+/* 결과 카드가 뒤집혀 펼쳐질 때 반짝이가 아래에서 위로 올라옴(2026-10-30 대표님 요청) + 카드 뒤로 금빛이 한 번 번짐 */
+.tspark::before { content: ''; position: absolute; inset: -18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(242, 217, 142, .5), rgba(242, 217, 142, 0)); animation: tspark-glow 1.6s ease-out both; z-index: -1; }
+@keyframes tspark-glow { 0% { opacity: 0; transform: scale(.7); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+.tslots .slot { position: relative; }
+.tspark { position: absolute; inset: 0; pointer-events: none; overflow: visible; z-index: 2; }
+.tspark i { position: absolute; left: var(--x); bottom: 6%; width: var(--s); height: var(--s); border-radius: 50%; background: radial-gradient(circle, #FFF6D6 0%, #F2D98E 45%, rgba(242, 217, 142, 0) 70%); box-shadow: 0 0 10px 3px rgba(242, 217, 142, .8), 0 0 2px 1px #FFF6D6; opacity: 0; animation: tspark-up 2.2s ease-out var(--d) both; }
+.tspark i:nth-child(3n) { background: radial-gradient(circle, #FFFFFF 0%, #E9C979 50%, rgba(233, 201, 121, 0) 72%); }
+@keyframes tspark-up { 0% { opacity: 0; transform: translateY(0) scale(.6); } 15% { opacity: 1; } 70% { opacity: .9; } 100% { opacity: 0; transform: translateY(calc(var(--h) * -1)) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) { .tspark { display: none; } }
