@@ -293,3 +293,27 @@ describe('Google Play 상태 해석', () => {
     expect((await app.inject({ method: 'POST', url: '/billing/google/verify', headers: auth(t), payload: { productId: 'jeongtong', purchaseToken: 'x' } })).statusCode).toBe(503);
   });
 });
+
+describe('구글 플레이 심사용 코드', () => {
+  it('코드가 없거나 틀리면 0원 주문 불가, 맞으면 결제 없이 지급', async () => {
+    const t = await guest('review-1');
+    const talisman = (await app.inject({ url: '/products' })).json().find((p: any) => p.kind === 'talisman');
+    // REVIEW_CODE 미설정: 기능 꺼짐
+    expect((await app.inject({ method: 'POST', url: '/review/redeem', remoteAddress: '10.9.9.8', headers: auth(t), payload: { code: 'X' } })).statusCode).toBe(400);
+    process.env.REVIEW_CODE = 'PLAY-REVIEW-2026';
+    try {
+      expect((await app.inject({ method: 'POST', url: '/orders', remoteAddress: '10.9.9.9', headers: auth(t), payload: { productId: talisman.id, channel: 'review' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'POST', url: '/review/redeem', remoteAddress: '10.9.9.8', headers: auth(t), payload: { code: 'wrong' } })).statusCode).toBe(400);
+      expect((await app.inject({ method: 'POST', url: '/review/redeem', remoteAddress: '10.9.9.8', headers: auth(t), payload: { code: 'play-review-2026' } })).statusCode).toBe(200);
+      const o = (await app.inject({ method: 'POST', url: '/orders', remoteAddress: '10.9.9.9', headers: auth(t), payload: { productId: talisman.id, channel: 'review' } })).json();
+      expect(o, JSON.stringify(o)).toHaveProperty('status', 'paid');
+      expect(o.amount).toBe(0);
+      expect(o.channel).toBe('review');
+      // 다른 사람(코드 안 넣은 계정)은 여전히 불가
+      const t2 = await guest('review-2');
+      expect((await app.inject({ method: 'POST', url: '/orders', remoteAddress: '10.9.9.9', headers: auth(t2), payload: { productId: talisman.id, channel: 'review' } })).statusCode).toBe(403);
+    } finally { delete process.env.REVIEW_CODE; }
+    // 변수를 지우면 코드 넣은 계정도 바로 꺼짐
+    expect((await app.inject({ method: 'POST', url: '/orders', remoteAddress: '10.9.9.9', headers: auth(t), payload: { productId: talisman.id, channel: 'review' } })).statusCode).toBe(403);
+  });
+});

@@ -17,6 +17,7 @@ export const users = pgTable('users', {
   pushConsent: boolean(),
   lastDailyPush: text(), // 매일 아침 자동 푸시를 마지막으로 보낸 날(KST yyyy-mm-dd) — 하루 한 번만
   mergedInto: text(), // 게스트 → 로그인 계정으로 합쳐지면 대상 id
+  reviewer: boolean().default(false).notNull(), // 구글 플레이 심사용 코드(REVIEW_CODE)를 넣은 계정 — 유료 상품을 결제 없이 받음
   createdAt: now(),
   lastSeenAt: now(),
   deletedAt: timestamp({ withTimezone: true }),

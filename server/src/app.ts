@@ -7,6 +7,7 @@ import rateLimit from '@fastify/rate-limit';
 import bcrypt from 'bcryptjs';
 import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { readFileSync, existsSync } from 'node:fs';
+import { timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, extname } from 'node:path';
 import { openDb, schema as S, type Db } from './db/index.ts';
@@ -84,6 +85,26 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
   app.get('/notices', async () => [] as { id: string; title: string; body: string; createdAt: string }[]);
   // 화면이 "어떤 로그인을 보여줄지·결제 전에 로그인을 요구할지" 정할 때 씀(키가 등록된 것만)
   app.get('/auth/providers', async () => ({ providers: MOCK ? ['google', 'kakao', 'naver'] : (['google', 'kakao', 'naver'] as const).filter((p) => isConfigured(p)) }));
+
+  /* ---------- 구글 플레이 심사용 코드 ----------
+   * Play 심사자는 결제를 할 수 없어서, 대표님이 Railway 변수 REVIEW_CODE 로 정한 코드를 운세함 → 「코드 입력」에 넣으면
+   * 그 계정은 유료 상품을 결제 없이 받는다(주문 금액 0원, channel 'review'). 변수가 없으면 이 기능은 꺼져 있다. */
+  const reviewCode = () => (process.env.REVIEW_CODE ?? '').trim();
+  app.post('/review/redeem', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, rep) => {
+    const userId = await needUser(req, rep);
+    if (!userId) return;
+    const code = String(((req.body ?? {}) as { code?: string }).code ?? '').trim();
+    const want = reviewCode();
+    const a = Buffer.from(code.toUpperCase()), b = Buffer.from(want.toUpperCase());
+    if (!want || a.length !== b.length || !timingSafeEqual(a, b)) return rep.code(400).send({ error: '코드를 다시 확인해 주세요', code: 'bad_code' });
+    await db.update(S.users).set({ reviewer: true }).where(eq(S.users.id, userId));
+    return { ok: true };
+  });
+  const isReviewer = async (userId: string) => {
+    if (!reviewCode()) return false; // 변수를 지우면 바로 꺼짐
+    const [u] = await db.select({ r: S.users.reviewer }).from(S.users).where(eq(S.users.id, userId));
+    return !!u?.r;
+  };
 
   /* ---------- 게스트·로그인 ---------- */
   app.post('/auth/guest', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (req) => {
@@ -321,6 +342,14 @@ export async function buildApp(opts: { db?: Db; demo?: boolean; logger?: boolean
     if (channel === 'mock') {
       const [o] = await db.insert(S.orders).values(base).returning();
       return fulfillOrder(db, o);
+    }
+    // 구글 플레이 심사용 계정 — 결제 없이 0원 주문으로 바로 지급(AI 준비 여부 확인은 아래와 같이)
+    if (b.channel === 'review') {
+      if (!(await isReviewer(userId))) return rep.code(403).send({ error: '사용할 수 없는 결제 방식이에요' });
+      const ready = p.kind === 'reading' ? liveAI() : p.kind === 'photo' ? (p.id === 'baby' ? babyLive() : photoLive()) : true;
+      if (kind === 'reading' && !ready) return rep.code(503).send({ error: '풀이 서비스를 준비하고 있어요. 조금만 기다려 주세요.', code: 'reading_off' });
+      const [o] = await db.insert(S.orders).values({ ...base, amount: 0, discount: p.price, method: 'review', channel: 'review' }).returning();
+      return fulfillOrder(db, o, { ref: 'review' });
     }
     // 실결제인데 AI 풀이가 꺼져 있으면 유료 풀이는 팔지 않는다(돈 받고 예시 풀이가 나가는 사고 방지). 부적·구독은 그대로 판매
     // 사주 풀이는 Claude, 손금·관상은 Claude(사진), 2세는 Gemini 키가 있어야 판매. 타로는 카드 풀이라 언제나 판매

@@ -13,7 +13,7 @@ import { BottomSheet, Button, ProductThumb, TalismanPaper, useToast } from '../c
 import { useApp, useMainProfile, usePremium, useProfileLimit } from '../store/app';
 import { BRAND, CHAR, charOf, displayTitle, isPhoto, isTarot, productById, thumbOf, won, type Product, type Talisman } from '../lib/catalog';
 import { api, MOCK_MODE } from '../lib/api';
-import { apiAuth, deleteProfileOnServer, getPayments, hideOrder, syncEntitlements, uploadAllProfiles } from '../platform/payments';
+import { apiAuth, deleteProfileOnServer, getPayments, hideOrder, isReviewer, redeemReviewCode, syncEntitlements, uploadAllProfiles } from '../platform/payments';
 import { enablePush, syncPushPrefs } from '../platform/native';
 import { birthLabel, hourLabel } from './ProfileNew';
 
@@ -69,7 +69,13 @@ export default function Box() {
   const { profile, isSample } = useMainProfile();
   const { limit, canAdd } = useProfileLimit();
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [sheet, setSheet] = useState<null | 'profiles' | 'notice' | 'terms' | 'biz' | 'contact' | 'withdraw'>(null);
+  const [sheet, setSheet] = useState<null | 'profiles' | 'notice' | 'terms' | 'biz' | 'contact' | 'withdraw' | 'code'>(null);
+  const [code, setCode] = useState('');
+  const redeem = async () => {
+    const err = await redeemReviewCode(code);
+    if (err) { toast(err); return; }
+    setSheet(null); setCode(''); toast('코드가 적용됐어요. 이제 유료 상품을 결제 없이 이용할 수 있어요');
+  };
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [hideAsk, setHideAsk] = useState<string | null>(null); // 운세함에서 지울 주문
   const hide = async (orderId: string) => {
@@ -190,6 +196,7 @@ export default function Box() {
           <li><button className="mrow" onClick={() => setSheet('contact')}><span>문의하기</span><span className="v">›</span></button></li>
           {s.account && <li><button className="mrow" onClick={async () => { await uploadAllProfiles(); s.signOut(); toast('로그아웃했어요. 다시 로그인하면 운세함이 그대로 돌아와요'); }}><span>로그아웃</span><span className="v">›</span></button></li>}
           {s.account && <li><button className="mrow" onClick={() => setSheet('withdraw')}><span>회원 탈퇴</span><span className="v">›</span></button></li>}
+          <li><button className="mrow" onClick={() => setSheet('code')}><span>코드 입력</span><span className="v">{isReviewer() ? '적용됨 ›' : '›'}</span></button></li>
           <li><div className="mrow"><span>버전</span><span className="v">{VERSION}</span></div></li>
         </ul>
       </main>
@@ -231,6 +238,14 @@ export default function Box() {
       <BottomSheet open={sheet === 'contact'} onClose={() => setSheet(null)} title="문의하기">
         <p>{BRAND.links.kakaoChannel ? <a className="u" href={BRAND.links.kakaoChannel} target="_blank" rel="noreferrer">카카오톡 채널 열기</a> : '카카오톡 채널 주소는 대표님께 받은 뒤 연결할 예정이에요.'}</p>
         <Button kind="line" onClick={() => setSheet(null)}>닫기</Button>
+      </BottomSheet>
+      <BottomSheet open={sheet === 'code'} onClose={() => setSheet(null)} title="코드 입력">
+        <p className="note" style={{ margin: '0 0 10px' }}>안내받은 코드가 있으면 입력해 주세요.</p>
+        <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="코드" aria-label="코드" autoCapitalize="characters" autoComplete="off" />
+        <div className="btn-row" style={{ marginTop: 14 }}>
+          <Button kind="line" onClick={() => setSheet(null)}>닫기</Button>
+          <Button kind="ink" onClick={redeem}>적용하기</Button>
+        </div>
       </BottomSheet>
       <BottomSheet open={sheet === 'withdraw'} onClose={() => setSheet(null)} title="회원 탈퇴">
         <p>탈퇴하면 계정과 연결된 풀이·부적 보관 기록이 삭제되고 되살릴 수 없어요. 웹에서 신청한 월 자동결제는 탈퇴할 때 함께 해지돼요. 앱(구글 플레이)에서 구독하셨다면 구글 플레이에서 먼저 해지해 주세요.</p>

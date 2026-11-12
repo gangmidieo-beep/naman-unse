@@ -6,7 +6,7 @@ export type PayResult = { status: 'paid' | 'cancelled' | 'failed' | 'redirect'; 
 export type PayMethod = { id: string; label: string };
 export type PayOpts = { method?: string; amount?: number; phone?: string };
 export interface PaymentProvider {
-  id: 'mock' | 'web' | 'google-play' | 'unavailable';
+  id: 'mock' | 'web' | 'google-play' | 'unavailable' | 'review';
   needsPhone: boolean; // PayApp 은 결제 문자 수신 번호가 필수
   methods(): PayMethod[];
   purchase(productId: string, profileId: string, opts?: PayOpts): Promise<PayResult>;
@@ -159,12 +159,39 @@ export const unavailable: PaymentProvider = {
   async restore() { return []; },
 };
 
+// 구글 플레이 심사용 — 운세함 「코드 입력」에 심사 코드를 넣은 기기는 결제 없이 상품을 받음(서버가 계정별로 다시 확인)
+const REVIEWER = 'naman-reviewer';
+export const isReviewer = () => { try { return localStorage.getItem(REVIEWER) === '1'; } catch { return false; } };
+export async function redeemReviewCode(code: string): Promise<string | null> {
+  try {
+    await apiAuth('/review/redeem', { method: 'POST', body: JSON.stringify({ code }) });
+    try { localStorage.setItem(REVIEWER, '1'); } catch { /* */ }
+    return null;
+  } catch (e: any) { return e?.message || '코드를 다시 확인해 주세요'; }
+}
+async function reviewOrder(productId: string, profileId: string): Promise<PayResult> {
+  try {
+    if (profileId) profileId = await syncProfiles(profileId);
+    const o = await apiAuth<{ id: string; status: string }>('/orders', { method: 'POST', body: JSON.stringify({ productId, profileId, channel: 'review' }) });
+    return { status: o.status === 'paid' ? 'paid' : 'failed', orderId: o.id };
+  } catch (e: any) { return { status: 'failed', orderId: '', message: e.message, code: e.code }; }
+}
+export const reviewProvider: PaymentProvider = {
+  id: 'review',
+  needsPhone: false,
+  methods: () => [{ id: 'review', label: '심사용 무료 이용' }],
+  purchase: (productId, profileId) => reviewOrder(productId, profileId),
+  subscribe: (planId) => reviewOrder(planId, ''),
+  async restore() { const e = await syncEntitlements(); return (e?.owned ?? []).map((x) => x.productId); },
+};
+
 export const isNativeApp = () => !!(window as any).Capacitor?.isNativePlatform?.();
 let gp: PaymentProvider | null = null;
 // 앱용 Google Play 구현은 앱에서만 불러옴(웹 번들에 결제 플러그인 코드가 섞이지 않게)
 export async function loadGooglePlay() { if (isNativeApp() && !MOCK_MODE && !gp) gp = (await import('./google-play')).googlePlayProvider; }
 export function getPayments(): PaymentProvider {
   if (MOCK_MODE) return mockProvider;
+  if (isReviewer()) return reviewProvider;
   return isNativeApp() ? gp ?? unavailable : webProvider;
 }
 
